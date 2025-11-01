@@ -237,10 +237,11 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
               Code <SortIcon active={isActive('code')} direction={sortDirection} />
             </th>
             <th
-              className="px-2 py-3 text-left whitespace-nowrap cursor-pointer hover:bg-gray-800 transition"
+              className="px-2 py-3 text-left cursor-pointer hover:bg-gray-800 transition max-w-[160px]"
               onClick={() => handleSort('name')}
+              style={{width:'160px'}}
             >
-              Name <SortIcon active={isActive('name')} direction={sortDirection} />
+              <span className="inline-block truncate max-w-[140px] align-middle">Name</span> <SortIcon active={isActive('name')} direction={sortDirection} />
             </th>
             <th
               className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
@@ -284,12 +285,13 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 {selectedStock.code}
               </span>
             </td>
-            <td className="px-2 py-3 font-medium text-white whitespace-nowrap">
+            <td className="px-2 py-3 font-medium text-white max-w-[160px]" style={{width:'160px'}}>
               <span
                 onClick={() => onStockCodeClick && onStockCodeClick(selectedStock.code)}
                 role="link"
                 tabIndex={0}
-                className="text-blue-300 hover:text-blue-200 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                className="text-blue-300 hover:text-blue-200 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 rounded block truncate"
+                title={selectedStock.name}
               >{selectedStock.name}</span>
             </td>
             <td className="px-4 py-3 text-right text-gray-200">${selectedStock.marketCap}</td>
@@ -336,12 +338,13 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                   {stock.code}
                 </span>
               </td>
-              <td className="px-2 py-3 text-gray-200 whitespace-nowrap">
+              <td className="px-2 py-3 text-gray-200 max-w-[160px]" style={{width:'160px'}}>
                 <span
                   onClick={() => onStockCodeClick && onStockCodeClick(stock.code)}
                   role="link"
                   tabIndex={0}
-                  className="text-blue-300 hover:text-blue-200 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                  className="text-blue-300 hover:text-blue-200 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 rounded block truncate"
+                  title={stock.name}
                 >{stock.name}</span>
               </td>
               <td className="px-4 py-3 text-right text-gray-200">${stock.marketCap}</td>
