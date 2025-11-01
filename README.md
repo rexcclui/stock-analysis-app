@@ -34,3 +34,17 @@ You can check out [the Next.js GitHub repository](https://github.com/vercel/next
 The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
 
 Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+
+ 1017  npx --registry=https://registry.npmjs.org/ create-next-app@latest stock-analysis-app\n
+ 1018  cd stock-analysis-app
+ 1020  npm install recharts lucide-react
+ 1021  # Create API routes directory\nmkdir -p app/api/stock\nmkdir -p app/api/competitors\nmkdir -p app/api/sentiment\nmkdir -p app/api/news
+Your API key is: AG3895F5UBBMNL1D, stk100001@gmail.com at Alpha Vantage
+
+ALPHA_VANTAGE_KEY=AG3895F5UBBMNL1D
+FMP_KEY=zGcTWbE1JPSBQB43vW4NGgTow69y5ksM
+
+https://newsapi.org/register/success
+NEWS_API_KEY=1c950bd1047f42c684e6eef9dec2a299
+
+git init
