@@ -83,6 +83,30 @@ export async function GET(request) {
       };
     }
 
+    // P/E ratio fallbacks & computation
+    const rawPe = (
+      (typeof profile.pe === 'number' ? profile.pe : null) ??
+      (typeof profile.priceToEarnings === 'number' ? profile.priceToEarnings : null) ??
+      (typeof quote.pe === 'number' ? quote.pe : null) ??
+      (typeof quote.priceToEarningsRatio === 'number' ? quote.priceToEarningsRatio : null)
+    );
+
+    let peValue = 'N/A';
+    if (typeof rawPe === 'number' && rawPe > 0) {
+      peValue = rawPe.toFixed(2);
+    } else {
+      // Try compute using price / eps if eps positive
+      const eps = typeof profile.eps === 'number' ? profile.eps : null;
+      const priceForPe = (typeof quote.price === 'number' ? quote.price : null) ?? (typeof profile.price === 'number' ? profile.price : null);
+      if (eps !== null) {
+        if (eps > 0 && priceForPe && priceForPe > 0) {
+          peValue = (priceForPe / eps).toFixed(2);
+        } else if (eps <= 0) {
+          peValue = '—'; // Dash indicates negative or zero earnings
+        }
+      }
+    }
+
     const stockData = {
       code: symbol,
       name: profile.companyName,
@@ -92,7 +116,7 @@ export async function GET(request) {
       marketCap: profile.mktCap 
         ? (profile.mktCap / 1e9).toFixed(2) + 'B'
         : 'N/A',
-      pe: profile.pe ? profile.pe.toFixed(2) : 'N/A',
+      pe: peValue,
       analystRating: profile.dcf > profile.price ? 'Buy' : 'Hold',
       industry: profile.industry || 'N/A',
       sector: profile.sector || 'N/A',
