@@ -9,91 +9,121 @@ export async function GET(request) {
   }
 
   try {
-    // Fetch company profile from FMP
-    const profileResponse = await fetch(
-      `https://financialmodelingprep.com/api/v3/profile/${symbol}?apikey=${process.env.FMP_KEY}`
+    // Fetch real social sentiment data from FMP
+    const sentimentResponse = await fetch(
+      `https://financialmodelingprep.com/api/v4/social-sentiment?symbol=${symbol}&apikey=${process.env.FMP_KEY}`
     );
-    const profileData = await profileResponse.json();
-
-    if (!profileData || profileData.length === 0) {
-      return NextResponse.json({ error: 'Stock not found' }, { status: 404 });
+    
+    if (!sentimentResponse.ok) {
+      throw new Error(`API returned status ${sentimentResponse.status}`);
     }
 
-    const profile = profileData[0];
+    const sentimentData = await sentimentResponse.json();
 
-    // Fetch quote for current price and day change
-    const quoteResponse = await fetch(
-      `https://financialmodelingprep.com/api/v3/quote/${symbol}?apikey=${process.env.FMP_KEY}`
-    );
-    const quoteData = await quoteResponse.json();
-    const quote = quoteData[0] || {};
-
-    // Fetch historical prices from FMP
-    const historicalResponse = await fetch(
-      `https://financialmodelingprep.com/api/v3/historical-price-full/${symbol}?apikey=${process.env.FMP_KEY}`
-    );
-    const historical = await historicalResponse.json();
-
-    let performance = {
-      '1D': 0, '7D': 0, '1M': 0, '3M': 0,
-      '6M': 0, '1Y': 0, '3Y': 0, '5Y': 0
+    // Initialize with defaults
+    let score = 0.5;
+    let positive = 50;
+    let neutral = 30;
+    let negative = 20;
+    let sentimentHistory = {
+      '1D': 0.5, '7D': 0.5, '1M': 0.5, '3M': 0.5,
+      '6M': 0.5, '1Y': 0.5, '3Y': 0.5, '5Y': 0.5
     };
 
-    let chartData = {};
+    // Process array of hourly sentiment data from FMP
+    if (Array.isArray(sentimentData) && sentimentData.length > 0) {
+      // Filter out entries with zero sentiment (no data for that hour)
+      const validData = sentimentData.filter(item => 
+        (item.stocktwitsSentiment > 0 || item.twitterSentiment > 0)
+      );
 
-    if (historical.historical && Array.isArray(historical.historical) && historical.historical.length > 0) {
-      const calculatePerformance = (days) => {
-        if (historical.historical.length <= days) return 0;
-        const current = historical.historical[0].close;
-        const past = historical.historical[days]?.close;
-        if (!past || !current) return 0;
-        return parseFloat(((current - past) / past * 100).toFixed(2));
-      };
+      if (validData.length > 0) {
+        // Calculate current average sentiment from both sources
+        let totalSentiment = 0;
+        let sentimentCount = 0;
 
-      performance = {
-        '1D': calculatePerformance(1),
-        '7D': calculatePerformance(7),
-        '1M': calculatePerformance(30),
-        '3M': calculatePerformance(90),
-        '6M': calculatePerformance(180),
-        '1Y': calculatePerformance(252),
-        '3Y': historical.historical.length > 756 ? calculatePerformance(756) : 0,
-        '5Y': historical.historical.length > 1260 ? calculatePerformance(1260) : 0
-      };
+        validData.forEach(item => {
+          if (item.stocktwitsSentiment > 0) {
+            totalSentiment += item.stocktwitsSentiment;
+            sentimentCount++;
+          }
+          if (item.twitterSentiment > 0) {
+            totalSentiment += item.twitterSentiment;
+            sentimentCount++;
+          }
+        });
 
-      // Prepare chart data for different periods
-      chartData = {
-        '1D': historical.historical.slice(0, 1).reverse().map(d => ({ date: d.date, price: d.close })),
-        '7D': historical.historical.slice(0, 7).reverse().map(d => ({ date: d.date, price: d.close })),
-        '1M': historical.historical.slice(0, 30).reverse().map(d => ({ date: d.date, price: d.close })),
-        '3M': historical.historical.slice(0, 90).reverse().map(d => ({ date: d.date, price: d.close })),
-        '6M': historical.historical.slice(0, 180).reverse().map(d => ({ date: d.date, price: d.close })),
-        '1Y': historical.historical.slice(0, 252).reverse().map(d => ({ date: d.date, price: d.close })),
-        '3Y': historical.historical.slice(0, 756).reverse().map(d => ({ date: d.date, price: d.close })),
-        '5Y': historical.historical.slice(0, 1260).reverse().map(d => ({ date: d.date, price: d.close }))
-      };
+        // Current overall score (0-1 scale where 0.5 = neutral)
+        score = sentimentCount > 0 ? parseFloat((totalSentiment / sentimentCount).toFixed(2)) : 0.5;
+
+        // Convert score to sentiment distribution
+        // Sentiment is on 0-1 scale: 0 = very negative, 0.5 = neutral, 1 = very positive
+        positive = Math.round(score * 100);
+        negative = Math.round((1 - score) * 100);
+        neutral = 100 - positive - negative;
+
+        // Calculate historical sentiment by time periods
+        const now = new Date();
+        const calculatePeriodSentiment = (hoursBack) => {
+          const cutoffTime = new Date(now.getTime() - hoursBack * 60 * 60 * 1000);
+          const periodData = validData.filter(item => {
+            const itemDate = new Date(item.date);
+            return itemDate >= cutoffTime;
+          });
+
+          if (periodData.length === 0) return score;
+
+          let totalPeriodSentiment = 0;
+          let periodCount = 0;
+
+          periodData.forEach(item => {
+            if (item.stocktwitsSentiment > 0) {
+              totalPeriodSentiment += item.stocktwitsSentiment;
+              periodCount++;
+            }
+            if (item.twitterSentiment > 0) {
+              totalPeriodSentiment += item.twitterSentiment;
+              periodCount++;
+            }
+          });
+
+          return periodCount > 0 ? parseFloat((totalPeriodSentiment / periodCount).toFixed(2)) : score;
+        };
+
+        // Generate sentiment history for different periods
+        sentimentHistory = {
+          '1D': calculatePeriodSentiment(24),
+          '7D': calculatePeriodSentiment(24 * 7),
+          '1M': calculatePeriodSentiment(24 * 30),
+          '3M': calculatePeriodSentiment(24 * 90),
+          '6M': calculatePeriodSentiment(24 * 180),
+          '1Y': calculatePeriodSentiment(24 * 365),
+          '3Y': calculatePeriodSentiment(24 * 365 * 3),
+          '5Y': calculatePeriodSentiment(24 * 365 * 5)
+        };
+      }
     }
 
-    const stockData = {
-      code: symbol,
-      name: profile.companyName,
-      exchange: profile.exchangeShortName || profile.exchange || 'N/A',
-      currentPrice: quote.price || profile.price || 0,
-      dayChange: quote.changesPercentage || 0,
-      marketCap: profile.mktCap 
-        ? (profile.mktCap / 1e9).toFixed(2) + 'B'
-        : 'N/A',
-      pe: profile.pe ? profile.pe.toFixed(2) : 'N/A',
-      analystRating: profile.dcf > profile.price ? 'Buy' : 'Hold',
-      industry: profile.industry || 'N/A',
-      sector: profile.sector || 'N/A',
-      performance,
-      chartData
-    };
-
-    return NextResponse.json(stockData);
+    return NextResponse.json({
+      score,
+      positive,
+      neutral,
+      negative,
+      sentimentHistory,
+      source: 'FMP Social Sentiment'
+    });
   } catch (error) {
-    console.error('Stock API Error:', error);
-    return NextResponse.json({ error: 'Failed to fetch stock data' }, { status: 500 });
+    console.error('Sentiment API Error:', error.message);
+    return NextResponse.json({
+      score: 0.5,
+      positive: 50,
+      neutral: 30,
+      negative: 20,
+      sentimentHistory: {
+        '1D': 0.5, '7D': 0.5, '1M': 0.5, '3M': 0.5,
+        '6M': 0.5, '1Y': 0.5, '3Y': 0.5, '5Y': 0.5
+      },
+      source: 'Default (API unavailable)'
+    });
   }
 }
