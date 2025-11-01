@@ -8,42 +8,59 @@ import { ComparisonSection } from './components/ComparisonSection';
 // Fetch complete stock data from API routes
 const fetchCompleteStockData = async (symbol) => {
   try {
-    const [stockRes, sentimentRes, newsRes] = await Promise.all([
-      fetch(`/api/stock?symbol=${symbol}`),
-      fetch(`/api/sentiment?symbol=${symbol}`),
-      fetch(`/api/news?symbol=${symbol}`)
-    ]);
+    // Fetch stock data (required)
+    const stockRes = await fetch(`/api/stock?symbol=${symbol}`);
+    if (!stockRes.ok) {
+      console.error(`Stock API error: ${stockRes.status}`);
+      return null;
+    }
+    const stock = await stockRes.json();
+    if (stock.error) {
+      console.error(`Stock error: ${stock.error}`);
+      return null;
+    }
 
-    if (!stockRes.ok) throw new Error(`Stock API error: ${stockRes.status}`);
-    if (!sentimentRes.ok) throw new Error(`Sentiment API error: ${sentimentRes.status}`);
-    if (!newsRes.ok) throw new Error(`News API error: ${newsRes.status}`);
+    // Fetch sentiment data (optional - use defaults if fails)
+    let sentiment = { score: 0.5, positive: 50, neutral: 30, negative: 20, sentimentHistory: { '1D': 0.5, '7D': 0.5, '1M': 0.5 } };
+    try {
+      const sentimentRes = await fetch(`/api/sentiment?symbol=${symbol}`);
+      if (sentimentRes.ok) {
+        sentiment = await sentimentRes.json();
+      }
+    } catch {
+      console.warn('Sentiment fetch failed, using defaults');
+    }
 
-    const [stock, sentiment, news] = await Promise.all([
-      stockRes.json(),
-      sentimentRes.json(),
-      newsRes.json()
-    ]);
+    // Fetch news data (optional - use empty if fails)
+    let news = [];
+    try {
+      const newsRes = await fetch(`/api/news?symbol=${symbol}`);
+      if (newsRes.ok) {
+        news = await newsRes.json();
+        if (!Array.isArray(news)) news = [];
+      }
+    } catch {
+      console.warn('News fetch failed, using empty array');
+    }
 
-    if (stock.error) throw new Error(stock.error);
-
+    // Fetch competitors (optional)
     let competitors = [];
     try {
       const competitorsRes = await fetch(`/api/competitors?sector=${stock.sector}&exclude=${symbol}`);
       if (competitorsRes.ok) {
-        const competitorsData = await competitorsRes.json();
-        competitors = competitorsData || [];
+        competitors = await competitorsRes.json();
+        if (!Array.isArray(competitors)) competitors = [];
       }
-    } catch (compError) {
-      console.warn('Failed to fetch competitors:', compError);
-      competitors = [];
+    } catch {
+      console.warn('Competitors fetch failed');
     }
 
     return {
       ...stock,
       sentiment,
-      sentimentHistory: sentiment.sentimentHistory,
-      news,
-      competitors
+      sentimentHistory: sentiment.sentimentHistory || {},
+      news: Array.isArray(news) ? news : [],
+      competitors: Array.isArray(competitors) ? competitors : []
     };
   } catch (error) {
     console.error('Fetch error:', error);
@@ -310,6 +327,7 @@ export default function StockAnalysisDashboard() {
                       <XAxis dataKey="date" stroke="#9CA3AF" />
                       <YAxis 
                         stroke="#9CA3AF" 
+                        allowDecimals={false}
                         domain={
                           chartData.length > 0 
                             ? [
