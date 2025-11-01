@@ -1,5 +1,5 @@
-import React from 'react';
-import { X } from 'lucide-react';
+import React, { useState } from 'react';
+import { X, ArrowUp, ArrowDown } from 'lucide-react';
 
 const getColorForPerformance = (value) => {
   const numValue = parseFloat(value);
@@ -141,6 +141,52 @@ export function ComparisonTable({
 }
 
 function TableView({ selectedStock, comparisonStocks, periods, onRemoveComparison, onStockCodeClick }) {
+  const [sortColumn, setSortColumn] = useState(null);
+  const [sortDirection, setSortDirection] = useState('asc');
+
+  const handleSort = (column) => {
+    if (sortColumn === column) {
+      setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
+    } else {
+      setSortColumn(column);
+      setSortDirection('asc');
+    }
+  };
+
+  const getSortValue = (stock, column) => {
+    if (column === 'code') return stock.code;
+    if (column === 'name') return stock.name;
+    if (column === 'marketCap') return getMarketCapValue(stock.marketCap);
+    if (column === 'pe') return parseFloat(stock.pe) || 0;
+    if (column === 'rating') return stock.analystRating;
+    if (periods.includes(column)) return stock.performance[column];
+    return 0;
+  };
+
+  const sortedComparisonStocks = [...comparisonStocks].sort((a, b) => {
+    if (!sortColumn) return 0;
+
+    const aValue = getSortValue(a, sortColumn);
+    const bValue = getSortValue(b, sortColumn);
+
+    if (typeof aValue === 'string' && typeof bValue === 'string') {
+      return sortDirection === 'asc'
+        ? aValue.localeCompare(bValue)
+        : bValue.localeCompare(aValue);
+    }
+
+    return sortDirection === 'asc'
+      ? aValue - bValue
+      : bValue - aValue;
+  });
+
+  const SortIcon = ({ column }) => {
+    if (sortColumn !== column) return null;
+    return sortDirection === 'asc'
+      ? <ArrowUp size={14} className="inline ml-1" />
+      : <ArrowDown size={14} className="inline ml-1" />;
+  };
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full">
@@ -153,14 +199,43 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
             <th className="px-4 py-3 text-center"></th>
           </tr>
           <tr>
-            <th className="px-4 py-3 text-left">Code</th>
-            <th className="px-2 py-3 text-left whitespace-nowrap">Name</th>
-            <th className="px-4 py-3 text-right">Market Cap</th>
-            <th className="px-4 py-3 text-right">P/E</th>
-            <th className="px-4 py-3 text-center">Rating</th>
+            <th
+              className="px-4 py-3 text-left cursor-pointer hover:bg-gray-800 transition"
+              onClick={() => handleSort('code')}
+            >
+              Code <SortIcon column="code" />
+            </th>
+            <th
+              className="px-2 py-3 text-left whitespace-nowrap cursor-pointer hover:bg-gray-800 transition"
+              onClick={() => handleSort('name')}
+            >
+              Name <SortIcon column="name" />
+            </th>
+            <th
+              className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
+              onClick={() => handleSort('marketCap')}
+            >
+              Market Cap <SortIcon column="marketCap" />
+            </th>
+            <th
+              className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
+              onClick={() => handleSort('pe')}
+            >
+              P/E <SortIcon column="pe" />
+            </th>
+            <th
+              className="px-4 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
+              onClick={() => handleSort('rating')}
+            >
+              Rating <SortIcon column="rating" />
+            </th>
             {periods.map(period => (
-              <th key={period} className="px-4 py-3 text-center">
-                {period}
+              <th
+                key={period}
+                className="px-4 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
+                onClick={() => handleSort(period)}
+              >
+                {period} <SortIcon column={period} />
               </th>
             ))}
             <th className="px-4 py-3 text-center">Action</th>
@@ -214,7 +289,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
             ))}
             <td className="px-4 py-3 text-center text-gray-400">-</td>
           </tr>
-          {comparisonStocks.map((stock, idx) => (
+          {sortedComparisonStocks.map((stock, idx) => (
             <tr key={stock.code} className={idx % 2 === 0 ? 'bg-gray-700/50' : 'bg-gray-800/50'}>
               <td className="px-4 py-3 font-medium text-white">
                 <span

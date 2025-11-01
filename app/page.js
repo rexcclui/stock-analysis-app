@@ -379,28 +379,25 @@ export default function StockAnalysisDashboard() {
           </div>
 
           {isClient && searchHistoryStocks.length > 0 && (
-            <div className="mb-6">
-              <p className="text-sm text-gray-400 mb-2">Recent Searches:</p>
-              <div className="flex flex-wrap gap-2">
-                {searchHistoryStocks.map((item) => (
-                  <button
-                    key={item.code + item.dayChange}
-                    onClick={() => {
-                      setSearchInput(item.code);
-                      handleSearch();
-                    }}
-                    className={`px-3 py-1 text-white rounded-lg text-sm font-medium transition ${
-                      item.dayChange > 0
-                        ? 'bg-green-700 hover:bg-green-600 border border-green-600 hover:border-green-500'
-                        : item.dayChange < 0
-                        ? 'bg-red-700 hover:bg-red-600 border border-red-600 hover:border-red-500'
-                        : 'bg-gray-700 hover:bg-gray-600 border border-gray-600 hover:border-gray-500'
-                    }`}
-                  >
-                    {item.code}
-                  </button>
-                ))}
-              </div>
+            <div className="mb-6 flex items-center gap-3 flex-wrap">
+              <span className="text-sm text-gray-400">Recent Searches:</span>
+              {searchHistoryStocks.map((item) => (
+                <button
+                  key={item.code + item.dayChange}
+                  onClick={() => {
+                    handleSearch(item.code);
+                  }}
+                  className={`px-3 py-1 text-white rounded-lg text-sm font-medium transition ${
+                    item.dayChange > 0
+                      ? 'bg-green-700 hover:bg-green-600 border border-green-600 hover:border-green-500'
+                      : item.dayChange < 0
+                      ? 'bg-red-700 hover:bg-red-600 border border-red-600 hover:border-red-500'
+                      : 'bg-gray-700 hover:bg-gray-600 border border-gray-600 hover:border-gray-500'
+                  }`}
+                >
+                  {item.code}
+                </button>
+              ))}
             </div>
           )}
 
