@@ -140,6 +140,14 @@ export function ComparisonTable({
   );
 }
 
+// Lifted out to avoid recreation warnings
+const SortIcon = ({ active, direction }) => {
+  if (!active) return null;
+  return direction === 'asc'
+    ? <ArrowUp size={14} className="inline ml-1" />
+    : <ArrowDown size={14} className="inline ml-1" />;
+};
+
 function TableView({ selectedStock, comparisonStocks, periods, onRemoveComparison, onStockCodeClick }) {
   const [sortColumn, setSortColumn] = useState(null);
   const [sortDirection, setSortDirection] = useState('asc');
@@ -180,11 +188,34 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
       : bValue - aValue;
   });
 
-  const SortIcon = ({ column }) => {
-    if (sortColumn !== column) return null;
-    return sortDirection === 'asc'
-      ? <ArrowUp size={14} className="inline ml-1" />
-      : <ArrowDown size={14} className="inline ml-1" />;
+  const isActive = (col) => sortColumn === col;
+
+  // Collect all P/E numeric values (exclude non-numeric and dash)
+  const allPeValues = [selectedStock, ...comparisonStocks]
+    .map(s => parseFloat(s.pe))
+    .filter(v => !isNaN(v) && v > 0);
+  const minPe = allPeValues.length ? Math.min(...allPeValues) : null;
+  const maxPe = allPeValues.length ? Math.max(...allPeValues) : null;
+
+  const getPeCellStyle = (pe) => {
+    const numericPe = parseFloat(pe);
+    if (isNaN(numericPe) || numericPe <= 0 || minPe === null || maxPe === null || minPe === maxPe) {
+      return { backgroundColor: '#4B5563', color: 'white', borderRadius: '0.5rem', padding: '0.5rem', textAlign: 'right', fontWeight: '600' };
+    }
+    // Normalize 0..1
+    const ratio = (numericPe - minPe) / (maxPe - minPe);
+    // Interpolate between blue (#1d4ed8) and red (#dc2626)
+    const lerpColor = (c1, c2, t) => {
+      const hexToRgb = h => h.match(/.{2}/g).map(x => parseInt(x, 16));
+      const [r1,g1,b1] = hexToRgb(c1);
+      const [r2,g2,b2] = hexToRgb(c2);
+      const r = Math.round(r1 + (r2 - r1) * t);
+      const g = Math.round(g1 + (g2 - g1) * t);
+      const b = Math.round(b1 + (b2 - b1) * t);
+      return `rgb(${r}, ${g}, ${b})`;
+    };
+    const bg = lerpColor('1d4ed8', 'dc2626', ratio);
+    return { backgroundColor: bg, color: 'white', borderRadius: '0.5rem', padding: '0.5rem', textAlign: 'right', fontWeight: '600' };
   };
 
   return (
@@ -203,31 +234,31 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
               className="px-4 py-3 text-left cursor-pointer hover:bg-gray-800 transition"
               onClick={() => handleSort('code')}
             >
-              Code <SortIcon column="code" />
+              Code <SortIcon active={isActive('code')} direction={sortDirection} />
             </th>
             <th
               className="px-2 py-3 text-left whitespace-nowrap cursor-pointer hover:bg-gray-800 transition"
               onClick={() => handleSort('name')}
             >
-              Name <SortIcon column="name" />
+              Name <SortIcon active={isActive('name')} direction={sortDirection} />
             </th>
             <th
               className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
               onClick={() => handleSort('marketCap')}
             >
-              Market Cap <SortIcon column="marketCap" />
+              Market Cap <SortIcon active={isActive('marketCap')} direction={sortDirection} />
             </th>
             <th
               className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
               onClick={() => handleSort('pe')}
             >
-              P/E <SortIcon column="pe" />
+              P/E <SortIcon active={isActive('pe')} direction={sortDirection} />
             </th>
             <th
               className="px-4 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
               onClick={() => handleSort('rating')}
             >
-              Rating <SortIcon column="rating" />
+              Rating <SortIcon active={isActive('rating')} direction={sortDirection} />
             </th>
             {periods.map(period => (
               <th
@@ -235,7 +266,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 className="px-4 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
                 onClick={() => handleSort(period)}
               >
-                {period} <SortIcon column={period} />
+                {period} <SortIcon active={isActive(period)} direction={sortDirection} />
               </th>
             ))}
             <th className="px-4 py-3 text-center">Action</th>
@@ -262,7 +293,11 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
               >{selectedStock.name}</span>
             </td>
             <td className="px-4 py-3 text-right text-gray-200">${selectedStock.marketCap}</td>
-            <td className="px-4 py-3 text-right text-gray-200">{selectedStock.pe}</td>
+            <td className="px-4 py-3">
+              <div style={getPeCellStyle(selectedStock.pe)}>
+                {selectedStock.pe === '—' ? '—' : selectedStock.pe}
+              </div>
+            </td>
             <td className="px-4 py-3 text-center">
               <span className="px-2 py-1 bg-green-900/40 text-green-300 rounded-full text-sm font-medium border border-green-700">
                 {selectedStock.analystRating}
@@ -310,7 +345,11 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 >{stock.name}</span>
               </td>
               <td className="px-4 py-3 text-right text-gray-200">${stock.marketCap}</td>
-              <td className="px-4 py-3 text-right text-gray-200">{stock.pe}</td>
+              <td className="px-4 py-3">
+                <div style={getPeCellStyle(stock.pe)}>
+                  {stock.pe === '—' ? '—' : stock.pe}
+                </div>
+              </td>
               <td className="px-4 py-3 text-center">
                 <span className="px-2 py-1 bg-gray-600 text-gray-200 rounded-full text-sm border border-gray-500">
                   {stock.analystRating}
