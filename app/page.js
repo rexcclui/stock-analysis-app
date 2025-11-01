@@ -47,7 +47,11 @@ const getSentimentColor = (score) => {
 export default function StockAnalysisDashboard() {
   const [searchInput, setSearchInput] = useState('');
   const [selectedStock, setSelectedStock] = useState(null);
-  const [chartPeriod, setChartPeriod] = useState('1M');
+  const [chartPeriod, setChartPeriod] = useState(() => {
+    if (typeof window === 'undefined') return '1M';
+    const saved = localStorage.getItem('chartPeriod');
+    return saved || '1M';
+  });
   const [comparisonStocks, setComparisonStocks] = useState([]);
   const [manualStock, setManualStock] = useState('');
   const [savedComparisons, setSavedComparisons] = useState({});
@@ -264,7 +268,10 @@ export default function StockAnalysisDashboard() {
                     {periods.map(period => (
                       <button
                         key={period}
-                        onClick={() => setChartPeriod(period)}
+                        onClick={() => {
+                          setChartPeriod(period);
+                          localStorage.setItem('chartPeriod', period);
+                        }}
                         className={`px-3 py-1 rounded-lg text-sm font-medium transition ${
                           chartPeriod === period
                             ? 'bg-blue-600 text-white'
@@ -281,7 +288,17 @@ export default function StockAnalysisDashboard() {
                     <LineChart data={chartData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                       <XAxis dataKey="date" stroke="#9CA3AF" />
-                      <YAxis stroke="#9CA3AF" />
+                      <YAxis 
+                        stroke="#9CA3AF" 
+                        domain={
+                          chartData.length > 0 
+                            ? [
+                                Math.min(...chartData.map(d => d.price)) * 0.9,
+                                Math.max(...chartData.map(d => d.price)) * 1.05
+                              ]
+                            : ['auto', 'auto']
+                        }
+                      />
                       <Tooltip 
                         contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }}
                         labelStyle={{ color: '#F3F4F6' }}
