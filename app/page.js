@@ -90,6 +90,19 @@ export default function StockAnalysisDashboard() {
   const [searchHistoryStocks, setSearchHistoryStocks] = useState([]); // array of { code, dayChange }
   const HISTORY_COL_WIDTH = 140; // approximate width for each cell
 
+  // Normalize possible percentage string or numeric into clean number
+  const normalizeDayChange = (val) => {
+    if (val === null || val === undefined) return 0;
+    if (typeof val === 'string') {
+      const cleaned = val.replace(/[%()]/g, '').trim();
+      const num = parseFloat(cleaned.replace(/[^0-9.+-]/g, ''));
+      if (isNaN(num)) return 0;
+      return cleaned.startsWith('-') ? -Math.abs(num) : Math.abs(num);
+    }
+    const num = Number(val);
+    return isNaN(num) ? 0 : num;
+  };
+
   const computeMaxColumns = () => {
     if (typeof window === 'undefined') return 8; // fallback
     return Math.max(1, Math.floor(window.innerWidth / HISTORY_COL_WIDTH));
@@ -108,7 +121,7 @@ export default function StockAnalysisDashboard() {
   const addSearchHistoryStock = (entry) => {
     setSearchHistoryStocks(prev => {
       const filtered = prev.filter(e => e.code !== entry.code); // dedupe
-      const updated = [{ code: entry.code, dayChange: entry.dayChange }, ...filtered];
+      const updated = [{ code: entry.code, dayChange: normalizeDayChange(entry.dayChange) }, ...filtered];
       const capacity = maxCapacity();
       if (updated.length > capacity) {
         return updated.slice(0, capacity); // drop oldest beyond capacity
@@ -162,7 +175,9 @@ export default function StockAnalysisDashboard() {
     if (savedDetailed) {
       try {
         const parsed = JSON.parse(savedDetailed);
-        if (Array.isArray(parsed)) setSearchHistoryStocks(parsed);
+        if (Array.isArray(parsed)) {
+          setSearchHistoryStocks(parsed.map(e => ({ code: e.code, dayChange: normalizeDayChange(e.dayChange) })));
+        }
       } catch {}
     }
     // Load chartPeriod from localStorage
@@ -371,7 +386,13 @@ export default function StockAnalysisDashboard() {
                       setSearchInput(item.code);
                       handleSearch();
                     }}
-                    className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition border border-gray-600 hover:border-gray-500"
+                    className={`px-3 py-1 text-white rounded-lg text-sm font-medium transition ${
+                      item.dayChange > 0
+                        ? 'bg-green-700 hover:bg-green-600 border border-green-600 hover:border-green-500'
+                        : item.dayChange < 0
+                        ? 'bg-red-700 hover:bg-red-600 border border-red-600 hover:border-red-500'
+                        : 'bg-gray-700 hover:bg-gray-600 border border-gray-600 hover:border-gray-500'
+                    }`}
                   >
                     {item.code}
                   </button>

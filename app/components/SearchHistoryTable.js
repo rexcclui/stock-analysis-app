@@ -7,19 +7,27 @@ export function SearchHistoryTable({ historyStocks, onClickCode }) {
 
   return (
     <div className="bg-gray-800 rounded-xl p-4 mb-6 border border-gray-700 shadow-md">
-      <h3 className="text-lg font-semibold text-white mb-3">Recent Search:</h3>
+      <h3 className="text-lg font-semibold text-white mb-3">Previous Search:</h3>
       <div className="flex flex-wrap gap-3">
         {historyStocks.map(item => {
           const pct = item.dayChange ?? 0;
-          const color = pct > 0 ? 'text-green-400' : pct < 0 ? 'text-red-400' : 'text-gray-400';
+          const trendBg = pct > 0
+            ? 'bg-green-700 hover:bg-green-600 border-green-600 hover:border-green-500'
+            : pct < 0
+            ? 'bg-red-700 hover:bg-red-600 border-red-600 hover:border-red-500'
+            : 'bg-gray-700 hover:bg-gray-600 border-gray-600 hover:border-gray-500';
+          // Force white font regardless of trend
+          const color = 'text-white';
+          const inlineBg = pct > 0 ? '#047857' : pct < 0 ? '#7f1d1d' : '#374151';
           return (
             <button
               key={item.code + pct}
               onClick={() => onClickCode && onClickCode(item.code)}
-              className="group flex flex-col items-start min-w-[120px] px-3 py-2 bg-gray-700 hover:bg-gray-600 rounded-lg border border-gray-600 hover:border-gray-500 transition"
+              className={`group flex flex-col items-center justify-center min-w-[120px] h-20 px-3 py-2 rounded-lg border transition ${trendBg}`}
+              style={{ backgroundColor: inlineBg }}
             >
-              <span className="font-mono text-sm text-blue-300 group-hover:text-blue-200">{item.code}</span>
-              <span className={`text-xs font-semibold ${color}`}>{pct > 0 ? '+' : ''}{pct.toFixed(2)}%</span>
+              <span className="font-mono text-sm font-bold text-white group-hover:text-white">{item.code}</span>
+              <span className={`text-xs font-bold ${color}`}>{pct > 0 ? '+' : ''}{pct.toFixed(2)}%</span>
             </button>
           );
         })}
