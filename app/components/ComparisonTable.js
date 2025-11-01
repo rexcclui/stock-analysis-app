@@ -151,7 +151,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
           </tr>
           <tr>
             <th className="px-4 py-3 text-left">Code</th>
-            <th className="px-4 py-3 text-left">Name</th>
+            <th className="px-2 py-3 text-left whitespace-nowrap">Name</th>
             <th className="px-4 py-3 text-right">Market Cap</th>
             <th className="px-4 py-3 text-right">P/E</th>
             <th className="px-4 py-3 text-center">Rating</th>
@@ -166,7 +166,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
         <tbody>
           <tr className="bg-blue-900/30 border-b-2 border-blue-700">
             <td className="px-4 py-3 font-bold text-white">{selectedStock.code}</td>
-            <td className="px-4 py-3 font-medium text-white">{selectedStock.name}</td>
+            <td className="px-2 py-3 font-medium text-white whitespace-nowrap">{selectedStock.name}</td>
             <td className="px-4 py-3 text-right text-gray-200">${selectedStock.marketCap}</td>
             <td className="px-4 py-3 text-right text-gray-200">{selectedStock.pe}</td>
             <td className="px-4 py-3 text-center">
@@ -191,7 +191,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
           {comparisonStocks.map((stock, idx) => (
             <tr key={stock.code} className={idx % 2 === 0 ? 'bg-gray-700/50' : 'bg-gray-800/50'}>
               <td className="px-4 py-3 font-medium text-white">{stock.code}</td>
-              <td className="px-4 py-3 text-gray-200">{stock.name}</td>
+              <td className="px-2 py-3 text-gray-200 whitespace-nowrap">{stock.name}</td>
               <td className="px-4 py-3 text-right text-gray-200">${stock.marketCap}</td>
               <td className="px-4 py-3 text-right text-gray-200">{stock.pe}</td>
               <td className="px-4 py-3 text-center">
