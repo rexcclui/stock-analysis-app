@@ -14,6 +14,10 @@ const fetchCompleteStockData = async (symbol) => {
       fetch(`/api/news?symbol=${symbol}`)
     ]);
 
+    if (!stockRes.ok) throw new Error(`Stock API error: ${stockRes.status}`);
+    if (!sentimentRes.ok) throw new Error(`Sentiment API error: ${sentimentRes.status}`);
+    if (!newsRes.ok) throw new Error(`News API error: ${newsRes.status}`);
+
     const [stock, sentiment, news] = await Promise.all([
       stockRes.json(),
       sentimentRes.json(),
@@ -22,8 +26,17 @@ const fetchCompleteStockData = async (symbol) => {
 
     if (stock.error) throw new Error(stock.error);
 
-    const competitorsRes = await fetch(`/api/competitors?sector=${stock.sector}&exclude=${symbol}`);
-    const competitors = await competitorsRes.json();
+    let competitors = [];
+    try {
+      const competitorsRes = await fetch(`/api/competitors?sector=${stock.sector}&exclude=${symbol}`);
+      if (competitorsRes.ok) {
+        const competitorsData = await competitorsRes.json();
+        competitors = competitorsData || [];
+      }
+    } catch (compError) {
+      console.warn('Failed to fetch competitors:', compError);
+      competitors = [];
+    }
 
     return {
       ...stock,
@@ -47,11 +60,7 @@ const getSentimentColor = (score) => {
 export default function StockAnalysisDashboard() {
   const [searchInput, setSearchInput] = useState('');
   const [selectedStock, setSelectedStock] = useState(null);
-  const [chartPeriod, setChartPeriod] = useState(() => {
-    if (typeof window === 'undefined') return '1M';
-    const saved = localStorage.getItem('chartPeriod');
-    return saved || '1M';
-  });
+  const [chartPeriod, setChartPeriod] = useState('1M');
   const [comparisonStocks, setComparisonStocks] = useState([]);
   const [manualStock, setManualStock] = useState('');
   const [savedComparisons, setSavedComparisons] = useState({});
@@ -59,11 +68,22 @@ export default function StockAnalysisDashboard() {
   const [viewMode, setViewMode] = useState('table');
   const [heatmapColorBy, setHeatmapColorBy] = useState('1D');
   const [heatmapSizeBy, setHeatmapSizeBy] = useState('marketCap');
-  const [searchHistory, setSearchHistory] = useState(() => {
-    if (typeof window === 'undefined') return [];
+  const [searchHistory, setSearchHistory] = useState([]);
+  const [isClient, setIsClient] = useState(false);
+
+  React.useEffect(() => {
+    setIsClient(true);
+    // Load searchHistory from localStorage
     const saved = localStorage.getItem('stockSearchHistory');
-    return saved ? JSON.parse(saved) : [];
-  });
+    if (saved) {
+      setSearchHistory(JSON.parse(saved));
+    }
+    // Load chartPeriod from localStorage
+    const savedPeriod = localStorage.getItem('chartPeriod');
+    if (savedPeriod) {
+      setChartPeriod(savedPeriod);
+    }
+  }, []);
 
   const chartData = selectedStock?.chartData?.[chartPeriod] || [];
 
@@ -159,8 +179,8 @@ export default function StockAnalysisDashboard() {
   const periods = ['1D', '7D', '1M', '3M', '6M', '1Y', '3Y', '5Y'];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-800 p-6">
-      <div className="max-w-7xl mx-auto">
+    <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-800 p-6 pl-20">
+      <div className="w-full">
         <div className="bg-gray-800 rounded-2xl shadow-2xl p-8 mb-6 border border-gray-700">
           <h1 className="text-4xl font-bold text-white mb-6 flex items-center gap-3">
             <BarChart3 className="text-blue-400" size={40} />
@@ -187,7 +207,7 @@ export default function StockAnalysisDashboard() {
             </button>
           </div>
 
-          {searchHistory.length > 0 && (
+          {isClient && searchHistory.length > 0 && (
             <div className="mb-6">
               <p className="text-sm text-gray-400 mb-2">Recent Searches:</p>
               <div className="flex flex-wrap gap-2">
