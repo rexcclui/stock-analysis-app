@@ -87,6 +87,39 @@ export default function StockAnalysisDashboard() {
   const [heatmapSizeBy, setHeatmapSizeBy] = useState('marketCap');
   const [searchHistory, setSearchHistory] = useState([]);
   const [isClient, setIsClient] = useState(false);
+  // Chart comparison input & stocks (for overlay lines)
+  const [chartCompareInput, setChartCompareInput] = useState('');
+  const [chartCompareStocks, setChartCompareStocks] = useState([]); // array of { code, series: [{date, pct}] }
+
+
+  const buildNormalizedSeries = (stock, period) => {
+    if (!stock?.chartData?.[period]) return [];
+    const raw = stock.chartData[period];
+    if (!raw.length) return [];
+    const base = raw[0].price; // first (earliest after reverse) because we reversed earlier
+    return raw.map(p => ({
+      date: p.date,
+      pct: base ? parseFloat((((p.price - base) / base) * 100).toFixed(2)) : 0
+    }));
+  };
+
+  // Merge multiple normalized series into one dataset keyed by date
+  const buildMultiStockDataset = (primarySeries, compareSeriesArr) => {
+    const map = new Map();
+    const addSeries = (series, key) => {
+      series.forEach(point => {
+        if (!map.has(point.date)) {
+          map.set(point.date, { date: point.date });
+        }
+        map.get(point.date)[key] = point.pct;
+      });
+    };
+    addSeries(primarySeries, selectedStock?.code || 'PRIMARY');
+    compareSeriesArr.forEach(s => addSeries(s.series, s.code));
+    // Sort by date ascending
+    return Array.from(map.values()).sort((a,b) => a.date.localeCompare(b.date));
+  };
+
 
   React.useEffect(() => {
     setIsClient(true);
@@ -101,6 +134,15 @@ export default function StockAnalysisDashboard() {
       setChartPeriod(savedPeriod);
     }
   }, []);
+
+  // Rebuild normalized comparison series when chartPeriod changes
+  React.useEffect(() => {
+    if (!selectedStock) return;
+    setChartCompareStocks(prev => prev.map(s => ({
+      ...s,
+      series: buildNormalizedSeries(s.__stockRef, chartPeriod)
+    })));
+  }, [chartPeriod, selectedStock]);
 
   const chartData = selectedStock?.chartData?.[chartPeriod] || [];
 
@@ -141,6 +183,12 @@ export default function StockAnalysisDashboard() {
       const validSaved = savedData.filter(s => s !== null);
       
       setComparisonStocks([...validCompetitors, ...validSaved]);
+
+      // Also update existing chart compare series baseline to new period
+      setChartCompareStocks(prev => prev.map(s => ({
+        ...s,
+        series: buildNormalizedSeries(s.__stockRef, chartPeriod)
+      })));
       
     } catch (error) {
       console.error('Search error:', error);
@@ -148,6 +196,42 @@ export default function StockAnalysisDashboard() {
     }
     
     setLoading(false);
+  };
+
+  // Add stock for chart-only comparison (percentage lines)
+  const addChartCompareStock = async () => {
+    const code = chartCompareInput.toUpperCase().trim();
+    if (!code) return;
+    if (!selectedStock) {
+      alert('Load a primary stock first');
+      return;
+    }
+    if (code === selectedStock.code) {
+      alert('Already the primary stock');
+      return;
+    }
+    if (chartCompareStocks.find(s => s.code === code)) {
+      alert('Already added to chart');
+      return;
+    }
+    setLoading(true);
+    const stock = await fetchCompleteStockData(code);
+    setLoading(false);
+    if (!stock) {
+      alert('Stock not found');
+      return;
+    }
+    const series = buildNormalizedSeries(stock, chartPeriod);
+    if (!series.length) {
+      alert('No chart data for this period');
+      return;
+    }
+    setChartCompareStocks([...chartCompareStocks, { code, series, __stockRef: stock }]);
+    setChartCompareInput('');
+  };
+
+  const removeChartCompareStock = (code) => {
+    setChartCompareStocks(chartCompareStocks.filter(s => s.code !== code));
   };
 
   const addManualComparison = async () => {
@@ -321,29 +405,107 @@ export default function StockAnalysisDashboard() {
                   </div>
                 </div>
                 <div className="bg-gray-800 rounded-xl p-4 shadow-xl border border-gray-700">
-                  <ResponsiveContainer width="100%" height={300}>
-                    <LineChart data={chartData}>
+                  <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
+                    <div className="flex gap-2 flex-1">
+                      {periods.map(period => (
+                        <button
+                          key={period}
+                          onClick={() => {
+                            setChartPeriod(period);
+                            localStorage.setItem('chartPeriod', period);
+                          }}
+                          className={`px-3 py-1 rounded-lg text-sm font-medium transition ${
+                            chartPeriod === period
+                              ? 'bg-blue-600 text-white'
+                              : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
+                          }`}
+                        >
+                          {period}
+                        </button>
+                      ))}
+                    </div>
+                    <div className="flex gap-2 flex-1">
+                      <input
+                        type="text"
+                        placeholder="Add stock to chart (e.g. MSFT)"
+                        value={chartCompareInput}
+                        onChange={(e)=> setChartCompareInput(e.target.value)}
+                        onKeyDown={(e)=> e.key==='Enter' && addChartCompareStock()}
+                        className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500 placeholder-gray-400"
+                      />
+                      <button
+                        onClick={addChartCompareStock}
+                        className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition"
+                      >Add</button>
+                    </div>
+                  </div>
+                  {chartCompareStocks.length > 0 && (
+                    <div className="flex flex-wrap gap-2 mb-3">
+                      {chartCompareStocks.map(s => (
+                        <span key={s.code} className="flex items-center gap-1 bg-gray-700 px-2 py-1 rounded text-xs text-gray-200">
+                          {s.code}
+                          <button onClick={()=> removeChartCompareStock(s.code)} className="text-red-400 hover:text-red-300">×</button>
+                        </span>
+                      ))}
+                    </div>
+                  )}
+                  <ResponsiveContainer width="100%" height={320}>
+                    {(() => {
+                      const primarySeries = buildNormalizedSeries(selectedStock, chartPeriod);
+                      const multiData = chartCompareStocks.length === 0
+                        ? chartData
+                        : buildMultiStockDataset(primarySeries, chartCompareStocks);
+                      return (
+                        <LineChart data={multiData}>
                       <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                       <XAxis dataKey="date" stroke="#9CA3AF" />
-                      <YAxis 
-                        stroke="#9CA3AF" 
-                        allowDecimals={false}
-                        domain={
-                          chartData.length > 0 
-                            ? [
-                                Math.min(...chartData.map(d => d.price)) * 0.9,
-                                Math.max(...chartData.map(d => d.price)) * 1.05
-                              ]
-                            : ['auto', 'auto']
-                        }
-                      />
-                      <Tooltip 
+                      {chartCompareStocks.length === 0 ? (
+                        <YAxis
+                          stroke="#9CA3AF"
+                          allowDecimals={false}
+                          domain={
+                            chartData.length > 0
+                              ? [
+                                  Math.min(...chartData.map(d => d.price)) * 0.9,
+                                  Math.max(...chartData.map(d => d.price)) * 1.05
+                                ]
+                              : ['auto','auto']
+                          }
+                        />
+                      ) : (
+                        <YAxis
+                          stroke="#9CA3AF"
+                          tickFormatter={(v)=> `${v.toFixed(0)}%`}
+                          domain={['auto','auto']}
+                        />
+                      )}
+                      <Tooltip
                         contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }}
                         labelStyle={{ color: '#F3F4F6' }}
+                        formatter={(value, name) => [chartCompareStocks.length === 0 ? `$${value.toFixed(2)}` : `${value.toFixed(2)}%`, name]}
                       />
                       <Legend />
-                      <Line type="monotone" dataKey="price" stroke="#3B82F6" strokeWidth={2} />
-                    </LineChart>
+                      {chartCompareStocks.length === 0 ? (
+                        <Line type="monotone" dataKey="price" stroke="#3B82F6" strokeWidth={2} dot={false} />
+                      ) : (
+                        <>
+                          <Line type="monotone" dataKey={selectedStock.code} name={selectedStock.code} stroke="#3B82F6" strokeWidth={2} dot={false} />
+                          {chartCompareStocks.map((s, idx) => (
+                            <Line
+                              key={s.code}
+                              type="monotone"
+                              dataKey={s.code}
+                              name={s.code}
+                              strokeWidth={2}
+                              dot={false}
+                              stroke={['#10B981','#F59E0B','#EF4444','#8B5CF6','#0EA5E9','#84CC16','#D946EF'][idx % 7]}
+                            />
+                          ))}
+                        </>
+                      )}
+                        </LineChart>
+                      );
+                    })()}
                   </ResponsiveContainer>
                 </div>
               </div>
