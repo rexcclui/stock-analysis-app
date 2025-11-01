@@ -3,15 +3,15 @@ import { X } from 'lucide-react';
 
 const getColorForPerformance = (value) => {
   const numValue = parseFloat(value);
-  if (isNaN(numValue)) return 'bg-gray-600 text-white';
-  if (numValue >= 20) return 'bg-green-500 text-white';
-  if (numValue >= 10) return 'bg-green-600 text-white';
-  if (numValue >= 5) return 'bg-green-700 text-white';
-  if (numValue >= 0) return 'bg-green-800 text-white';
-  if (numValue >= -5) return 'bg-red-800 text-white';
-  if (numValue >= -10) return 'bg-red-700 text-white';
-  if (numValue >= -20) return 'bg-red-600 text-white';
-  return 'bg-red-500 text-white';
+  if (isNaN(numValue)) return { backgroundColor: '#4B5563', color: 'white' };
+  if (numValue >= 20) return { backgroundColor: '#10B981', color: 'white' };
+  if (numValue >= 10) return { backgroundColor: '#059669', color: 'white' };
+  if (numValue >= 5) return { backgroundColor: '#047857', color: 'white' };
+  if (numValue >= 0) return { backgroundColor: '#065F46', color: 'white' };
+  if (numValue >= -5) return { backgroundColor: '#7F1D1D', color: 'white' };
+  if (numValue >= -10) return { backgroundColor: '#B91C1C', color: 'white' };
+  if (numValue >= -20) return { backgroundColor: '#DC2626', color: 'white' };
+  return { backgroundColor: '#EF4444', color: 'white' };
 };
 
 const getSentimentBgColor = (score) => {
@@ -176,7 +176,14 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
             </td>
             {periods.map(period => (
               <td key={period} className="px-2 py-3">
-                <div className={`px-3 py-2 rounded-lg text-center font-bold mb-1 ${getColorForPerformance(selectedStock.performance[period])}`}>
+                <div style={{
+                  ...getColorForPerformance(selectedStock.performance[period]),
+                  padding: '0.75rem',
+                  borderRadius: '0.5rem',
+                  textAlign: 'center',
+                  fontWeight: 'bold',
+                  marginBottom: '0.25rem'
+                }}>
                   {selectedStock.performance[period] > 0 ? '+' : ''}{selectedStock.performance[period].toFixed(1)}%
                 </div>
                 {selectedStock.sentimentHistory && (
@@ -201,7 +208,14 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
               </td>
               {periods.map(period => (
                 <td key={period} className="px-2 py-3">
-                  <div className={`px-3 py-2 rounded-lg text-center font-bold mb-1 ${getColorForPerformance(stock.performance[period])}`}>
+                  <div style={{
+                    ...getColorForPerformance(stock.performance[period]),
+                    padding: '0.75rem',
+                    borderRadius: '0.5rem',
+                    textAlign: 'center',
+                    fontWeight: 'bold',
+                    marginBottom: '0.25rem'
+                  }}>
                     {stock.performance[period] > 0 ? '+' : ''}{stock.performance[period].toFixed(1)}%
                   </div>
                   {stock.sentimentHistory && (

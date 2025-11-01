@@ -66,8 +66,8 @@ export async function GET(request) {
         '3M': calculatePerformance(90),
         '6M': calculatePerformance(180),
         '1Y': calculatePerformance(252),
-        '3Y': historical.historical.length > 756 ? calculatePerformance(756) : 0,
-        '5Y': historical.historical.length > 1260 ? calculatePerformance(1260) : 0
+        '3Y': historical.historical.length > 756 ? calculatePerformance(756) : (historical.historical.length > 252 ? calculatePerformance(historical.historical.length - 1) : 0),
+        '5Y': historical.historical.length > 1260 ? calculatePerformance(1260) : (historical.historical.length > 252 ? calculatePerformance(historical.historical.length - 1) : 0)
       };
 
       // Prepare chart data for different periods

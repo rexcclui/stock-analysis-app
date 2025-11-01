@@ -35,8 +35,7 @@ export async function GET(request) {
     let neutral = 30;
     let negative = 20;
     let sentimentHistory = {
-      '1D': 0.5, '7D': 0.5, '1M': 0.5, '3M': 0.5,
-      '6M': 0.5, '1Y': 0.5, '3Y': 0.5, '5Y': 0.5
+      '1D': 0.5, '7D': 0.5, '1M': 0.5
     };
 
     // Process array of hourly sentiment data from FMP
@@ -103,12 +102,7 @@ export async function GET(request) {
         sentimentHistory = {
           '1D': calculatePeriodSentiment(24),
           '7D': calculatePeriodSentiment(24 * 7),
-          '1M': calculatePeriodSentiment(24 * 30),
-          '3M': calculatePeriodSentiment(24 * 90),
-          '6M': calculatePeriodSentiment(24 * 180),
-          '1Y': calculatePeriodSentiment(24 * 365),
-          '3Y': calculatePeriodSentiment(24 * 365 * 3),
-          '5Y': calculatePeriodSentiment(24 * 365 * 5)
+          '1M': calculatePeriodSentiment(24 * 30)
         };
       }
     }
@@ -134,8 +128,7 @@ export async function GET(request) {
       neutral: 30,
       negative: 20,
       sentimentHistory: {
-        '1D': 0.5, '7D': 0.5, '1M': 0.5, '3M': 0.5,
-        '6M': 0.5, '1Y': 0.5, '3Y': 0.5, '5Y': 0.5
+        '1D': 0.5, '7D': 0.5, '1M': 0.5
       },
       source: 'Default (API unavailable)'
     });
