@@ -427,7 +427,6 @@ export default function StockAnalysisDashboard() {
                         : '#9CA3AF'
                     }}>
                       {selectedStock.dayChange > 0 ? '+' : ''}{selectedStock.dayChange?.toFixed(2)}%
-                      <span className="text-sm text-gray-400"> Today</span>
                     </div>
                   </div>
                 </div>
