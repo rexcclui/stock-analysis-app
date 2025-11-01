@@ -2,9 +2,10 @@
 
 import React, { useState } from 'react';
 // Chart now extracted to PricePerformanceChart component
-import { Search, TrendingUp, TrendingDown, BarChart3 } from 'lucide-react';
+import { Search, BarChart3 } from 'lucide-react';
 import { ComparisonSection } from './components/ComparisonSection';
 import { PricePerformanceChart } from './components/PricePerformanceChart';
+import { NewsSection } from './components/NewsSection';
 
 // Fetch complete stock data from API routes
 const fetchCompleteStockData = async (symbol) => {
@@ -507,26 +508,7 @@ export default function StockAnalysisDashboard() {
                 </div>
               )}
 
-              {selectedStock.news && selectedStock.news.length > 0 && (
-                <div className="mt-6 bg-gray-800 rounded-xl shadow-xl p-6 border border-gray-700">
-                  <h3 className="text-xl font-bold text-white mb-4">Latest News</h3>
-                  <div className="space-y-3">
-                    {selectedStock.news.map((article, idx) => (
-                      <div key={idx} className="flex items-start gap-3 p-3 bg-gray-700/40 rounded-lg border border-gray-600">
-                        {article.sentiment === 'positive' ? (
-                          <TrendingUp className="text-green-400 mt-1" size={20} />
-                        ) : (
-                          <TrendingDown className="text-red-400 mt-1" size={20} />
-                        )}
-                        <div className="flex-1">
-                          <div className="font-medium text-white">{article.title}</div>
-                          <div className="text-sm text-gray-400">{article.date}</div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                </div>
-              )}
+              <NewsSection news={selectedStock.news} />
             </>
           )}
         </div>
