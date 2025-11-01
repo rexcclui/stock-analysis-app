@@ -45,6 +45,7 @@ export function ComparisonSection({
         onHeatmapColorByChange={onHeatmapColorByChange}
         heatmapSizeBy={heatmapSizeBy}
         onHeatmapSizeByChange={onHeatmapSizeByChange}
+        onStockCodeClick={onSearchHistoryCodeClick}
       />
     </>
   );

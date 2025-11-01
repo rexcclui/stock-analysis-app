@@ -52,7 +52,8 @@ export function ComparisonTable({
   heatmapColorBy,
   onHeatmapColorByChange,
   heatmapSizeBy,
-  onHeatmapSizeByChange
+  onHeatmapSizeByChange,
+  onStockCodeClick
 }) {
   return (
     <div className="bg-gray-800 rounded-xl shadow-xl overflow-hidden border border-gray-700">
@@ -62,6 +63,7 @@ export function ComparisonTable({
           comparisonStocks={comparisonStocks}
           periods={periods}
           onRemoveComparison={onRemoveComparison}
+          onStockCodeClick={onStockCodeClick}
         />
       ) : (
         <HeatmapView
@@ -70,6 +72,7 @@ export function ComparisonTable({
           heatmapColorBy={heatmapColorBy}
           heatmapSizeBy={heatmapSizeBy}
           onRemoveComparison={onRemoveComparison}
+          onStockCodeClick={onStockCodeClick}
         />
       )}
       
@@ -137,7 +140,7 @@ export function ComparisonTable({
   );
 }
 
-function TableView({ selectedStock, comparisonStocks, periods, onRemoveComparison }) {
+function TableView({ selectedStock, comparisonStocks, periods, onRemoveComparison, onStockCodeClick }) {
   return (
     <div className="overflow-x-auto">
       <table className="w-full">
@@ -165,8 +168,24 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
         </thead>
         <tbody>
           <tr className="bg-blue-900/30 border-b-2 border-blue-700">
-            <td className="px-4 py-3 font-bold text-white">{selectedStock.code}</td>
-            <td className="px-2 py-3 font-medium text-white whitespace-nowrap">{selectedStock.name}</td>
+            <td className="px-4 py-3 font-bold text-white">
+              <span
+                onClick={() => onStockCodeClick && onStockCodeClick(selectedStock.code)}
+                role="link"
+                tabIndex={0}
+                className="text-blue-400 hover:text-blue-300 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+              >
+                {selectedStock.code}
+              </span>
+            </td>
+            <td className="px-2 py-3 font-medium text-white whitespace-nowrap">
+              <span
+                onClick={() => onStockCodeClick && onStockCodeClick(selectedStock.code)}
+                role="link"
+                tabIndex={0}
+                className="text-blue-300 hover:text-blue-200 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+              >{selectedStock.name}</span>
+            </td>
             <td className="px-4 py-3 text-right text-gray-200">${selectedStock.marketCap}</td>
             <td className="px-4 py-3 text-right text-gray-200">{selectedStock.pe}</td>
             <td className="px-4 py-3 text-center">
@@ -197,8 +216,24 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
           </tr>
           {comparisonStocks.map((stock, idx) => (
             <tr key={stock.code} className={idx % 2 === 0 ? 'bg-gray-700/50' : 'bg-gray-800/50'}>
-              <td className="px-4 py-3 font-medium text-white">{stock.code}</td>
-              <td className="px-2 py-3 text-gray-200 whitespace-nowrap">{stock.name}</td>
+              <td className="px-4 py-3 font-medium text-white">
+                <span
+                  onClick={() => onStockCodeClick && onStockCodeClick(stock.code)}
+                  role="link"
+                  tabIndex={0}
+                  className="text-blue-400 hover:text-blue-300 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                >
+                  {stock.code}
+                </span>
+              </td>
+              <td className="px-2 py-3 text-gray-200 whitespace-nowrap">
+                <span
+                  onClick={() => onStockCodeClick && onStockCodeClick(stock.code)}
+                  role="link"
+                  tabIndex={0}
+                  className="text-blue-300 hover:text-blue-200 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                >{stock.name}</span>
+              </td>
               <td className="px-4 py-3 text-right text-gray-200">${stock.marketCap}</td>
               <td className="px-4 py-3 text-right text-gray-200">{stock.pe}</td>
               <td className="px-4 py-3 text-center">
@@ -241,11 +276,11 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
   );
 }
 
-function HeatmapView({ selectedStock, comparisonStocks, heatmapColorBy, heatmapSizeBy, onRemoveComparison }) {
+function HeatmapView({ selectedStock, comparisonStocks, heatmapColorBy, heatmapSizeBy, onRemoveComparison, onStockCodeClick }) {
   return (
     <div className="p-6">
       <div className="flex flex-wrap gap-3 justify-center">
-        {[selectedStock, ...comparisonStocks].map((stock) => {
+  {[selectedStock, ...comparisonStocks].map((stock) => {
           const performance = stock.performance[heatmapColorBy];
           const sizeValue = heatmapSizeBy === 'marketCap' 
             ? getMarketCapValue(stock.marketCap)
@@ -277,8 +312,20 @@ function HeatmapView({ selectedStock, comparisonStocks, heatmapColorBy, heatmapS
               }}
             >
               <div className="text-center">
-                <div className="text-white font-bold text-2xl mb-1">{stock.code}</div>
-                <div className="text-white text-sm opacity-90 mb-2">{stock.name}</div>
+                <span
+                  onClick={() => onStockCodeClick && onStockCodeClick(stock.code)}
+                  role="link"
+                  tabIndex={0}
+                  className="text-white font-bold text-2xl mb-1 underline decoration-dotted cursor-pointer hover:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                >{stock.code}</span>
+                <div className="text-white text-sm opacity-90 mb-2">
+                  <span
+                    onClick={() => onStockCodeClick && onStockCodeClick(stock.code)}
+                    role="link"
+                    tabIndex={0}
+                    className="underline decoration-dotted cursor-pointer hover:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                  >{stock.name}</span>
+                </div>
                 <div className="text-white font-bold text-3xl">
                   {performance > 0 ? '+' : ''}{performance.toFixed(1)}%
                 </div>
