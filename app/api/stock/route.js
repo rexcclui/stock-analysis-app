@@ -9,11 +9,24 @@ export async function GET(request) {
   }
 
   try {
-    // Fetch stock overview from Alpha Vantage
-    const overviewResponse = await fetch(
-      `https://www.alphavantage.co/query?function=OVERVIEW&symbol=${symbol}&apikey=${process.env.ALPHA_VANTAGE_KEY}`
+    // Fetch company profile from FMP
+    const profileResponse = await fetch(
+      `https://financialmodelingprep.com/api/v3/profile/${symbol}?apikey=${process.env.FMP_KEY}`
     );
-    const overview = await overviewResponse.json();
+    const profileData = await profileResponse.json();
+
+    if (!profileData || profileData.length === 0) {
+      return NextResponse.json({ error: 'Stock not found' }, { status: 404 });
+    }
+
+    const profile = profileData[0];
+
+    // Fetch quote for current price and day change
+    const quoteResponse = await fetch(
+      `https://financialmodelingprep.com/api/v3/quote/${symbol}?apikey=${process.env.FMP_KEY}`
+    );
+    const quoteData = await quoteResponse.json();
+    const quote = quoteData[0] || {};
 
     // Fetch historical prices from FMP
     const historicalResponse = await fetch(
@@ -21,38 +34,66 @@ export async function GET(request) {
     );
     const historical = await historicalResponse.json();
 
-    // Calculate performance
-    const calculatePerformance = (days) => {
-      if (!historical.historical || historical.historical.length < days) return 0;
-      const current = historical.historical[0].close;
-      const past = historical.historical[days]?.close || current;
-      return ((current - past) / past * 100).toFixed(2);
+    let performance = {
+      '1D': 0, '7D': 0, '1M': 0, '3M': 0,
+      '6M': 0, '1Y': 0, '3Y': 0, '5Y': 0
     };
+
+    let chartData = [];
+
+    if (historical.historical && Array.isArray(historical.historical) && historical.historical.length > 0) {
+      const calculatePerformance = (days) => {
+        if (historical.historical.length <= days) return 0;
+        const current = historical.historical[0].close;
+        const past = historical.historical[days]?.close;
+        if (!past || !current) return 0;
+        return parseFloat(((current - past) / past * 100).toFixed(2));
+      };
+
+      performance = {
+        '1D': calculatePerformance(1),
+        '7D': calculatePerformance(7),
+        '1M': calculatePerformance(30),
+        '3M': calculatePerformance(90),
+        '6M': calculatePerformance(180),
+        '1Y': calculatePerformance(252),
+        '3Y': historical.historical.length > 756 ? calculatePerformance(756) : 0,
+        '5Y': historical.historical.length > 1260 ? calculatePerformance(1260) : 0
+      };
+
+      // Prepare chart data for different periods
+      chartData = {
+        '1D': historical.historical.slice(0, 1).reverse().map(d => ({ date: d.date, price: d.close })),
+        '7D': historical.historical.slice(0, 7).reverse().map(d => ({ date: d.date, price: d.close })),
+        '1M': historical.historical.slice(0, 30).reverse().map(d => ({ date: d.date, price: d.close })),
+        '3M': historical.historical.slice(0, 90).reverse().map(d => ({ date: d.date, price: d.close })),
+        '6M': historical.historical.slice(0, 180).reverse().map(d => ({ date: d.date, price: d.close })),
+        '1Y': historical.historical.slice(0, 252).reverse().map(d => ({ date: d.date, price: d.close })),
+        '3Y': historical.historical.slice(0, 756).reverse().map(d => ({ date: d.date, price: d.close })),
+        '5Y': historical.historical.slice(0, 1260).reverse().map(d => ({ date: d.date, price: d.close }))
+      };
+    }
 
     const stockData = {
       code: symbol,
-      name: overview.Name,
-      exchange: overview.Exchange,
-      marketCap: (parseFloat(overview.MarketCapitalization) / 1e9).toFixed(2) + 'B',
-      pe: parseFloat(overview.PERatio).toFixed(2),
-      analystRating: overview.AnalystTargetPrice > overview['50DayMovingAverage'] ? 'Buy' : 'Hold',
-      industry: overview.Industry,
-      sector: overview.Sector,
-      performance: {
-        '1D': parseFloat(calculatePerformance(1)),
-        '7D': parseFloat(calculatePerformance(7)),
-        '1M': parseFloat(calculatePerformance(30)),
-        '3M': parseFloat(calculatePerformance(90)),
-        '6M': parseFloat(calculatePerformance(180)),
-        '1Y': parseFloat(calculatePerformance(365)),
-        '3Y': parseFloat(calculatePerformance(1095)),
-        '5Y': parseFloat(calculatePerformance(1825))
-      }
+      name: profile.companyName,
+      exchange: profile.exchangeShortName || profile.exchange || 'N/A',
+      currentPrice: quote.price || profile.price || 0,
+      dayChange: quote.changesPercentage || 0,
+      marketCap: profile.mktCap 
+        ? (profile.mktCap / 1e9).toFixed(2) + 'B'
+        : 'N/A',
+      pe: profile.pe ? profile.pe.toFixed(2) : 'N/A',
+      analystRating: profile.dcf > profile.price ? 'Buy' : 'Hold',
+      industry: profile.industry || 'N/A',
+      sector: profile.sector || 'N/A',
+      performance,
+      chartData
     };
 
     return NextResponse.json(stockData);
   } catch (error) {
-    console.error('API Error:', error);
+    console.error('Stock API Error:', error);
     return NextResponse.json({ error: 'Failed to fetch stock data' }, { status: 500 });
   }
 }

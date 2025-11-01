@@ -48,3 +48,9 @@ https://newsapi.org/register/success
 NEWS_API_KEY=1c950bd1047f42c684e6eef9dec2a299
 
 git init
+git add .
+git remote add origin https://github.com/rexcclui/stock-analysis-app.git
+
+git add -A && git commit -m "Clean dependencies and remove duplicate page.js" && git push
+
+https://vercel.com/rexccluis-projects/stock-analysis-app-epkc

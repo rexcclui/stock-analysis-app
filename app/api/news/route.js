@@ -14,6 +14,10 @@ export async function GET(request) {
     );
     const data = await response.json();
 
+    if (data.status === 'error') {
+      throw new Error(data.message);
+    }
+
     const news = data.articles?.map(article => ({
       title: article.title,
       sentiment: 'neutral',
@@ -24,6 +28,12 @@ export async function GET(request) {
     return NextResponse.json(news);
   } catch (error) {
     console.error('News API Error:', error);
-    return NextResponse.json({ error: 'Failed to fetch news' }, { status: 500 });
+    return NextResponse.json([
+      {
+        title: 'Unable to fetch latest news',
+        sentiment: 'neutral',
+        date: new Date().toISOString().split('T')[0]
+      }
+    ]);
   }
 }

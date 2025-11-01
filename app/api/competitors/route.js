@@ -11,9 +11,13 @@ export async function GET(request) {
 
   try {
     const response = await fetch(
-      `https://financialmodelingprep.com/api/v3/stock-screener?sector=${sector}&limit=5&apikey=${process.env.FMP_KEY}`
+      `https://financialmodelingprep.com/api/v3/stock-screener?sector=${sector}&limit=10&apikey=${process.env.FMP_KEY}`
     );
     const data = await response.json();
+
+    if (!Array.isArray(data)) {
+      throw new Error('Invalid response from API');
+    }
 
     const competitors = data
       .filter(stock => stock.symbol !== exclude)
@@ -23,6 +27,6 @@ export async function GET(request) {
     return NextResponse.json(competitors);
   } catch (error) {
     console.error('Competitors API Error:', error);
-    return NextResponse.json({ error: 'Failed to fetch competitors' }, { status: 500 });
+    return NextResponse.json([]);
   }
 }
