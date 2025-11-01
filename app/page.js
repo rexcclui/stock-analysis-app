@@ -55,8 +55,24 @@ export default function StockAnalysisDashboard() {
   const [viewMode, setViewMode] = useState('table');
   const [heatmapColorBy, setHeatmapColorBy] = useState('1D');
   const [heatmapSizeBy, setHeatmapSizeBy] = useState('marketCap');
+  const [searchHistory, setSearchHistory] = useState(() => {
+    if (typeof window === 'undefined') return [];
+    const saved = localStorage.getItem('stockSearchHistory');
+    return saved ? JSON.parse(saved) : [];
+  });
 
   const chartData = selectedStock?.chartData?.[chartPeriod] || [];
+
+  // Save search history to localStorage
+  const addToSearchHistory = (stockCode) => {
+    const code = stockCode.toUpperCase();
+    let updated = [code, ...searchHistory.filter(s => s !== code)];
+    if (updated.length > 10) {
+      updated = updated.slice(0, 10);
+    }
+    setSearchHistory(updated);
+    localStorage.setItem('stockSearchHistory', JSON.stringify(updated));
+  };
 
   const handleSearch = async () => {
     setLoading(true);
@@ -72,6 +88,7 @@ export default function StockAnalysisDashboard() {
       }
       
       setSelectedStock(stockData);
+      addToSearchHistory(stockCode);
       
       const competitorPromises = stockData.competitors.map(code => fetchCompleteStockData(code));
       const competitorData = await Promise.all(competitorPromises);
@@ -165,6 +182,26 @@ export default function StockAnalysisDashboard() {
               {loading ? 'Loading...' : 'Search'}
             </button>
           </div>
+
+          {searchHistory.length > 0 && (
+            <div className="mb-6">
+              <p className="text-sm text-gray-400 mb-2">Recent Searches:</p>
+              <div className="flex flex-wrap gap-2">
+                {searchHistory.map((code) => (
+                  <button
+                    key={code}
+                    onClick={() => {
+                      setSearchInput(code);
+                      handleSearch();
+                    }}
+                    className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-blue-400 hover:text-blue-300 rounded-lg text-sm transition border border-gray-600 hover:border-gray-500"
+                  >
+                    {code}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
           {!selectedStock && (
             <div className="text-center py-12">
