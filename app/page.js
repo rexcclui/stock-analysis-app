@@ -183,9 +183,15 @@ export default function StockAnalysisDashboard() {
                   </div>
                   <div className="text-right">
                     <div className="text-sm text-gray-300">Current Price</div>
-                    <div className="text-3xl font-bold text-white">${selectedStock.currentPrice?.toFixed(2)}</div>
-                    <div className={`text-lg font-semibold ${selectedStock.dayChange >= 0 ? 'text-green-400' : 'text-red-400'}`}>
-                      {selectedStock.dayChange >= 0 ? '+' : ''}{selectedStock.dayChange?.toFixed(2)}%
+                    <div className="text-3xl font-bold" style={{ color: '#60A5FA' }}>${selectedStock.currentPrice?.toFixed(2)}</div>
+                    <div className="text-lg font-semibold" style={{
+                      color: selectedStock.dayChange > 0 
+                        ? '#4ADE80' 
+                        : selectedStock.dayChange < 0 
+                        ? '#F87171' 
+                        : '#9CA3AF'
+                    }}>
+                      {selectedStock.dayChange > 0 ? '+' : ''}{selectedStock.dayChange?.toFixed(2)}%
                       <span className="text-sm text-gray-400"> Today</span>
                     </div>
                   </div>
