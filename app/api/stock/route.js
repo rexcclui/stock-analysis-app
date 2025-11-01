@@ -1,4 +1,5 @@
 import { NextResponse } from 'next/server';
+import { getCache, setCache, getCacheKey } from '../../../lib/cache';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -6,6 +7,14 @@ export async function GET(request) {
 
   if (!symbol) {
     return NextResponse.json({ error: 'Symbol required' }, { status: 400 });
+  }
+
+  // Check cache first
+  const cacheKey = getCacheKey('stock', symbol);
+  const cachedData = getCache(cacheKey);
+  if (cachedData) {
+    console.log(`[CACHE HIT] Stock data for ${symbol}`);
+    return NextResponse.json(cachedData);
   }
 
   try {
@@ -90,6 +99,9 @@ export async function GET(request) {
       performance,
       chartData
     };
+
+    // Cache the result (24 hours)
+    setCache(cacheKey, stockData, 1440);
 
     return NextResponse.json(stockData);
   } catch (error) {
