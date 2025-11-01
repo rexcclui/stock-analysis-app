@@ -1,6 +1,7 @@
 import React from 'react';
 import { AddCustomComparison } from './AddCustomComparison';
 import { ComparisonTable } from './ComparisonTable';
+import { SearchHistoryTable } from './SearchHistoryTable';
 
 export function ComparisonSection({
   selectedStock,
@@ -16,10 +17,16 @@ export function ComparisonSection({
   onHeatmapColorByChange,
   heatmapSizeBy,
   onHeatmapSizeByChange,
-  periods
+  periods,
+  searchHistoryStocks,
+  onSearchHistoryCodeClick
 }) {
   return (
     <>
+      <SearchHistoryTable
+        historyStocks={searchHistoryStocks}
+        onClickCode={onSearchHistoryCodeClick}
+      />
       <AddCustomComparison
         manualStock={manualStock}
         onManualStockChange={onManualStockChange}

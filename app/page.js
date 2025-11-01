@@ -11,7 +11,7 @@ const fetchCompleteStockData = async (symbol) => {
     // Fetch stock data (required)
     const stockRes = await fetch(`/api/stock?symbol=${symbol}`);
     if (!stockRes.ok) {
-      console.error(`Stock API error: ${stockRes.status}`);
+      console.error(`Stock API error: ${stockRes.status}` + stockRes.statusText);
       return null;
     }
     const stock = await stockRes.json();
@@ -86,6 +86,36 @@ export default function StockAnalysisDashboard() {
   const [heatmapColorBy, setHeatmapColorBy] = useState('1D');
   const [heatmapSizeBy, setHeatmapSizeBy] = useState('marketCap');
   const [searchHistory, setSearchHistory] = useState([]);
+  // Detailed search history entries with day change for table (bounded by 3 rows dynamic columns)
+  const [searchHistoryStocks, setSearchHistoryStocks] = useState([]); // array of { code, dayChange }
+  const HISTORY_COL_WIDTH = 140; // approximate width for each cell
+
+  const computeMaxColumns = () => {
+    if (typeof window === 'undefined') return 8; // fallback
+    return Math.max(1, Math.floor(window.innerWidth / HISTORY_COL_WIDTH));
+  };
+  const [historyCols, setHistoryCols] = useState(computeMaxColumns());
+
+  React.useEffect(() => {
+    const handleResize = () => setHistoryCols(computeMaxColumns());
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const MAX_ROWS = 3;
+  const maxCapacity = () => historyCols * MAX_ROWS;
+
+  const addSearchHistoryStock = (entry) => {
+    setSearchHistoryStocks(prev => {
+      const filtered = prev.filter(e => e.code !== entry.code); // dedupe
+      const updated = [{ code: entry.code, dayChange: entry.dayChange }, ...filtered];
+      const capacity = maxCapacity();
+      if (updated.length > capacity) {
+        return updated.slice(0, capacity); // drop oldest beyond capacity
+      }
+      return updated;
+    });
+  };
   const [isClient, setIsClient] = useState(false);
   // Chart comparison input & stocks (for overlay lines)
   const [chartCompareInput, setChartCompareInput] = useState('');
@@ -128,6 +158,13 @@ export default function StockAnalysisDashboard() {
     if (saved) {
       setSearchHistory(JSON.parse(saved));
     }
+    const savedDetailed = localStorage.getItem('stockSearchHistoryDetailed');
+    if (savedDetailed) {
+      try {
+        const parsed = JSON.parse(savedDetailed);
+        if (Array.isArray(parsed)) setSearchHistoryStocks(parsed);
+      } catch {}
+    }
     // Load chartPeriod from localStorage
     const savedPeriod = localStorage.getItem('chartPeriod');
     if (savedPeriod) {
@@ -143,6 +180,14 @@ export default function StockAnalysisDashboard() {
       series: buildNormalizedSeries(s.__stockRef, chartPeriod)
     })));
   }, [chartPeriod, selectedStock]);
+
+  // Persist detailed history whenever it changes
+  React.useEffect(() => {
+    if (!isClient) return;
+    try {
+      localStorage.setItem('stockSearchHistoryDetailed', JSON.stringify(searchHistoryStocks));
+    } catch {}
+  }, [searchHistoryStocks, isClient]);
 
   const chartData = selectedStock?.chartData?.[chartPeriod] || [];
 
@@ -183,6 +228,13 @@ export default function StockAnalysisDashboard() {
       const validSaved = savedData.filter(s => s !== null);
       
       setComparisonStocks([...validCompetitors, ...validSaved]);
+
+      // Add to detailed history table
+      addSearchHistoryStock({ code: stockData.code, dayChange: stockData.dayChange || 0 });
+      // Persist detailed history
+      setTimeout(() => {
+        try { localStorage.setItem('stockSearchHistoryDetailed', JSON.stringify(searchHistoryStocks)); } catch {}
+      }, 0);
 
       // Also update existing chart compare series baseline to new period
       setChartCompareStocks(prev => prev.map(s => ({
@@ -308,20 +360,20 @@ export default function StockAnalysisDashboard() {
             </button>
           </div>
 
-          {isClient && searchHistory.length > 0 && (
+          {isClient && searchHistoryStocks.length > 0 && (
             <div className="mb-6">
               <p className="text-sm text-gray-400 mb-2">Recent Searches:</p>
               <div className="flex flex-wrap gap-2">
-                {searchHistory.map((code) => (
+                {searchHistoryStocks.map((item) => (
                   <button
-                    key={code}
+                    key={item.code + item.dayChange}
                     onClick={() => {
-                      setSearchInput(code);
+                      setSearchInput(item.code);
                       handleSearch();
                     }}
-                    className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-blue-400 hover:text-blue-300 rounded-lg text-sm transition border border-gray-600 hover:border-gray-500"
+                    className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded-lg text-sm font-medium transition border border-gray-600 hover:border-gray-500"
                   >
-                    {code}
+                    {item.code}
                   </button>
                 ))}
               </div>
@@ -525,6 +577,8 @@ export default function StockAnalysisDashboard() {
                 heatmapSizeBy={heatmapSizeBy}
                 onHeatmapSizeByChange={setHeatmapSizeBy}
                 periods={periods}
+                searchHistoryStocks={searchHistoryStocks}
+                onSearchHistoryCodeClick={(code)=> { setSearchInput(code); handleSearch(); }}
               />
 
               {selectedStock.sentiment && (
