@@ -16,19 +16,26 @@ export function SearchHistoryTable({ historyStocks, onClickCode }) {
             : pct < 0
             ? 'bg-red-700 hover:bg-red-600 border-red-600 hover:border-red-500'
             : 'bg-gray-700 hover:bg-gray-600 border-gray-600 hover:border-gray-500';
-          // Force white font regardless of trend
-          const color = 'text-white';
           const inlineBg = pct > 0 ? '#047857' : pct < 0 ? '#7f1d1d' : '#374151';
           return (
-            <button
+            <div
               key={item.code + pct}
-              onClick={() => onClickCode && onClickCode(item.code)}
               className={`group flex flex-col items-center justify-center min-w-[120px] h-20 px-3 py-2 rounded-lg border transition ${trendBg}`}
               style={{ backgroundColor: inlineBg }}
             >
-              <span className="font-mono text-sm font-bold text-white group-hover:text-white">{item.code}</span>
-              <span className={`text-xs font-bold ${color}`}>{pct > 0 ? '+' : ''}{pct.toFixed(2)}%</span>
-            </button>
+              <span
+                onClick={() => onClickCode && onClickCode(item.code)}
+                role="link"
+                tabIndex={0}
+                className="font-mono text-sm font-bold text-blue-300 underline decoration-dotted cursor-pointer group-hover:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+              >{item.code}</span>
+              <span
+                onClick={() => onClickCode && onClickCode(item.code)}
+                role="link"
+                tabIndex={0}
+                className="text-xs font-bold text-white cursor-pointer hover:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+              >{pct > 0 ? '+' : ''}{pct.toFixed(2)}%</span>
+            </div>
           );
         })}
       </div>

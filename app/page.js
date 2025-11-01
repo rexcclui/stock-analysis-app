@@ -217,9 +217,12 @@ export default function StockAnalysisDashboard() {
     localStorage.setItem('stockSearchHistory', JSON.stringify(updated));
   };
 
-  const handleSearch = async () => {
+  const handleSearch = async (overrideCode) => {
     setLoading(true);
-    const stockCode = searchInput.toUpperCase();
+    const stockCode = (overrideCode || searchInput).toUpperCase();
+    if (!stockCode) { setLoading(false); return; }
+    // Always reflect clicked/typed code in the input
+    setSearchInput(stockCode);
     
     try {
       const stockData = await fetchCompleteStockData(stockCode);
@@ -599,7 +602,7 @@ export default function StockAnalysisDashboard() {
                 onHeatmapSizeByChange={setHeatmapSizeBy}
                 periods={periods}
                 searchHistoryStocks={searchHistoryStocks}
-                onSearchHistoryCodeClick={(code)=> { setSearchInput(code); handleSearch(); }}
+                onSearchHistoryCodeClick={(code)=> { handleSearch(code); }}
               />
 
               {selectedStock.sentiment && (
