@@ -68,9 +68,9 @@ export function HeatmapView({ selectedStock, comparisonStocks, heatmapColorBy, h
               {stock.code !== selectedStock.code && (
                 <button
                   onClick={() => onRemoveComparison(stock.code)}
-                  className="absolute top-2 right-2 p-1 bg-red-500 hover:bg-red-600 rounded-full transition"
+                  className="absolute bottom-2 right-2 p-0.5 bg-red-500 hover:bg-red-600 rounded-full transition"
                 >
-                  <X size={14} className="text-white" />
+                  <X size={12} className="text-white" />
                 </button>
               )}
             </div>
