@@ -24,6 +24,24 @@ const getSentimentBgColor = (score) => {
   return 'bg-red-600 text-white';
 };
 
+const getRatingStyle = (rating) => {
+  const baseStyle = { padding: '0.25rem 0.5rem', borderRadius: '9999px', fontSize: '0.875rem', fontWeight: '500', border: '1px solid' };
+  if (!rating) {
+    return { ...baseStyle, backgroundColor: '#4B5563', color: '#D1D5DB', borderColor: '#6B7280' };
+  }
+  const lowerRating = rating.toLowerCase();
+  if (lowerRating.includes('buy')) {
+    return { ...baseStyle, backgroundColor: 'rgba(16, 185, 129, 0.1)', color: '#6EE7B7', borderColor: '#059669' };
+  }
+  if (lowerRating.includes('sell')) {
+    return { ...baseStyle, backgroundColor: 'rgba(239, 68, 68, 0.1)', color: '#F87171', borderColor: '#B91C1C' };
+  }
+  if (lowerRating.includes('hold')) {
+    return { ...baseStyle, backgroundColor: 'rgba(245, 158, 11, 0.1)', color: '#FBBF24', borderColor: '#D97706' };
+  }
+  return { ...baseStyle, backgroundColor: '#4B5563', color: '#D1D5DB', borderColor: '#6B7280' };
+};
+
 const getMarketCapValue = (marketCap) => {
   if (!marketCap || marketCap === 'N/A') return 0;
   const value = parseFloat(marketCap.replace(/[^0-9.]/g, ''));
@@ -332,7 +350,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
               </div>
             </td>
             <td className="px-4 py-3 text-center">
-              <span className="px-2 py-1 bg-green-900/40 text-green-300 rounded-full text-sm font-medium border border-green-700">
+              <span style={getRatingStyle(selectedStock.analystRating)}>
                 {selectedStock.analystRating}
               </span>
             </td>
@@ -395,7 +413,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 </div>
               </td>
               <td className="px-4 py-3 text-center">
-                <span className="px-2 py-1 bg-gray-600 text-gray-200 rounded-full text-sm border border-gray-500">
+                <span style={getRatingStyle(stock.analystRating)}>
                   {stock.analystRating}
                 </span>
               </td>
