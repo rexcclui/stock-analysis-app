@@ -22,6 +22,9 @@ function findTrends(historicalData, type = "up") {
     const matchesTrendType =
       (type === "up" && isUpDay) || (type === "down" && isDownDay);
 
+    const isOppositeDirection =
+      (type === "up" && isDownDay) || (type === "down" && isUpDay);
+
     if (matchesTrendType) {
       if (!currentTrend) {
         // Start a new trend
@@ -33,18 +36,20 @@ function findTrends(historicalData, type = "up") {
           days: 1,
           firstDayChange: dailyChange,
           prices: [yesterday.close, today.close],
+          startIndex: i, // Track the newest day of trend (lower index = more recent)
+          endIndex: i, // Track where trend ends (oldest day)
         };
       } else {
-        // Continue the current trend
+        // Continue the current trend (startIndex stays the same, endIndex updates)
         currentTrend.endDate = today.date;
         currentTrend.endPrice = today.close;
         currentTrend.days++;
         currentTrend.prices.push(today.close);
+        currentTrend.endIndex = i;
       }
-    } else {
-      // Trend ended
+    } else if (isOppositeDirection) {
+      // Opposite direction - end current trend and start counting opposite
       if (currentTrend && currentTrend.days >= 2) {
-        // Only include trends of 2+ days
         const totalChange =
           ((currentTrend.endPrice - currentTrend.startPrice) /
             currentTrend.startPrice) *
@@ -56,6 +61,7 @@ function findTrends(historicalData, type = "up") {
       }
       currentTrend = null;
     }
+    // If flat day, just skip it - don't end the trend, don't extend it
   }
 
   // Add the last trend if it exists
@@ -73,16 +79,58 @@ function findTrends(historicalData, type = "up") {
   // Sort by total change (descending) and take top 20
   trends.sort((a, b) => b.totalChange - a.totalChange);
 
-  // Format for output
-  return trends.slice(0, 20).map((trend) => ({
-    startDate: trend.startDate,
-    endDate: trend.endDate,
-    days: trend.days,
-    totalChange: type === "up" ? trend.totalChange : -trend.totalChange,
-    firstDayChange: trend.firstDayChange,
-    startPrice: trend.startPrice,
-    endPrice: trend.endPrice,
-  }));
+  // Format for output and calculate opposite direction data
+  return trends.slice(0, 20).map((trend) => {
+    // Find opposite direction trend that follows the main trend
+    // Since trends now only end when opposite direction is encountered,
+    // there should always be at least 1 opposite day (unless we're at the data boundary)
+    let oppositeDays = 0;
+    let oppositeEndPrice = trend.startPrice; // Start from where the trend began (most recent price)
+
+    // Data is sorted newest to oldest (index 0 = most recent)
+    // trend.startIndex = index of most recent day of the trend
+    // trend.endIndex = index of oldest day of the trend
+    // Days AFTER the trend chronologically are at indices LOWER than startIndex
+
+    // Check consecutive opposite direction days after the trend ended
+    if (trend.startIndex > 0) {
+      for (let j = trend.startIndex - 1; j >= 0; j--) {
+        const today = historicalData[j];
+        const prevDay = j + 1 < historicalData.length ? historicalData[j + 1] : null;
+
+        if (!prevDay) break;
+
+        const dailyChange = ((today.close - prevDay.close) / prevDay.close) * 100;
+
+        const isOppositeDirection =
+          (type === "up" && dailyChange < 0) ||
+          (type === "down" && dailyChange > 0);
+
+        if (isOppositeDirection) {
+          oppositeDays++;
+          oppositeEndPrice = today.close;
+        } else {
+          break; // Opposite trend ended (either same direction resumed or flat)
+        }
+      }
+    }
+
+    const oppositeChange = oppositeDays > 0
+      ? ((oppositeEndPrice - trend.startPrice) / trend.startPrice) * 100
+      : 0;
+
+    return {
+      startDate: trend.startDate,
+      endDate: trend.endDate,
+      days: trend.days,
+      totalChange: type === "up" ? trend.totalChange : -trend.totalChange,
+      firstDayChange: trend.firstDayChange,
+      startPrice: trend.startPrice,
+      endPrice: trend.endPrice,
+      oppositeDays,
+      oppositeChange,
+    };
+  });
 }
 
 export async function GET(request) {

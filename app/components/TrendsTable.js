@@ -5,10 +5,23 @@ export function TrendsTable({ trends }) {
   const totalChanges = trends.map(t => t.totalChange);
   const days = trends.map(t => t.days);
 
+  // Only consider trends with opposite days > 0 for opposite metrics
+  const trendsWithOpposite = trends.filter(t => t.oppositeDays > 0);
+  const oppositeDays = trendsWithOpposite.length > 0
+    ? trendsWithOpposite.map(t => t.oppositeDays)
+    : [0];
+  const oppositeChanges = trendsWithOpposite.length > 0
+    ? trendsWithOpposite.map(t => t.oppositeChange)
+    : [0];
+
   const maxChange = Math.max(...totalChanges);
   const minChange = Math.min(...totalChanges);
   const maxDays = Math.max(...days);
   const minDays = Math.min(...days);
+  const maxOppositeDays = Math.max(...oppositeDays);
+  const minOppositeDays = Math.min(...oppositeDays);
+  const maxOppositeChange = Math.max(...oppositeChanges);
+  const minOppositeChange = Math.min(...oppositeChanges);
 
   // Color interpolation function
   const getColorForValue = (value, min, max) => {
@@ -74,6 +87,12 @@ export function TrendsTable({ trends }) {
             <th className="px-4 py-3 text-gray-300 font-semibold border-b border-gray-600">
               End Price
             </th>
+            <th className="px-4 py-3 text-gray-300 font-semibold border-b border-gray-600">
+              Opposite Days
+            </th>
+            <th className="px-4 py-3 text-gray-300 font-semibold border-b border-gray-600">
+              Opposite Change
+            </th>
           </tr>
         </thead>
         <tbody>
@@ -117,6 +136,25 @@ export function TrendsTable({ trends }) {
               </td>
               <td className="px-4 py-3 text-gray-300">
                 ${trend.endPrice.toFixed(2)}
+              </td>
+              <td
+                className="px-4 py-3 text-white font-medium"
+                style={trend.oppositeDays > 0 ? { backgroundColor: getColorForDays(trend.oppositeDays, minOppositeDays, maxOppositeDays) } : {}}
+              >
+                {trend.oppositeDays > 0 ? trend.oppositeDays : "-"}
+              </td>
+              <td
+                className="px-4 py-3 font-bold text-white"
+                style={trend.oppositeDays > 0 ? { backgroundColor: getColorForValue(trend.oppositeChange, minOppositeChange, maxOppositeChange) } : {}}
+              >
+                {trend.oppositeDays > 0 ? (
+                  <>
+                    {trend.oppositeChange >= 0 ? "+" : ""}
+                    {trend.oppositeChange.toFixed(2)}%
+                  </>
+                ) : (
+                  "-"
+                )}
               </td>
             </tr>
           ))}
