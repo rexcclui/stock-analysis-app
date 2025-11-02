@@ -7,6 +7,7 @@ import { ComparisonSection } from './components/ComparisonSection';
 import { PricePerformanceChart } from './components/PricePerformanceChart';
 import { NewsSection } from './components/NewsSection';
 import { SentimentSection } from './components/SentimentSection';
+import { StockResultCard } from './components/StockResultCard';
 
 // Fetch complete stock data from API routes
 const fetchCompleteStockData = async (symbol) => {
@@ -71,11 +72,7 @@ const fetchCompleteStockData = async (symbol) => {
   }
 };
 
-const getSentimentColor = (score) => {
-  if (score >= 0.6) return 'text-green-400';
-  if (score >= 0.3) return 'text-yellow-400';
-  return 'text-red-400';
-};
+// (Moved sentiment color helper into StockResultCard component)
 
 export default function StockAnalysisDashboard() {
   const [searchInput, setSearchInput] = useState('');
@@ -412,49 +409,7 @@ export default function StockAnalysisDashboard() {
 
           {selectedStock && (
             <>
-              <div className="bg-gradient-to-r from-blue-900/40 to-indigo-900/40 rounded-xl p-6 mb-6 border border-blue-800/30">
-                <div className="flex justify-between items-start mb-4">
-                  <div>
-                    <h2 className="text-3xl font-bold text-white">{selectedStock.name}</h2>
-                    <p className="text-gray-300">{selectedStock.code} • {selectedStock.exchange}</p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-sm text-gray-300">Current Price</div>
-                    <div className="text-3xl font-bold" style={{ color: '#60A5FA' }}>${selectedStock.currentPrice?.toFixed(2)}</div>
-                    <div className="text-lg font-semibold" style={{
-                      color: selectedStock.dayChange > 0 
-                        ? '#4ADE80' 
-                        : selectedStock.dayChange < 0 
-                        ? '#F87171' 
-                        : '#9CA3AF'
-                    }}>
-                      {selectedStock.dayChange > 0 ? '+' : ''}{selectedStock.dayChange?.toFixed(2)}%
-                    </div>
-                  </div>
-                </div>
-                <div className="grid grid-cols-4 gap-4">
-                  <div className="bg-gray-800/60 rounded-lg p-3 border border-gray-700">
-                    <div className="text-sm text-gray-300">Market Cap</div>
-                    <div className="text-lg font-bold text-white">${selectedStock.marketCap}</div>
-                  </div>
-                  <div className="bg-gray-800/60 rounded-lg p-3 border border-gray-700">
-                    <div className="text-sm text-gray-300">P/E Ratio</div>
-                    <div className="text-lg font-bold text-white">{selectedStock.pe}</div>
-                  </div>
-                  <div className="bg-gray-800/60 rounded-lg p-3 border border-gray-700">
-                    <div className="text-sm text-gray-300">Analyst Rating</div>
-                    <div className="text-lg font-bold text-green-400">{selectedStock.analystRating}</div>
-                  </div>
-                  {selectedStock.sentiment && (
-                    <div className="bg-gray-800/60 rounded-lg p-3 border border-gray-700">
-                      <div className="text-sm text-gray-300">Social Sentiment</div>
-                      <div className={`text-lg font-bold ${getSentimentColor(selectedStock.sentiment.score)}`}>
-                        {(selectedStock.sentiment.score * 100).toFixed(0)}%
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
+              <StockResultCard stock={selectedStock} />
 
               <PricePerformanceChart
                 selectedStock={selectedStock}
