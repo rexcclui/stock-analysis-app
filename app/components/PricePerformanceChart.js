@@ -115,23 +115,27 @@ export function PricePerformanceChart({
                 <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
                 <XAxis dataKey="date" stroke="#9CA3AF" />
                 {chartCompareStocks.length === 0 ? (
-                  <YAxis
-                    stroke="#9CA3AF"
-                    allowDecimals={false}
-                    domain={
-                      chartData.length > 0
-                        ? [
-                            Math.min(...chartData.map(d => d.price)) * 0.9,
-                            Math.max(...chartData.map(d => d.price)) * 1.05
-                          ]
-                        : ['auto','auto']
-                    }
-                  />
+                  (() => {
+                    const hasData = chartData.length > 0;
+                    const rawMin = hasData ? Math.min(...chartData.map(d => d.price)) * 0.95 : 0;
+                    const rawMax = hasData ? Math.max(...chartData.map(d => d.price)) * 1.05 : 10;
+                    const intMin = Math.floor(rawMin);
+                    const intMax = Math.ceil(rawMax);
+                    return (
+                      <YAxis
+                        stroke="#9CA3AF"
+                        allowDecimals={false}
+                        domain={[intMin, intMax]}
+                        tickFormatter={(v) => Math.round(v)}
+                      />
+                    );
+                  })()
                 ) : (
                   <YAxis
                     stroke="#9CA3AF"
-                    tickFormatter={(v)=> `${v.toFixed(0)}%`}
+                    tickFormatter={(v)=> `${Math.round(v)}%`}
                     domain={['auto','auto']}
+                    allowDecimals={false}
                   />
                 )}
                 <Tooltip
