@@ -57,12 +57,14 @@ export function StockResultCard({ stock }) {
           { label: 'P/E Ratio', value: stock.pe ?? '—' },
           { label: '52W Range', value: stock.fiftyTwoWeekRange ?? '—' },
           { label: 'Dividend %', value: stock.dividendYield > 0 ? `${stock.dividendYield}%` : '—' },
+          { label: 'Sector', value: stock.sector ?? '—' },
+          { label: 'Industry', value: stock.industry ?? '—' },
           { label: 'Analyst Rating', value: stock.analystRating ?? '—', color: 'text-green-400' },
           stock.sentiment && { label: 'Social Sentiment', value: `${(stock.sentiment.score * 100).toFixed(0)}%`, color: getSentimentColor(stock.sentiment.score) }
         ].filter(Boolean).map(item => (
-          <div key={item.label} className="bg-gray-800/60 rounded-lg p-3 border border-gray-700 flex-shrink-0 w-40">
-            <div className="text-sm text-gray-300">{item.label}</div>
-            <div className={`text-lg font-bold ${item.color || 'text-white'}`}>{item.value}</div>
+          <div key={item.label} className="bg-gray-800/60 rounded-lg p-3 border border-gray-700 flex-shrink-0 w-44">
+            <div className="text-sm text-gray-300 truncate">{item.label}</div>
+            <div className={`text-lg font-bold truncate ${item.color || 'text-white'}`}>{item.value}</div>
           </div>
         ))}
       </div>
