@@ -7,6 +7,7 @@ import { ComparisonSection } from './components/ComparisonSection';
 import { PricePerformanceChart } from './components/PricePerformanceChart';
 import { NewsSection } from './components/NewsSection';
 import { SentimentSection } from './components/SentimentSection';
+import { SentimentTimeSeriesChart } from './components/SentimentTimeSeriesChart';
 import { StockResultCard } from './components/StockResultCard';
 
 // Fetch complete stock data from API routes
@@ -442,6 +443,10 @@ export default function StockAnalysisDashboard() {
                 setChartCompareInput={setChartCompareInput}
                 buildNormalizedSeries={buildNormalizedSeries}
                 buildMultiStockDataset={buildMultiStockDataset}
+              />
+
+              <SentimentTimeSeriesChart
+                sentimentTimeSeries={selectedStock.sentimentTimeSeries}
               />
 
               <ComparisonSection
