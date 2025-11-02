@@ -91,7 +91,7 @@ export async function GET(request) {
     const symbol = searchParams.get("symbol");
     const years = parseInt(searchParams.get("years") || "5");
     const type = searchParams.get("type") || "up";
-    const threshold = parseFloat(searchParams.get("threshold") || "5");
+    const direction = searchParams.get("direction") || "up";
 
     if (!symbol) {
       return NextResponse.json(
@@ -102,7 +102,7 @@ export async function GET(request) {
 
     // Check cache first
     const cacheKey = type === "bigmoves"
-      ? getCacheKey(`bigmoves-${threshold}-${years}y`, symbol)
+      ? getCacheKey(`bigmoves-${direction}-${years}y`, symbol)
       : getCacheKey(`trends-${type}-${years}y`, symbol);
     const cachedData = getCache(cacheKey);
     if (cachedData) {
@@ -139,7 +139,7 @@ export async function GET(request) {
     let result;
 
     if (type === "bigmoves") {
-      // Find big single-day moves
+      // Find all single-day moves
       const bigMoves = [];
 
       for (let i = 0; i < historicalData.length - 3; i++) {
@@ -150,8 +150,12 @@ export async function GET(request) {
 
         const dayChange = ((today.close - yesterday.close) / yesterday.close) * 100;
 
-        // Check if it exceeds threshold
-        if (Math.abs(dayChange) >= threshold) {
+        // Filter by direction
+        const matchesDirection =
+          (direction === "up" && dayChange > 0) ||
+          (direction === "down" && dayChange < 0);
+
+        if (matchesDirection) {
           // Calculate after effects
           const after1Day = i > 0 && i < historicalData.length - 1
             ? ((historicalData[i - 1].close - today.close) / today.close) * 100
@@ -176,14 +180,14 @@ export async function GET(request) {
         }
       }
 
-      // Sort by absolute day change magnitude and take top 30
+      // Sort by absolute day change magnitude and take top 20
       bigMoves.sort((a, b) => Math.abs(b.dayChange) - Math.abs(a.dayChange));
 
       result = {
         symbol,
         type,
-        threshold,
-        bigMoves: bigMoves.slice(0, 30),
+        direction,
+        bigMoves: bigMoves.slice(0, 20),
         dataPoints: historicalData.length,
       };
     } else {

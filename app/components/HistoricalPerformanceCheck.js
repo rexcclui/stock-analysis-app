@@ -13,7 +13,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
   const [bigMoves, setBigMoves] = useState([]);
   const [spyCorrelations, setSpyCorrelations] = useState([]);
   const [spyDirection, setSpyDirection] = useState("up");
-  const [thresholdPercent, setThresholdPercent] = useState(5);
+  const [bigMovesDirection, setBigMovesDirection] = useState("up");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -72,7 +72,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
 
       // Fetch big moves data
       const response = await fetch(
-        `/api/historical-trends?symbol=${stockCode}&years=5&type=bigmoves&threshold=${thresholdPercent}`
+        `/api/historical-trends?symbol=${stockCode}&years=5&type=bigmoves&direction=${bigMovesDirection}`
       );
 
       if (!response.ok) {
@@ -212,26 +212,37 @@ export function HistoricalPerformanceCheck({ stockCode }) {
         </div>
       )}
 
-      {/* Threshold Input - Only for bigmoves */}
+      {/* Big Moves Direction Selection - Only for bigmoves */}
       {selectedOption === "bigmoves" && (
-        <div className="mb-6 flex items-center gap-4">
-          <label className="text-gray-300 text-sm font-medium">
-            Minimum % Change Threshold:
-          </label>
-          <input
-            type="number"
-            min="1"
-            max="50"
-            step="0.5"
-            value={thresholdPercent}
-            onChange={(e) => setThresholdPercent(parseFloat(e.target.value))}
-            className="w-24 px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          />
-          <span className="text-gray-400 text-sm">%</span>
+        <div className="mb-6">
+          <div className="flex gap-4 mb-4">
+            <button
+              onClick={() => setBigMovesDirection("up")}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all"
+              style={{
+                backgroundColor: bigMovesDirection === "up" ? "#10b981" : "#374151",
+                color: bigMovesDirection === "up" ? "#ffffff" : "#d1d5db",
+              }}
+            >
+              <TrendingUp size={20} />
+              Top 20 Upward Days
+            </button>
+            <button
+              onClick={() => setBigMovesDirection("down")}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all"
+              style={{
+                backgroundColor: bigMovesDirection === "down" ? "#10b981" : "#374151",
+                color: bigMovesDirection === "down" ? "#ffffff" : "#d1d5db",
+              }}
+            >
+              <TrendingDown size={20} />
+              Top 20 Downward Days
+            </button>
+          </div>
           <button
             onClick={analyzeBigMoves}
             disabled={loading || !stockCode}
-            className="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-all"
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-all"
           >
             {loading ? "Analyzing..." : "Analyze Big Moves"}
           </button>
