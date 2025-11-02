@@ -39,13 +39,17 @@ export async function GET(request) {
 
     return NextResponse.json(news);
   } catch (error) {
-    console.error('News API Error:', error);
-    return NextResponse.json([
-      {
-        title: 'Unable to fetch latest news',
-        sentiment: 'neutral',
-        date: new Date().toISOString().split('T')[0]
-      }
-    ]);
+    console.error(`News API Error for ${symbol}: ${error.message}`);
+    return NextResponse.json(
+      [
+        {
+          title: `Unable to fetch news for ${symbol}`,
+          sentiment: 'neutral',
+          date: new Date().toISOString().split('T')[0],
+          error: true,
+        },
+      ],
+      { status: 500 }
+    );
   }
 }
