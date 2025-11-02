@@ -19,6 +19,7 @@ export async function POST(request) {
         sentiment: counts.sentiment || 0,
         news: counts.news || 0,
         competitors: counts.competitors || 0,
+        historicalTrends: counts.historicalTrends || 0,
       };
       // Derive actual external calls by subtracting cache hits for each prefix
       const actualExternal = {
@@ -26,9 +27,10 @@ export async function POST(request) {
         sentiment: Math.max(0, reported.sentiment - (cacheHits.sentiment || 0)),
         news: Math.max(0, reported.news - (cacheHits.news || 0)),
         competitors: Math.max(0, reported.competitors - (cacheHits.competitors || 0)),
+        historicalTrends: Math.max(0, reported.historicalTrends - ((cacheHits['trends-up-5y'] || 0) + (cacheHits['trends-down-5y'] || 0))),
       };
-      const totalReported = reported.stock + reported.sentiment + reported.news + reported.competitors;
-      const totalActualExternal = actualExternal.stock + actualExternal.sentiment + actualExternal.news + actualExternal.competitors;
+      const totalReported = reported.stock + reported.sentiment + reported.news + reported.competitors + reported.historicalTrends;
+      const totalActualExternal = actualExternal.stock + actualExternal.sentiment + actualExternal.news + actualExternal.competitors + actualExternal.historicalTrends;
       const cacheSummary = {
         totalHits: stats.totalHits,
         totalMisses: stats.totalMisses,
@@ -55,12 +57,14 @@ export async function POST(request) {
       sentiment: counts.sentiment || 0,
       news: counts.news || 0,
       competitors: counts.competitors || 0,
+      historicalTrends: counts.historicalTrends || 0,
     } : null;
     const actualExternal = reported ? {
       stock: Math.max(0, reported.stock - (cacheHits.stock || 0)),
       sentiment: Math.max(0, reported.sentiment - (cacheHits.sentiment || 0)),
       news: Math.max(0, reported.news - (cacheHits.news || 0)),
       competitors: Math.max(0, reported.competitors - (cacheHits.competitors || 0)),
+      historicalTrends: Math.max(0, reported.historicalTrends - ((cacheHits['trends-up-5y'] || 0) + (cacheHits['trends-down-5y'] || 0))),
     } : null;
     return NextResponse.json({ success: true, cache: stats, reported, actualExternal });
   } catch (error) {

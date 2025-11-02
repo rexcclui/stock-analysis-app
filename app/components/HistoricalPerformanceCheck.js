@@ -20,6 +20,9 @@ export function HistoricalPerformanceCheck({ stockCode }) {
     setError(null);
 
     try {
+      // Track API call
+      const apiCounts = { historicalTrends: 1 };
+
       // Fetch 5 years of historical data
       const response = await fetch(
         `/api/historical-trends?symbol=${stockCode}&years=5&type=${trendType}`
@@ -31,6 +34,14 @@ export function HistoricalPerformanceCheck({ stockCode }) {
 
       const data = await response.json();
       setTrends(data.trends || []);
+
+      // Log API call to tracking endpoint
+      fetch('/api/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ counts: apiCounts })
+      }).catch(err => console.error('Failed to send tracking data:', err));
+
     } catch (err) {
       setError(err.message);
       console.error("Error analyzing trends:", err);

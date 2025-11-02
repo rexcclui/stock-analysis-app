@@ -1,4 +1,5 @@
 import { NextResponse } from "next/server";
+import { getCache, setCache, getCacheKey, FOUR_HOUR_TTL_MINUTES } from '../../../lib/cache';
 
 const FMP_KEY = process.env.FMP_KEY;
 
@@ -98,6 +99,14 @@ export async function GET(request) {
       );
     }
 
+    // Check cache first
+    const cacheKey = getCacheKey(`trends-${type}-${years}y`, symbol);
+    const cachedData = getCache(cacheKey);
+    if (cachedData) {
+      console.log(`[CACHE HIT] Historical trends for ${symbol} (${type}, ${years}y)`);
+      return NextResponse.json(cachedData);
+    }
+
     // Fetch historical data from FMP
     const url = `https://financialmodelingprep.com/api/v3/historical-price-full/${symbol}?apikey=${FMP_KEY}`;
 
@@ -127,12 +136,17 @@ export async function GET(request) {
     // Find trends
     const trends = findTrends(historicalData, type);
 
-    return NextResponse.json({
+    const result = {
       symbol,
       type,
       trends,
       dataPoints: historicalData.length,
-    });
+    };
+
+    // Cache the result (4 hours)
+    setCache(cacheKey, result, FOUR_HOUR_TTL_MINUTES);
+
+    return NextResponse.json(result);
   } catch (error) {
     console.error("Error in historical-trends API:", error);
     return NextResponse.json(
