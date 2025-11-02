@@ -187,6 +187,11 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
     if (column === 'name') return stock.name;
     if (column === 'marketCap') return getMarketCapValue(stock.marketCap);
     if (column === 'pe') return parseFloat(stock.pe) || 0;
+    if (column === 'beta') return parseFloat(stock.beta) || 0;
+    if (column === 'dividendYield') {
+      const raw = typeof stock.dividendYield === 'string' ? stock.dividendYield.replace('%','') : stock.dividendYield;
+      return parseFloat(raw) || 0;
+    }
     if (column === 'rating') return stock.analystRating;
     if (periods.includes(column)) return stock.performance[column];
     return 0;
@@ -260,6 +265,61 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
     return { backgroundColor: bg, color: 'white', borderRadius: '0.5rem', padding: '0.5rem', textAlign: 'right', fontWeight: '600' };
   };
 
+  // Beta gradient (light blue -> deep blue)
+  const allBetaValues = [selectedStock, ...comparisonStocks]
+    .map(s => parseFloat(s.beta))
+    .filter(v => !isNaN(v) && v > 0);
+  const minBeta = allBetaValues.length ? Math.min(...allBetaValues) : null;
+  const maxBeta = allBetaValues.length ? Math.max(...allBetaValues) : null;
+
+  const getBetaCellStyle = (beta) => {
+    const numeric = parseFloat(beta);
+    const base = { color: 'white', borderRadius: '0.5rem', padding: '0.5rem', fontWeight: '600', textAlign: 'right' };
+    if (isNaN(numeric)) {
+      return { ...base, backgroundColor: '#4B5563' };
+    }
+    // Negative beta: light red (fa8072 / salmon) to deep red (7f1d1d).
+    if (numeric < 0) {
+      // Cap extreme negatives for gradient scaling
+      const capped = Math.max(numeric, -3); // assume -3 is very negative
+      const ratioNeg = Math.abs(capped) / 3; // 0 at 0, 1 at -3
+      const negBg = lerpColor('fa8072', '7f1d1d', ratioNeg); // salmon to dark red
+      return { ...base, backgroundColor: negBg };
+    }
+    // Zero or near zero positive: treat as gray base
+    if (numeric === 0 || minBeta === null || maxBeta === null || minBeta === maxBeta) {
+      return { ...base, backgroundColor: '#4B5563' };
+    }
+    // Positive gradient light blue -> deep blue
+    const ratio = (numeric - minBeta) / (maxBeta - minBeta);
+    const bg = lerpColor('90cdf4', '1e3a8a', ratio);
+    return { ...base, backgroundColor: bg };
+  };
+
+  // Dividend yield gradient (light blue -> deep blue)
+  const dividendToNumber = (val) => {
+    if (typeof val !== 'string') return NaN;
+    const cleaned = val.replace('%','');
+    const num = parseFloat(cleaned);
+    return isNaN(num) ? NaN : num;
+  };
+  const allDividendValues = [selectedStock, ...comparisonStocks]
+    .map(s => dividendToNumber(s.dividendYield))
+    .filter(v => !isNaN(v) && v > 0);
+  const minDiv = allDividendValues.length ? Math.min(...allDividendValues) : null;
+  const maxDiv = allDividendValues.length ? Math.max(...allDividendValues) : null;
+
+  const getDividendCellStyle = (divYield) => {
+    const numeric = dividendToNumber(divYield);
+    const base = { color: 'white', borderRadius: '0.5rem', padding: '0.5rem', fontWeight: '600', textAlign: 'right' };
+    if (isNaN(numeric) || numeric <= 0 || minDiv === null || maxDiv === null || minDiv === maxDiv) {
+      return { ...base, backgroundColor: '#4B5563' };
+    }
+    const ratio = (numeric - minDiv) / (maxDiv - minDiv);
+    const bg = lerpColor('90cdf4', '1e3a8a', ratio);
+    return { ...base, backgroundColor: bg };
+  };
+
   return (
     <div className="overflow-x-auto">
       <table className="w-full">
@@ -286,9 +346,21 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
             </th>
             <th
               className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
+              onClick={() => handleSort('beta')}
+            >
+              Beta <SortIcon active={isActive('beta')} direction={sortDirection} />
+            </th>
+            <th
+              className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
               onClick={() => handleSort('pe')}
             >
               P/E <SortIcon active={isActive('pe')} direction={sortDirection} />
+            </th>
+            <th
+              className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
+              onClick={() => handleSort('dividendYield')}
+            >
+              Dividend <SortIcon active={isActive('dividendYield')} direction={sortDirection} />
             </th>
             <th
               className="px-4 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
@@ -296,11 +368,12 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
             >
               Rating <SortIcon active={isActive('rating')} direction={sortDirection} />
             </th>
-            <th className="px-4 py-3 text-center">Sentiment (1M)</th>
+            <th className="px-2 py-3 text-center" style={{width:'90px', minWidth:'90px'}}>Sentiment (1M)</th>
             {periods.map(period => (
               <th
                 key={period}
-                className="px-4 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
+                className="px-2 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
+                style={{width:'90px', minWidth:'90px'}}
                 onClick={() => handleSort(period)}
               >
                 {period} <SortIcon active={isActive(period)} direction={sortDirection} />
@@ -341,9 +414,19 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 ${selectedStock.marketCap}
               </div>
             </td>
+            <td className="px-4 py-3 text-right">
+              <div style={getBetaCellStyle(selectedStock.beta)}>
+                {selectedStock.beta || 'N/A'}
+              </div>
+            </td>
             <td className="px-4 py-3">
               <div style={getPeCellStyle(selectedStock.pe)}>
                 {selectedStock.pe === '—' ? '—' : selectedStock.pe}
+              </div>
+            </td>
+            <td className="px-4 py-3 text-right">
+              <div style={getDividendCellStyle(selectedStock.dividendYield)}>
+                {selectedStock.dividendYield}
               </div>
             </td>
             <td className="px-4 py-3 text-center">
@@ -351,8 +434,10 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 {selectedStock.analystRating}
               </span>
             </td>
-            <td className="px-4 py-3">
-              <SentimentChart data={selectedStock.sentimentTimeSeries} />
+            <td className="px-2 py-3 text-center" style={{width:'90px', minWidth:'90px'}}>
+              <div className="mx-auto" style={{width:'84px'}}>
+                <SentimentChart data={selectedStock.sentimentTimeSeries} />
+              </div>
             </td>
             {periods.map(period => {
               const basePerf = selectedStock.performance[period];
@@ -377,7 +462,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 styleObj = { backgroundColor: lerp('10b981','ef4444', 1 - ratio), color:'white' };
               }
               return (
-                <td key={period} className="px-2 py-3">
+                <td key={period} className="px-2 py-3 text-center" style={{width:'90px', minWidth:'90px'}}>
                   <div style={{
                     ...styleObj,
                     padding: '0.75rem',
@@ -425,9 +510,19 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                   ${stock.marketCap}
                 </div>
               </td>
+              <td className="px-4 py-3 text-right">
+                <div style={getBetaCellStyle(stock.beta)}>
+                  {stock.beta || 'N/A'}
+                </div>
+              </td>
               <td className="px-4 py-3">
                 <div style={getPeCellStyle(stock.pe)}>
                   {stock.pe === '—' ? '—' : stock.pe}
+                </div>
+              </td>
+              <td className="px-4 py-3 text-right">
+                <div style={getDividendCellStyle(stock.dividendYield)}>
+                  {stock.dividendYield}
                 </div>
               </td>
               <td className="px-4 py-3 text-center">
@@ -435,8 +530,10 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                   {stock.analystRating}
                 </span>
               </td>
-              <td className="px-4 py-3">
-                <SentimentChart data={stock.sentimentTimeSeries} />
+              <td className="px-2 py-3 text-center" style={{width:'90px', minWidth:'90px'}}>
+                <div className="mx-auto" style={{width:'84px'}}>
+                  <SentimentChart data={stock.sentimentTimeSeries} />
+                </div>
               </td>
               {periods.map(period => {
                 const value = stock.performance[period];
@@ -458,7 +555,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                   styleObj = { backgroundColor: lerp('10b981','ef4444', 1 - ratio), color:'white' };
                 }
                 return (
-                  <td key={period} className="px-2 py-3">
+                  <td key={period} className="px-2 py-3 text-center" style={{width:'90px', minWidth:'90px'}}>
                     <div style={{
                       ...styleObj,
                       padding: '0.75rem',

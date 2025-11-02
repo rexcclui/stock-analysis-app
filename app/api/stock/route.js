@@ -109,7 +109,9 @@ export async function GET(request) {
 
     const price = quote.price || profile.price || 0;
     const lastDiv = profile.lastDiv || 0;
-    const dividendYield = (price > 0 && lastDiv > 0) ? ((lastDiv / price) * 100).toFixed(2) : 0;
+  const dividendYieldRaw = (price > 0 && lastDiv > 0) ? ((lastDiv / price) * 100).toFixed(2) : null;
+  const dividendYield = dividendYieldRaw ? dividendYieldRaw + '%' : '—';
+  const betaValue = (typeof profile.beta === 'number' && profile.beta !== 0) ? profile.beta.toFixed(2) : (profile.beta || 'N/A');
 
     const stockData = {
       code: symbol,
@@ -121,8 +123,9 @@ export async function GET(request) {
       marketCap: profile.mktCap 
         ? (profile.mktCap / 1e9).toFixed(2) + 'B'
         : 'N/A',
-      pe: peValue,
-      dividendYield: dividendYield,
+  pe: peValue,
+  beta: betaValue,
+  dividendYield: dividendYield,
       fiftyTwoWeekRange: profile.range,
       analystRating: profile.dcf > profile.price ? 'Buy' : 'Hold',
       industry: profile.industry || 'N/A',
