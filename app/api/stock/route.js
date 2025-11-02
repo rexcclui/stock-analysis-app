@@ -107,16 +107,23 @@ export async function GET(request) {
       }
     }
 
+    const price = quote.price || profile.price || 0;
+    const lastDiv = profile.lastDiv || 0;
+    const dividendYield = (price > 0 && lastDiv > 0) ? ((lastDiv / price) * 100).toFixed(2) : 0;
+
     const stockData = {
       code: symbol,
       name: profile.companyName,
+      website: profile.website,
       exchange: profile.exchangeShortName || profile.exchange || 'N/A',
-      currentPrice: quote.price || profile.price || 0,
+      currentPrice: price,
       dayChange: quote.changesPercentage || 0,
       marketCap: profile.mktCap 
         ? (profile.mktCap / 1e9).toFixed(2) + 'B'
         : 'N/A',
       pe: peValue,
+      dividendYield: dividendYield,
+      fiftyTwoWeekRange: profile.range,
       analystRating: profile.dcf > profile.price ? 'Buy' : 'Hold',
       industry: profile.industry || 'N/A',
       sector: profile.sector || 'N/A',

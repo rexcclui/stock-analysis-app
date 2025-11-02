@@ -22,7 +22,15 @@ export function StockResultCard({ stock }) {
     <div className="bg-gradient-to-r from-blue-900/40 to-indigo-900/40 rounded-xl p-6 mb-6 border border-blue-800/30">
       <div className="flex justify-between items-start mb-4">
         <div>
-          <h2 className="text-3xl font-bold text-white">{stock.name}</h2>
+          <h2 className="text-3xl font-bold text-white">
+            {stock.website ? (
+              <a href={stock.website} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                {stock.name}
+              </a>
+            ) : (
+              stock.name
+            )}
+          </h2>
           <p className="text-gray-300">{stock.code} • {stock.exchange}</p>
         </div>
         <div className="text-right">
@@ -43,27 +51,20 @@ export function StockResultCard({ stock }) {
           )}
         </div>
       </div>
-      <div className="grid grid-cols-4 gap-4">
-        <div className="bg-gray-800/60 rounded-lg p-3 border border-gray-700">
-          <div className="text-sm text-gray-300">Market Cap</div>
-          <div className="text-lg font-bold text-white">{stock.marketCap ? `$${stock.marketCap}` : '—'}</div>
-        </div>
-        <div className="bg-gray-800/60 rounded-lg p-3 border border-gray-700">
-          <div className="text-sm text-gray-300">P/E Ratio</div>
-          <div className="text-lg font-bold text-white">{stock.pe ?? '—'}</div>
-        </div>
-        <div className="bg-gray-800/60 rounded-lg p-3 border border-gray-700">
-          <div className="text-sm text-gray-300">Analyst Rating</div>
-          <div className="text-lg font-bold text-green-400">{stock.analystRating ?? '—'}</div>
-        </div>
-        {stock.sentiment && (
-          <div className="bg-gray-800/60 rounded-lg p-3 border border-gray-700">
-            <div className="text-sm text-gray-300">Social Sentiment</div>
-            <div className={`text-lg font-bold ${getSentimentColor(stock.sentiment.score)}`}>
-              {(stock.sentiment.score * 100).toFixed(0)}%
-            </div>
+      <div className="flex overflow-x-auto space-x-4 pb-2">
+        {[
+          { label: 'Market Cap', value: stock.marketCap ? `$${stock.marketCap}` : '—' },
+          { label: 'P/E Ratio', value: stock.pe ?? '—' },
+          { label: '52W Range', value: stock.fiftyTwoWeekRange ?? '—' },
+          { label: 'Dividend %', value: stock.dividendYield > 0 ? `${stock.dividendYield}%` : '—' },
+          { label: 'Analyst Rating', value: stock.analystRating ?? '—', color: 'text-green-400' },
+          stock.sentiment && { label: 'Social Sentiment', value: `${(stock.sentiment.score * 100).toFixed(0)}%`, color: getSentimentColor(stock.sentiment.score) }
+        ].filter(Boolean).map(item => (
+          <div key={item.label} className="bg-gray-800/60 rounded-lg p-3 border border-gray-700 flex-shrink-0 w-40">
+            <div className="text-sm text-gray-300">{item.label}</div>
+            <div className={`text-lg font-bold ${item.color || 'text-white'}`}>{item.value}</div>
           </div>
-        )}
+        ))}
       </div>
     </div>
   );
