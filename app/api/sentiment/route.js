@@ -9,7 +9,6 @@ export async function GET(request) {
     return NextResponse.json({ error: 'Symbol required' }, { status: 400 });
   }
 
-  // Check cache first
   const cacheKey = getCacheKey('sentiment', symbol);
   const cachedData = getCache(cacheKey);
   if (cachedData) {
@@ -18,7 +17,6 @@ export async function GET(request) {
   }
 
   try {
-    // Fetch real social sentiment data from FMP
     const sentimentResponse = await fetch(
       `https://financialmodelingprep.com/api/v4/social-sentiment?symbol=${symbol}&apikey=${process.env.FMP_KEY}`
     );
@@ -29,24 +27,62 @@ export async function GET(request) {
 
     const sentimentData = await sentimentResponse.json();
 
-    // Initialize with defaults
     let score = 0.5;
     let positive = 50;
     let neutral = 30;
     let negative = 20;
-    let sentimentHistory = {
-      '1D': 0.5, '7D': 0.5, '1M': 0.5
-    };
+    let sentimentHistory = { '1D': 0.5, '7D': 0.5, '1M': 0.5 };
+    let sentimentTimeSeries = [];
 
-    // Process array of hourly sentiment data from FMP
     if (Array.isArray(sentimentData) && sentimentData.length > 0) {
-      // Filter out entries with zero sentiment (no data for that hour)
       const validData = sentimentData.filter(item => 
         (item.stocktwitsSentiment > 0 || item.twitterSentiment > 0)
       );
 
       if (validData.length > 0) {
-        // Calculate current average sentiment from both sources
+        const dailySentiments = {};
+        const thirtyDaysAgo = new Date(new Date().setDate(new Date().getDate() - 30));
+
+        validData.forEach(item => {
+            const itemDate = new Date(item.date);
+            if (itemDate >= thirtyDaysAgo) {
+                const day = itemDate.toISOString().split('T')[0];
+                if (!dailySentiments[day]) {
+                    dailySentiments[day] = { stocktwitsTotal: 0, stocktwitsCount: 0, twitterTotal: 0, twitterCount: 0 };
+                }
+                if (item.stocktwitsSentiment > 0) {
+                    dailySentiments[day].stocktwitsTotal += item.stocktwitsSentiment;
+                    dailySentiments[day].stocktwitsCount++;
+                }
+                if (item.twitterSentiment > 0) {
+                    dailySentiments[day].twitterTotal += item.twitterSentiment;
+                    dailySentiments[day].twitterCount++;
+                }
+            }
+        });
+
+        sentimentTimeSeries = Object.keys(dailySentiments)
+            .map(day => {
+                const dayData = dailySentiments[day];
+                const stocktwitsAvg = dayData.stocktwitsCount > 0 ? dayData.stocktwitsTotal / dayData.stocktwitsCount : 0;
+                const twitterAvg = dayData.twitterCount > 0 ? dayData.twitterTotal / dayData.twitterCount : 0;
+                
+                let score = 0.5; // Default score
+                if (stocktwitsAvg > 0 && twitterAvg > 0) {
+                    score = (stocktwitsAvg + twitterAvg) / 2;
+                } else if (stocktwitsAvg > 0) {
+                    score = stocktwitsAvg;
+                } else if (twitterAvg > 0) {
+                    score = twitterAvg;
+                }
+
+                return {
+                    date: day,
+                    score: parseFloat(score.toFixed(2))
+                };
+            })
+            .sort((a, b) => new Date(a.date) - new Date(b.date));
+
         let totalSentiment = 0;
         let sentimentCount = 0;
 
@@ -61,23 +97,15 @@ export async function GET(request) {
           }
         });
 
-        // Current overall score (0-1 scale where 0.5 = neutral)
         score = sentimentCount > 0 ? parseFloat((totalSentiment / sentimentCount).toFixed(2)) : 0.5;
-
-        // Convert score to sentiment distribution
-        // Sentiment is on 0-1 scale: 0 = very negative, 0.5 = neutral, 1 = very positive
         positive = Math.round(score * 100);
         negative = Math.round((1 - score) * 100);
         neutral = 100 - positive - negative;
 
-        // Calculate historical sentiment by time periods
         const now = new Date();
         const calculatePeriodSentiment = (hoursBack) => {
           const cutoffTime = new Date(now.getTime() - hoursBack * 60 * 60 * 1000);
-          const periodData = validData.filter(item => {
-            const itemDate = new Date(item.date);
-            return itemDate >= cutoffTime;
-          });
+          const periodData = validData.filter(item => new Date(item.date) >= cutoffTime);
 
           if (periodData.length === 0) return score;
 
@@ -98,7 +126,6 @@ export async function GET(request) {
           return periodCount > 0 ? parseFloat((totalPeriodSentiment / periodCount).toFixed(2)) : score;
         };
 
-        // Generate sentiment history for different periods
         sentimentHistory = {
           '1D': calculatePeriodSentiment(24),
           '7D': calculatePeriodSentiment(24 * 7),
@@ -113,10 +140,10 @@ export async function GET(request) {
       neutral,
       negative,
       sentimentHistory,
+      sentimentTimeSeries,
       source: 'FMP Social Sentiment'
     };
 
-    // Cache the result (24 hours)
     setCache(cacheKey, result, 1440);
 
     return NextResponse.json(result);
@@ -127,9 +154,8 @@ export async function GET(request) {
       positive: 50,
       neutral: 30,
       negative: 20,
-      sentimentHistory: {
-        '1D': 0.5, '7D': 0.5, '1M': 0.5
-      },
+      sentimentHistory: { '1D': 0.5, '7D': 0.5, '1M': 0.5 },
+      sentimentTimeSeries: [],
       source: 'Default (API unavailable)'
     });
   }

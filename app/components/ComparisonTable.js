@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { X, ArrowUp, ArrowDown } from 'lucide-react';
+import SentimentChart from './SentimentChart';
 
 const getColorForPerformance = (value) => {
   const numValue = parseFloat(value);
@@ -12,16 +13,6 @@ const getColorForPerformance = (value) => {
   if (numValue >= -10) return { backgroundColor: '#B91C1C', color: 'white' };
   if (numValue >= -20) return { backgroundColor: '#DC2626', color: 'white' };
   return { backgroundColor: '#EF4444', color: 'white' };
-};
-
-const getSentimentBgColor = (score) => {
-  if (score >= 0.7) return 'bg-green-500 text-white';
-  if (score >= 0.6) return 'bg-green-600 text-white';
-  if (score >= 0.5) return 'bg-green-700 text-white';
-  if (score >= 0.4) return 'bg-yellow-600 text-white';
-  if (score >= 0.3) return 'bg-yellow-700 text-white';
-  if (score >= 0.2) return 'bg-red-700 text-white';
-  return 'bg-red-600 text-white';
 };
 
 const getRatingStyle = (rating) => {
@@ -300,6 +291,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
             >
               Rating <SortIcon active={isActive('rating')} direction={sortDirection} />
             </th>
+            <th className="px-4 py-3 text-center">Sentiment (1M)</th>
             {periods.map(period => (
               <th
                 key={period}
@@ -354,6 +346,9 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 {selectedStock.analystRating}
               </span>
             </td>
+            <td className="px-4 py-3">
+              <SentimentChart data={selectedStock.sentimentTimeSeries} />
+            </td>
             {periods.map(period => (
               <td key={period} className="px-2 py-3">
                 <div style={{
@@ -366,11 +361,6 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 }}>
                   {selectedStock.performance[period] > 0 ? '+' : ''}{selectedStock.performance[period].toFixed(1)}%
                 </div>
-                {selectedStock.sentimentHistory && (
-                  <div className={`px-2 py-1 rounded text-center text-xs font-bold ${getSentimentBgColor(selectedStock.sentimentHistory[period])}`}>
-                    {(selectedStock.sentimentHistory[period] * 100).toFixed(0)}%
-                  </div>
-                )}
               </td>
             ))}
             <td className="px-4 py-3 text-center text-gray-400">-</td>
@@ -417,6 +407,9 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                   {stock.analystRating}
                 </span>
               </td>
+              <td className="px-4 py-3">
+                <SentimentChart data={stock.sentimentTimeSeries} />
+              </td>
               {periods.map(period => (
                 <td key={period} className="px-2 py-3">
                   <div style={{
@@ -429,11 +422,6 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                   }}>
                     {stock.performance[period] > 0 ? '+' : ''}{stock.performance[period].toFixed(1)}%
                   </div>
-                  {stock.sentimentHistory && (
-                    <div className={`px-2 py-1 rounded text-center text-xs font-bold ${getSentimentBgColor(stock.sentimentHistory[period])}`}>
-                      {(stock.sentimentHistory[period] * 100).toFixed(0)}%
-                    </div>
-                  )}
                 </td>
               ))}
               <td className="px-4 py-3 text-center">

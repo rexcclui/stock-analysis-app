@@ -25,7 +25,7 @@ const fetchCompleteStockData = async (symbol) => {
     }
 
     // Fetch sentiment data (optional - use defaults if fails)
-    let sentiment = { score: 0.5, positive: 50, neutral: 30, negative: 20, sentimentHistory: { '1D': 0.5, '7D': 0.5, '1M': 0.5 } };
+    let sentiment = { score: 0.5, positive: 50, neutral: 30, negative: 20, sentimentHistory: { '1D': 0.5, '7D': 0.5, '1M': 0.5 }, sentimentTimeSeries: [] };
     try {
       const sentimentRes = await fetch(`/api/sentiment?symbol=${symbol}`);
       if (sentimentRes.ok) {
@@ -62,7 +62,8 @@ const fetchCompleteStockData = async (symbol) => {
     return {
       ...stock,
       sentiment,
-      sentimentHistory: sentiment.sentimentHistory || {},
+      sentimentHistory: sentiment.sentimentHistory, // Ensure this is passed
+      sentimentTimeSeries: sentiment.sentimentTimeSeries,
       news: Array.isArray(news) ? news : [],
       competitors: Array.isArray(competitors) ? competitors : []
     };
