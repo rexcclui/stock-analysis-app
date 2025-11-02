@@ -27,42 +27,91 @@ export function HeatmapView({
   onRemoveComparison,
   onStockCodeClick,
 }) {
-  return (
-    <div className="p-6">
-      <div className="flex flex-wrap gap-3 justify-center">
-        {[selectedStock, ...comparisonStocks].map((stock) => {
-          const performance = stock.performance[heatmapColorBy];
-          const sizeValue =
-            heatmapSizeBy === "marketCap"
-              ? getMarketCapValue(stock.marketCap)
-              : heatmapSizeBy === "pe"
-              ? parseFloat(stock.pe) || 0
-              : Math.abs(stock.performance[heatmapSizeBy]);
+  // Calculate size values for all stocks and sort by size (largest first)
+  const allStocks = [selectedStock, ...comparisonStocks];
 
-          const maxSize = 250;
-          const minSize = 120;
-          const allValues = [selectedStock, ...comparisonStocks].map((s) =>
-            heatmapSizeBy === "marketCap"
-              ? getMarketCapValue(s.marketCap)
-              : heatmapSizeBy === "pe"
-              ? parseFloat(s.pe) || 0
-              : Math.abs(s.performance[heatmapSizeBy])
-          );
-          const maxValue = Math.max(...allValues);
-          const minValue = Math.min(...allValues);
-          const normalizedSize =
-            minSize +
-            ((sizeValue - minValue) / (maxValue - minValue || 1)) *
-              (maxSize - minSize);
+  const stocksWithSize = allStocks.map((stock) => {
+    const sizeValue =
+      heatmapSizeBy === "marketCap"
+        ? getMarketCapValue(stock.marketCap)
+        : heatmapSizeBy === "pe"
+        ? parseFloat(stock.pe) || 0
+        : Math.abs(stock.performance[heatmapSizeBy]);
+    return { stock, sizeValue };
+  });
+
+  // Sort by size value descending (largest first)
+  stocksWithSize.sort((a, b) => b.sizeValue - a.sizeValue);
+
+  // Calculate flex-grow values with better proportional representation
+  const minSize = Math.min(...stocksWithSize.map(item => item.sizeValue));
+  const maxSize = Math.max(...stocksWithSize.map(item => item.sizeValue));
+
+  const stocksWithFlex = stocksWithSize.map((item) => {
+    // Normalize between 1 and 10 for more dramatic, proportional size differences
+    const normalizedFlex = 1 + ((item.sizeValue - minSize) / (maxSize - minSize)) * 9;
+    return {
+      ...item,
+      flexGrow: normalizedFlex,
+    };
+  });
+
+  return (
+    <div className="p-4">
+      <div className="flex flex-wrap" style={{ gap: '0px', minHeight: '500px' }}>
+        {stocksWithFlex.map(({ stock, flexGrow }) => {
+          const performance = stock.performance[heatmapColorBy];
+
+          // Determine what to display for SIZE metric (heatmapSizeBy)
+          let sizeDisplayValue;
+          let sizeDisplayLabel;
+
+          if (heatmapSizeBy === "marketCap") {
+            sizeDisplayValue = stock.marketCap;
+            sizeDisplayLabel = "Cap";
+          } else if (heatmapSizeBy === "pe") {
+            sizeDisplayValue = stock.pe;
+            sizeDisplayLabel = "P/E";
+          } else {
+            // It's a performance metric
+            const perfValue = stock.performance[heatmapSizeBy];
+            sizeDisplayValue = `${perfValue > 0 ? "+" : ""}${perfValue.toFixed(1)}%`;
+            sizeDisplayLabel = heatmapSizeBy.toUpperCase();
+          }
+
+          // Determine what to display for COLOR metric (heatmapColorBy)
+          let colorDisplayValue;
+          let colorDisplayLabel;
+
+          if (heatmapColorBy === "marketCap") {
+            colorDisplayValue = stock.marketCap;
+            colorDisplayLabel = "Cap";
+          } else if (heatmapColorBy === "pe") {
+            colorDisplayValue = stock.pe;
+            colorDisplayLabel = "P/E";
+          } else {
+            // It's a performance metric
+            const perfValue = stock.performance[heatmapColorBy];
+            colorDisplayValue = `${perfValue > 0 ? "+" : ""}${perfValue.toFixed(1)}%`;
+            colorDisplayLabel = heatmapColorBy.toUpperCase();
+          }
+
+          // Only show color value if it's different from size value
+          const showBothMetrics = heatmapSizeBy !== heatmapColorBy;
 
           return (
             <div
               key={stock.code}
-              className="relative rounded-xl shadow-lg hover:shadow-2xl transition-all duration-300 cursor-pointer transform hover:scale-105 flex flex-col items-center justify-center p-4 border-2 border-white/10"
+              className="relative cursor-pointer transition-all duration-200 hover:brightness-110 flex flex-col items-center justify-center"
               style={{
                 backgroundColor: getHeatmapColor(performance),
-                width: `${normalizedSize}px`,
-                height: `${normalizedSize}px`,
+                flexGrow: flexGrow,
+                flexBasis: `${Math.max(200, flexGrow * 80)}px`,
+                minHeight: '120px',
+                minWidth: '180px',
+                border: '2px solid rgba(0,0,0,0.4)',
+                boxSizing: 'border-box',
+                padding: '12px',
               }}
             >
               <div className="text-center">
@@ -72,23 +121,29 @@ export function HeatmapView({
                   }
                   role="link"
                   tabIndex={0}
-                  className="text-white font-bold text-2xl mb-1 underline decoration-dotted cursor-pointer hover:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                  className="text-white font-bold text-lg underline decoration-dotted cursor-pointer hover:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded block mb-1"
                 >
                   {stock.code}
                 </span>
-                <div className="text-white font-bold text-3xl">
-                  {performance > 0 ? "+" : ""}
-                  {performance.toFixed(1)}%
+                <div className="text-white font-bold text-xl mb-1">
+                  <span className="text-xs opacity-80">{sizeDisplayLabel}: </span>
+                  {sizeDisplayValue}
                 </div>
+                {showBothMetrics && (
+                  <div className="text-white font-bold text-lg">
+                    <span className="text-xs opacity-80">{colorDisplayLabel}: </span>
+                    {colorDisplayValue}
+                  </div>
+                )}
               </div>
               {stock.code !== selectedStock.code && (
                 <button
                   onClick={() => onRemoveComparison(stock.code)}
                   className="absolute p-0.5 bg-red-500/80 hover:bg-red-600 rounded-full transition-all"
-                  style={{ bottom: "4px", right: "4px", zIndex: 10 }}
+                  style={{ bottom: "6px", right: "6px", zIndex: 10 }}
                   aria-label="Remove comparison"
                 >
-                  <X size={8} className="text-white" />
+                  <X size={10} className="text-white" />
                 </button>
               )}
             </div>
