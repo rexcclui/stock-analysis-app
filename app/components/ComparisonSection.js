@@ -21,6 +21,7 @@ export function ComparisonSection({
   searchHistoryStocks,
   onSearchHistoryCodeClick
 }) {
+  //console.log('TEMP_LOG[7] ComparisonSection> comparisonStocks :', comparisonStocks );
   return (
     <>
       <SearchHistoryTable

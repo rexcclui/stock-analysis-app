@@ -50,7 +50,7 @@ const fetchCompleteStockData = async (symbol) => {
     // Fetch competitors (optional)
     let competitors = [];
     try {
-      const competitorsRes = await fetch(`/api/competitors?sector=${stock.sector}&exclude=${symbol}`);
+      const competitorsRes = await fetch(`/api/competitors?industry=${stock.industry}&exclude=${symbol}`);
       if (competitorsRes.ok) {
         competitors = await competitorsRes.json();
         if (!Array.isArray(competitors)) competitors = [];

@@ -3,24 +3,24 @@ import { getCache, setCache, getCacheKey } from '../../../lib/cache';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
-  const sector = searchParams.get('sector');
+  const industry = searchParams.get('industry');
   const exclude = searchParams.get('exclude');
 
-  if (!sector) {
-    return NextResponse.json({ error: 'Sector required' }, { status: 400 });
+  if (!industry) {
+    return NextResponse.json({ error: 'Industry required' }, { status: 400 });
   }
 
   // Check cache first
-  const cacheKey = getCacheKey('competitors', sector);
+  const cacheKey = getCacheKey('competitors', industry);
   const cachedData = getCache(cacheKey);
   if (cachedData) {
-    console.log(`[CACHE HIT] Competitors data for sector ${sector}`);
+    console.log(`[CACHE HIT] Competitors data for industry ${industry}`);
     return NextResponse.json(cachedData);
   }
 
   try {
     const response = await fetch(
-      `https://financialmodelingprep.com/api/v3/stock-screener?sector=${sector}&limit=10&apikey=${process.env.FMP_KEY}`
+      `https://financialmodelingprep.com/api/v3/stock-screener?industry=${industry}&limit=30&apikey=${process.env.FMP_KEY}`
     );
     const data = await response.json();
 
@@ -30,7 +30,7 @@ export async function GET(request) {
 
     const competitors = data
       .filter(stock => stock.symbol !== exclude)
-      .slice(0, 4)
+      .slice(0, 29)
       .map(stock => stock.symbol);
 
     // Cache the result (24 hours)
