@@ -6,6 +6,7 @@ import { Search, BarChart3 } from 'lucide-react';
 import { ComparisonSection } from './components/ComparisonSection';
 import { PricePerformanceChart } from './components/PricePerformanceChart';
 import { NewsSection } from './components/NewsSection';
+import { SentimentSection } from './components/SentimentSection';
 
 // Fetch complete stock data from API routes
 const fetchCompleteStockData = async (symbol) => {
@@ -488,25 +489,7 @@ export default function StockAnalysisDashboard() {
                 onSearchHistoryCodeClick={(code)=> { handleSearch(code); }}
               />
 
-              {selectedStock.sentiment && (
-                <div className="mt-6 bg-gray-800 rounded-xl shadow-xl p-6 border border-gray-700">
-                  <h3 className="text-xl font-bold text-white mb-4">Social Media Sentiment</h3>
-                  <div className="grid grid-cols-3 gap-4 mb-4">
-                    <div className="bg-green-900/20 rounded-lg p-4 border border-green-800">
-                      <div className="text-sm text-gray-300">Positive</div>
-                      <div className="text-2xl font-bold text-green-400">{selectedStock.sentiment.positive}%</div>
-                    </div>
-                    <div className="bg-gray-700/20 rounded-lg p-4 border border-gray-600">
-                      <div className="text-sm text-gray-300">Neutral</div>
-                      <div className="text-2xl font-bold text-gray-200">{selectedStock.sentiment.neutral}%</div>
-                    </div>
-                    <div className="bg-red-900/20 rounded-lg p-4 border border-red-800">
-                      <div className="text-sm text-gray-300">Negative</div>
-                      <div className="text-2xl font-bold text-red-400">{selectedStock.sentiment.negative}%</div>
-                    </div>
-                  </div>
-                </div>
-              )}
+              <SentimentSection sentiment={selectedStock.sentiment} />
 
               <NewsSection news={selectedStock.news} />
             </>
