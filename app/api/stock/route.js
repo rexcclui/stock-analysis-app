@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getCache, setCache, getCacheKey } from '../../../lib/cache';
+import { getCache, setCache, getCacheKey, FOUR_HOUR_TTL_MINUTES } from '../../../lib/cache';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -131,8 +131,8 @@ export async function GET(request) {
       chartData
     };
 
-    // Cache the result (24 hours)
-    setCache(cacheKey, stockData, 1440);
+  // Cache the result (4 hours)
+  setCache(cacheKey, stockData, FOUR_HOUR_TTL_MINUTES);
 
     return NextResponse.json(stockData);
   } catch (error) {

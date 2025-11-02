@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { getCache, setCache, getCacheKey } from '../../../lib/cache';
+import { getCache, setCache, getCacheKey, FOUR_HOUR_TTL_MINUTES } from '../../../lib/cache';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -144,7 +144,7 @@ export async function GET(request) {
       source: 'FMP Social Sentiment'
     };
 
-    setCache(cacheKey, result, 1440);
+  setCache(cacheKey, result, FOUR_HOUR_TTL_MINUTES);
 
     return NextResponse.json(result);
   } catch (error) {
