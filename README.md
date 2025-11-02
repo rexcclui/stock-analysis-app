@@ -54,3 +54,8 @@ git remote add origin https://github.com/rexcclui/stock-analysis-app.git
 git add -A && git commit -m "Clean dependencies and remove duplicate page.js" && git push
 
 https://vercel.com/rexccluis-projects/stock-analysis-app-epkc
+
+
+ rm -rf .next
+ npm run build
+ npm run dev
