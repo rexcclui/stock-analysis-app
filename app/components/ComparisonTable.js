@@ -253,11 +253,9 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
       <table className="w-full">
         <thead className="bg-gray-900 text-white">
           <tr>
-            <th colSpan="5" className="px-4 py-3 text-left"></th>
-            <th colSpan={periods.length} className="px-4 py-3 text-center font-semibold bg-gray-800 border-b-2 border-gray-700">
-              Price / Sentiment
+            <th colSpan={5 + 1 + periods.length + 1} className="px-4 py-3 text-left text-lg font-semibold bg-gray-800 border-b border-gray-700">
+              Industry Comparison
             </th>
-            <th className="px-4 py-3 text-center"></th>
           </tr>
           <tr>
             <th
