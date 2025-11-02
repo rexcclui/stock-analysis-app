@@ -10,9 +10,10 @@ import { SentimentSection } from './components/SentimentSection';
 import { StockResultCard } from './components/StockResultCard';
 
 // Fetch complete stock data from API routes
-const fetchCompleteStockData = async (symbol) => {
+const fetchCompleteStockData = async (symbol, apiCallCounts) => {
   try {
     // Fetch stock data (required)
+    if (apiCallCounts) apiCallCounts.stock++;
     const stockRes = await fetch(`/api/stock?symbol=${symbol}`);
     if (!stockRes.ok) {
       console.error(`Stock API error: ${stockRes.status}` + stockRes.statusText);
@@ -27,6 +28,7 @@ const fetchCompleteStockData = async (symbol) => {
     // Fetch sentiment data (optional - use defaults if fails)
     let sentiment = { score: 0.5, positive: 50, neutral: 30, negative: 20, sentimentHistory: { '1D': 0.5, '7D': 0.5, '1M': 0.5 }, sentimentTimeSeries: [] };
     try {
+      if (apiCallCounts) apiCallCounts.sentiment++;
       const sentimentRes = await fetch(`/api/sentiment?symbol=${symbol}`);
       if (sentimentRes.ok) {
         sentiment = await sentimentRes.json();
@@ -38,6 +40,7 @@ const fetchCompleteStockData = async (symbol) => {
     // Fetch news data (optional - use empty if fails)
     let news = [];
     try {
+      if (apiCallCounts) apiCallCounts.news++;
       const newsRes = await fetch(`/api/news?symbol=${symbol}`);
       if (newsRes.ok) {
         news = await newsRes.json();
@@ -50,6 +53,7 @@ const fetchCompleteStockData = async (symbol) => {
     // Fetch competitors (optional)
     let competitors = [];
     try {
+      if (apiCallCounts) apiCallCounts.competitors++;
       const competitorsRes = await fetch(`/api/competitors?industry=${stock.industry}&exclude=${symbol}`);
       if (competitorsRes.ok) {
         competitors = await competitorsRes.json();
@@ -58,6 +62,8 @@ const fetchCompleteStockData = async (symbol) => {
     } catch {
       console.warn('Competitors fetch failed');
     }
+
+    if (apiCallCounts) apiCallCounts.total++;
 
     return {
       ...stock,
@@ -221,11 +227,14 @@ export default function StockAnalysisDashboard() {
     setLoading(true);
     const stockCode = (overrideCode || searchInput).toUpperCase();
     if (!stockCode) { setLoading(false); return; }
+    
+    const counts = { total: 0, stock: 0, sentiment: 0, news: 0, competitors: 0 };
+
     // Always reflect clicked/typed code in the input
     setSearchInput(stockCode);
     
     try {
-      const stockData = await fetchCompleteStockData(stockCode);
+      const stockData = await fetchCompleteStockData(stockCode, counts);
       
       if (!stockData) {
         alert('Stock not found or API error. Please check your API keys in .env.local');
@@ -236,12 +245,12 @@ export default function StockAnalysisDashboard() {
       setSelectedStock(stockData);
       addToSearchHistory(stockCode);
       
-      const competitorPromises = stockData.competitors.map(code => fetchCompleteStockData(code));
+      const competitorPromises = stockData.competitors.map(code => fetchCompleteStockData(code, counts));
       const competitorData = await Promise.all(competitorPromises);
       const validCompetitors = competitorData.filter(c => c !== null);
       
       const saved = savedComparisons[stockCode] || [];
-      const savedPromises = saved.map(code => fetchCompleteStockData(code));
+      const savedPromises = saved.map(code => fetchCompleteStockData(code, counts));
       const savedData = await Promise.all(savedPromises);
       const validSaved = savedData.filter(s => s !== null);
       
@@ -260,6 +269,7 @@ export default function StockAnalysisDashboard() {
         series: buildNormalizedSeries(s.__stockRef, chartPeriod)
       })));
       
+      console.log('API Call Summary:', counts);
     } catch (error) {
       console.error('Search error:', error);
       alert('Error fetching stock data. Please check your API keys and try again.');
@@ -285,7 +295,7 @@ export default function StockAnalysisDashboard() {
       return;
     }
     setLoading(true);
-    const stock = await fetchCompleteStockData(code);
+    const stock = await fetchCompleteStockData(code, null); // Pass null for counts
     setLoading(false);
     if (!stock) {
       alert('Stock not found');
@@ -315,7 +325,7 @@ export default function StockAnalysisDashboard() {
     }
     
     setLoading(true);
-    const stock = await fetchCompleteStockData(code);
+    const stock = await fetchCompleteStockData(code, null); // Pass null for counts
     
     if (stock) {
       setComparisonStocks([...comparisonStocks, stock]);
