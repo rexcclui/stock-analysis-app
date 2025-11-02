@@ -59,13 +59,82 @@ export function ComparisonTable({
   viewMode,
   onViewModeChange,
   heatmapColorBy,
-  onHeatmapColorByChange,
   heatmapSizeBy,
+  onHeatmapColorByChange,
   onHeatmapSizeByChange,
   onStockCodeClick
 }) {
+  const [colorMode, setColorMode] = useState('historical'); // 'historical' | 'relative'
   return (
     <div className="bg-gray-800 rounded-xl shadow-xl overflow-hidden border border-gray-700">
+      <div className="flex items-center justify-between flex-wrap gap-4 px-6 py-4 bg-gray-900 border-b border-gray-700">
+        <span className="text-lg font-semibold text-white">Industry Comparison</span>
+        <div className="flex items-center gap-6 flex-wrap">
+          <div className="flex items-center gap-2">
+            <span className="text-gray-300 text-sm">View:</span>
+            <div className="flex bg-gray-700 rounded-lg p-1">
+              <button
+                onClick={() => onViewModeChange('table')}
+                className={`px-3 py-1 rounded-md text-sm transition ${
+                  viewMode === 'table' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white'
+                }`}
+              >Table</button>
+              <button
+                onClick={() => onViewModeChange('heatmap')}
+                className={`px-3 py-1 rounded-md text-sm transition ${
+                  viewMode === 'heatmap' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white'
+                }`}
+              >Heatmap</button>
+            </div>
+          </div>
+          {viewMode === 'table' && (
+            <div className="flex items-center gap-2">
+              <span className="text-gray-300 text-sm">Colorize:</span>
+              <div className="flex bg-gray-700 rounded-lg p-1">
+                <button
+                  onClick={() => setColorMode('historical')}
+                  className={`px-3 py-1 rounded-md text-sm transition ${colorMode === 'historical' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white'}`}
+                >Historical</button>
+                <button
+                  onClick={() => setColorMode('relative')}
+                  className={`px-3 py-1 rounded-md text-sm transition ${colorMode === 'relative' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white'}`}
+                >Relative</button>
+              </div>
+            </div>
+          )}
+          {viewMode === 'heatmap' && (
+            <div className="flex items-center gap-6 flex-wrap">
+              <div className="flex items-center gap-2">
+                <span className="text-gray-300 text-sm">Color by:</span>
+                <select
+                  value={heatmapColorBy}
+                  onChange={(e) => onHeatmapColorByChange && onHeatmapColorByChange(e.target.value)}
+                  className="bg-gray-700 text-gray-200 text-sm rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {periods.map(p => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex items-center gap-2">
+                <span className="text-gray-300 text-sm">Size by:</span>
+                <select
+                  value={heatmapSizeBy}
+                  onChange={(e) => onHeatmapSizeByChange && onHeatmapSizeByChange(e.target.value)}
+                  className="bg-gray-700 text-gray-200 text-sm rounded px-2 py-1 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  {/* size options: performance periods OR fundamentals */}
+                  <option value="marketCap">Market Cap</option>
+                  <option value="pe">P/E</option>
+                  {periods.map(p => (
+                    <option key={p} value={p}>{p}</option>
+                  ))}
+                </select>
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
       {viewMode === 'table' ? (
         <TableView
           selectedStock={selectedStock}
@@ -73,6 +142,8 @@ export function ComparisonTable({
           periods={periods}
           onRemoveComparison={onRemoveComparison}
           onStockCodeClick={onStockCodeClick}
+          colorMode={colorMode}
+          setColorMode={setColorMode}
         />
       ) : (
         <HeatmapView
@@ -85,66 +156,7 @@ export function ComparisonTable({
         />
       )}
       
-      <div className="bg-gray-800 p-4 border-t border-gray-700">
-        <div className="flex items-center justify-between flex-wrap gap-4">
-          <div className="flex items-center gap-4">
-            <span className="text-white font-medium">View Mode:</span>
-            <div className="flex bg-gray-700 rounded-lg p-1">
-              <button
-                onClick={() => onViewModeChange('table')}
-                className={`px-4 py-2 rounded-lg transition ${
-                  viewMode === 'table' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'text-gray-300 hover:text-white'
-                }`}
-              >
-                Table
-              </button>
-              <button
-                onClick={() => onViewModeChange('heatmap')}
-                className={`px-4 py-2 rounded-lg transition ${
-                  viewMode === 'heatmap' 
-                    ? 'bg-blue-600 text-white' 
-                    : 'text-gray-300 hover:text-white'
-                }`}
-              >
-                Heatmap
-              </button>
-            </div>
-          </div>
-
-          {viewMode === 'heatmap' && (
-            <div className="flex items-center gap-6 flex-wrap">
-              <div className="flex items-center gap-2">
-                <span className="text-gray-300 text-sm">Color by:</span>
-                <select
-                  value={heatmapColorBy}
-                  onChange={(e) => onHeatmapColorByChange(e.target.value)}
-                  className="px-3 py-1 bg-gray-700 border border-gray-600 text-white rounded-lg text-sm focus:border-blue-500 focus:outline-none"
-                >
-                  {periods.map(period => (
-                    <option key={period} value={period}>{period} Performance</option>
-                  ))}
-                </select>
-              </div>
-              <div className="flex items-center gap-2">
-                <span className="text-gray-300 text-sm">Size by:</span>
-                <select
-                  value={heatmapSizeBy}
-                  onChange={(e) => onHeatmapSizeByChange(e.target.value)}
-                  className="px-3 py-1 bg-gray-700 border border-gray-600 text-white rounded-lg text-sm focus:border-blue-500 focus:outline-none"
-                >
-                  <option value="marketCap">Market Cap</option>
-                  <option value="pe">P/E Ratio</option>
-                  {periods.map(period => (
-                    <option key={period} value={period}>{period} Performance</option>
-                  ))}
-                </select>
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
+      {/* Controls moved to header; heatmap-specific controls could be repositioned later if needed */}
     </div>
   );
 }
@@ -157,7 +169,7 @@ const SortIcon = ({ active, direction }) => {
     : <ArrowDown size={14} className="inline ml-1" />;
 };
 
-function TableView({ selectedStock, comparisonStocks, periods, onRemoveComparison, onStockCodeClick }) {
+function TableView({ selectedStock, comparisonStocks, periods, onRemoveComparison, onStockCodeClick, colorMode }) {
   const [sortColumn, setSortColumn] = useState(null);
   const [sortDirection, setSortDirection] = useState('asc');
 
@@ -253,11 +265,6 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
       <table className="w-full">
         <thead className="bg-gray-900 text-white">
           <tr>
-            <th colSpan={5 + 1 + periods.length + 1} className="px-4 py-3 text-left text-lg font-semibold bg-gray-800 border-b border-gray-700">
-              Industry Comparison
-            </th>
-          </tr>
-          <tr>
             <th
               className="px-4 py-3 text-left cursor-pointer hover:bg-gray-800 transition"
               onClick={() => handleSort('code')}
@@ -347,20 +354,43 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
             <td className="px-4 py-3">
               <SentimentChart data={selectedStock.sentimentTimeSeries} />
             </td>
-            {periods.map(period => (
-              <td key={period} className="px-2 py-3">
-                <div style={{
-                  ...getColorForPerformance(selectedStock.performance[period]),
-                  padding: '0.75rem',
-                  borderRadius: '0.5rem',
-                  textAlign: 'center',
-                  fontWeight: 'bold',
-                  marginBottom: '0.25rem'
-                }}>
-                  {selectedStock.performance[period] > 0 ? '+' : ''}{selectedStock.performance[period].toFixed(1)}%
-                </div>
-              </td>
-            ))}
+            {periods.map(period => {
+              const basePerf = selectedStock.performance[period];
+              // Relative mode: compute min/max across all stocks (primary + comparisons) for this period
+              let styleObj = getColorForPerformance(basePerf);
+              if (colorMode === 'relative') {
+                const allValues = [selectedStock, ...comparisonStocks].map(s => s.performance[period]);
+                const min = Math.min(...allValues);
+                const max = Math.max(...allValues);
+                // Map value to 0..1
+                const ratio = max === min ? 0.5 : (basePerf - min) / (max - min);
+                // Interpolate green (best) to red (worst)
+                const lerp = (hex1, hex2, t) => {
+                  const toRgb = h => h.match(/.{2}/g).map(x => parseInt(x,16));
+                  const [r1,g1,b1] = toRgb(hex1);
+                  const [r2,g2,b2] = toRgb(hex2);
+                  const r = Math.round(r1 + (r2 - r1) * t);
+                  const g = Math.round(g1 + (g2 - g1) * t);
+                  const b = Math.round(b1 + (b2 - b1) * t);
+                  return `rgb(${r}, ${g}, ${b})`;
+                };
+                styleObj = { backgroundColor: lerp('10b981','ef4444', 1 - ratio), color:'white' };
+              }
+              return (
+                <td key={period} className="px-2 py-3">
+                  <div style={{
+                    ...styleObj,
+                    padding: '0.75rem',
+                    borderRadius: '0.5rem',
+                    textAlign: 'center',
+                    fontWeight: 'bold',
+                    marginBottom: '0.25rem'
+                  }}>
+                    {basePerf > 0 ? '+' : ''}{basePerf.toFixed(1)}%
+                  </div>
+                </td>
+              );
+            })}
             <td className="px-4 py-3 text-center text-gray-400">-</td>
           </tr>
           {sortedComparisonStocks.map((stock, idx) => (
@@ -408,20 +438,40 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
               <td className="px-4 py-3">
                 <SentimentChart data={stock.sentimentTimeSeries} />
               </td>
-              {periods.map(period => (
-                <td key={period} className="px-2 py-3">
-                  <div style={{
-                    ...getColorForPerformance(stock.performance[period]),
-                    padding: '0.75rem',
-                    borderRadius: '0.5rem',
-                    textAlign: 'center',
-                    fontWeight: 'bold',
-                    marginBottom: '0.25rem'
-                  }}>
-                    {stock.performance[period] > 0 ? '+' : ''}{stock.performance[period].toFixed(1)}%
-                  </div>
-                </td>
-              ))}
+              {periods.map(period => {
+                const value = stock.performance[period];
+                let styleObj = getColorForPerformance(value);
+                if (colorMode === 'relative') {
+                  const allValues = [selectedStock, ...comparisonStocks].map(s => s.performance[period]);
+                  const min = Math.min(...allValues);
+                  const max = Math.max(...allValues);
+                  const ratio = max === min ? 0.5 : (value - min) / (max - min);
+                  const lerp = (hex1, hex2, t) => {
+                    const toRgb = h => h.match(/.{2}/g).map(x => parseInt(x,16));
+                    const [r1,g1,b1] = toRgb(hex1);
+                    const [r2,g2,b2] = toRgb(hex2);
+                    const r = Math.round(r1 + (r2 - r1) * t);
+                    const g = Math.round(g1 + (g2 - g1) * t);
+                    const b = Math.round(b1 + (b2 - b1) * t);
+                    return `rgb(${r}, ${g}, ${b})`;
+                  };
+                  styleObj = { backgroundColor: lerp('10b981','ef4444', 1 - ratio), color:'white' };
+                }
+                return (
+                  <td key={period} className="px-2 py-3">
+                    <div style={{
+                      ...styleObj,
+                      padding: '0.75rem',
+                      borderRadius: '0.5rem',
+                      textAlign: 'center',
+                      fontWeight: 'bold',
+                      marginBottom: '0.25rem'
+                    }}>
+                      {value > 0 ? '+' : ''}{value.toFixed(1)}%
+                    </div>
+                  </td>
+                );
+              })}
               <td className="px-4 py-3 text-center">
                 <button
                   onClick={() => onRemoveComparison(stock.code)}
