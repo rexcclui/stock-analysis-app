@@ -9,6 +9,7 @@ import { NewsSection } from './components/NewsSection';
 import { SentimentSection } from './components/SentimentSection';
 import { SentimentTimeSeriesChart } from './components/SentimentTimeSeriesChart';
 import { StockResultCard } from './components/StockResultCard';
+import { HistoricalPerformanceCheck } from './components/HistoricalPerformanceCheck';
 
 // Fetch complete stock data from API routes
 const fetchCompleteStockData = async (symbol, apiCounts = null) => {
@@ -430,6 +431,8 @@ export default function StockAnalysisDashboard() {
           {selectedStock && (
             <>
               <StockResultCard stock={selectedStock} />
+
+              <HistoricalPerformanceCheck stockCode={selectedStock.code} />
 
               <PricePerformanceChart
                 selectedStock={selectedStock}
