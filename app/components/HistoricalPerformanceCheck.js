@@ -7,6 +7,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
   const [selectedOption, setSelectedOption] = useState("top10");
   const [trendType, setTrendType] = useState("up");
   const [trends, setTrends] = useState([]);
+  const [bigMoves, setBigMoves] = useState([]);
+  const [thresholdPercent, setThresholdPercent] = useState(5);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -50,6 +52,46 @@ export function HistoricalPerformanceCheck({ stockCode }) {
     }
   };
 
+  const analyzeBigMoves = async () => {
+    if (!stockCode) {
+      setError("No stock selected");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Track API call
+      const apiCounts = { historicalTrends: 1 };
+
+      // Fetch big moves data
+      const response = await fetch(
+        `/api/historical-trends?symbol=${stockCode}&years=5&type=bigmoves&threshold=${thresholdPercent}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch big moves data");
+      }
+
+      const data = await response.json();
+      setBigMoves(data.bigMoves || []);
+
+      // Log API call to tracking endpoint
+      fetch('/api/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ counts: apiCounts })
+      }).catch(err => console.error('Failed to send tracking data:', err));
+
+    } catch (err) {
+      setError(err.message);
+      console.error("Error analyzing big moves:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="bg-gray-800 rounded-lg mt-4 border border-gray-700">
       {/* Collapsible Header */}
@@ -76,49 +118,87 @@ export function HistoricalPerformanceCheck({ stockCode }) {
         </label>
         <select
           value={selectedOption}
-          onChange={(e) => setSelectedOption(e.target.value)}
+          onChange={(e) => {
+            setSelectedOption(e.target.value);
+            setTrends([]);
+            setBigMoves([]);
+            setError(null);
+          }}
           className="w-full md:w-auto px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="top10">
             Show me the top 10 up or down trends
           </option>
+          <option value="bigmoves">
+            Big Drop/Rise - Single day movements
+          </option>
         </select>
       </div>
 
-      {/* Trend Direction Selection */}
-      <div className="mb-6 flex gap-4">
-        <button
-          onClick={() => setTrendType("up")}
-          className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all"
-          style={{
-            backgroundColor: trendType === "up" ? "#10b981" : "#374151",
-            color: trendType === "up" ? "#ffffff" : "#d1d5db",
-          }}
-        >
-          <TrendingUp size={20} />
-          Upward Trends
-        </button>
-        <button
-          onClick={() => setTrendType("down")}
-          className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all"
-          style={{
-            backgroundColor: trendType === "down" ? "#10b981" : "#374151",
-            color: trendType === "down" ? "#ffffff" : "#d1d5db",
-          }}
-        >
-          <TrendingDown size={20} />
-          Downward Trends
-        </button>
-      </div>
+      {/* Trend Direction Selection - Only for top10 */}
+      {selectedOption === "top10" && (
+        <div className="mb-6 flex gap-4">
+          <button
+            onClick={() => setTrendType("up")}
+            className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all"
+            style={{
+              backgroundColor: trendType === "up" ? "#10b981" : "#374151",
+              color: trendType === "up" ? "#ffffff" : "#d1d5db",
+            }}
+          >
+            <TrendingUp size={20} />
+            Upward Trends
+          </button>
+          <button
+            onClick={() => setTrendType("down")}
+            className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all"
+            style={{
+              backgroundColor: trendType === "down" ? "#10b981" : "#374151",
+              color: trendType === "down" ? "#ffffff" : "#d1d5db",
+            }}
+          >
+            <TrendingDown size={20} />
+            Downward Trends
+          </button>
+        </div>
+      )}
 
-      {/* Analyze Button */}
-      <button
-        onClick={analyzeTrends}
-        disabled={loading || !stockCode}
-        className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-all mb-6"
-      >
-        {loading ? "Analyzing..." : "Analyze Trends"}
-      </button>
+      {/* Threshold Input - Only for bigmoves */}
+      {selectedOption === "bigmoves" && (
+        <div className="mb-6 flex items-center gap-4">
+          <label className="text-gray-300 text-sm font-medium">
+            Minimum % Change Threshold:
+          </label>
+          <input
+            type="number"
+            min="1"
+            max="50"
+            step="0.5"
+            value={thresholdPercent}
+            onChange={(e) => setThresholdPercent(parseFloat(e.target.value))}
+            className="w-24 px-3 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
+          />
+          <span className="text-gray-400 text-sm">%</span>
+          <button
+            onClick={analyzeBigMoves}
+            disabled={loading || !stockCode}
+            className="px-6 py-2 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-all"
+          >
+            {loading ? "Analyzing..." : "Analyze Big Moves"}
+          </button>
+        </div>
+      )}
+
+      {/* Analyze Button - Only for top10 */}
+      {selectedOption === "top10" && (
+        <button
+          onClick={analyzeTrends}
+          disabled={loading || !stockCode}
+          className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-all mb-6"
+        >
+          {loading ? "Analyzing..." : "Analyze Trends"}
+        </button>
+      )}
 
       {/* Error Display */}
       {error && (
@@ -254,10 +334,124 @@ export function HistoricalPerformanceCheck({ stockCode }) {
         );
       })()}
 
+      {/* Big Moves Table */}
+      {bigMoves.length > 0 && (() => {
+        // Calculate min/max for conditional formatting
+        const dayChanges = bigMoves.map(m => m.dayChange);
+        const after1Days = bigMoves.map(m => m.after1Day);
+        const after2Days = bigMoves.map(m => m.after2Days);
+        const after3Days = bigMoves.map(m => m.after3Days);
+
+        const allChanges = [...dayChanges, ...after1Days, ...after2Days, ...after3Days];
+        const maxChange = Math.max(...allChanges);
+        const minChange = Math.min(...allChanges);
+
+        // Color interpolation function
+        const getColorForChange = (value, min, max) => {
+          if (max === min) return value >= 0 ? "rgba(16, 185, 129, 0.3)" : "rgba(239, 68, 68, 0.3)";
+
+          if (value >= 0) {
+            // Positive: pale green to deep green
+            const intensity = (value - Math.max(0, min)) / (max - Math.max(0, min));
+            const r = Math.round(16 + (200 - 16) * (1 - intensity));
+            const g = Math.round(185 + (255 - 185) * (1 - intensity));
+            const b = Math.round(129 + (200 - 129) * (1 - intensity));
+            const alpha = 0.2 + intensity * 0.6;
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+          } else {
+            // Negative: pale red to deep red
+            const intensity = Math.abs(value) / Math.abs(min);
+            const r = Math.round(239 + (180 - 239) * (1 - intensity));
+            const g = Math.round(68 + (50 - 68) * (1 - intensity));
+            const b = Math.round(68 + (50 - 68) * (1 - intensity));
+            const alpha = 0.2 + intensity * 0.6;
+            return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+          }
+        };
+
+        return (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left border-collapse">
+              <thead>
+                <tr className="bg-gray-700">
+                  <th className="px-4 py-3 text-gray-300 font-semibold border-b border-gray-600">
+                    Rank
+                  </th>
+                  <th className="px-4 py-3 text-gray-300 font-semibold border-b border-gray-600">
+                    Date
+                  </th>
+                  <th className="px-4 py-3 text-gray-300 font-semibold border-b border-gray-600">
+                    Day Change
+                  </th>
+                  <th className="px-4 py-3 text-gray-300 font-semibold border-b border-gray-600">
+                    After 1 Day
+                  </th>
+                  <th className="px-4 py-3 text-gray-300 font-semibold border-b border-gray-600">
+                    After 2 Days
+                  </th>
+                  <th className="px-4 py-3 text-gray-300 font-semibold border-b border-gray-600">
+                    After 3 Days
+                  </th>
+                  <th className="px-4 py-3 text-gray-300 font-semibold border-b border-gray-600">
+                    Price
+                  </th>
+                </tr>
+              </thead>
+              <tbody>
+                {bigMoves.map((move, index) => (
+                  <tr
+                    key={index}
+                    className="border-b border-gray-700 hover:bg-gray-700/30 transition-colors"
+                  >
+                    <td className="px-4 py-3 text-white font-medium">
+                      #{index + 1}
+                    </td>
+                    <td className="px-4 py-3 text-gray-300">
+                      {move.date}
+                    </td>
+                    <td
+                      className="px-4 py-3 font-bold text-white"
+                      style={{ backgroundColor: getColorForChange(move.dayChange, minChange, maxChange) }}
+                    >
+                      {move.dayChange >= 0 ? "+" : ""}
+                      {move.dayChange.toFixed(2)}%
+                    </td>
+                    <td
+                      className="px-4 py-3 font-bold text-white"
+                      style={{ backgroundColor: getColorForChange(move.after1Day, minChange, maxChange) }}
+                    >
+                      {move.after1Day >= 0 ? "+" : ""}
+                      {move.after1Day.toFixed(2)}%
+                    </td>
+                    <td
+                      className="px-4 py-3 font-bold text-white"
+                      style={{ backgroundColor: getColorForChange(move.after2Days, minChange, maxChange) }}
+                    >
+                      {move.after2Days >= 0 ? "+" : ""}
+                      {move.after2Days.toFixed(2)}%
+                    </td>
+                    <td
+                      className="px-4 py-3 font-bold text-white"
+                      style={{ backgroundColor: getColorForChange(move.after3Days, minChange, maxChange) }}
+                    >
+                      {move.after3Days >= 0 ? "+" : ""}
+                      {move.after3Days.toFixed(2)}%
+                    </td>
+                    <td className="px-4 py-3 text-gray-300">
+                      ${move.price.toFixed(2)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        );
+      })()}
+
       {/* No Results */}
-      {!loading && trends.length === 0 && !error && stockCode && (
+      {!loading && trends.length === 0 && bigMoves.length === 0 && !error && stockCode && (
         <div className="text-gray-400 text-center py-8">
-          Click "Analyze Trends" to see historical performance data
+          Click &quot;Analyze {selectedOption === "top10" ? "Trends" : "Big Moves"}&quot; to see historical performance data
         </div>
       )}
 

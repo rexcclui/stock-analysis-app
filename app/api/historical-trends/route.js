@@ -91,6 +91,7 @@ export async function GET(request) {
     const symbol = searchParams.get("symbol");
     const years = parseInt(searchParams.get("years") || "5");
     const type = searchParams.get("type") || "up";
+    const threshold = parseFloat(searchParams.get("threshold") || "5");
 
     if (!symbol) {
       return NextResponse.json(
@@ -100,7 +101,9 @@ export async function GET(request) {
     }
 
     // Check cache first
-    const cacheKey = getCacheKey(`trends-${type}-${years}y`, symbol);
+    const cacheKey = type === "bigmoves"
+      ? getCacheKey(`bigmoves-${threshold}-${years}y`, symbol)
+      : getCacheKey(`trends-${type}-${years}y`, symbol);
     const cachedData = getCache(cacheKey);
     if (cachedData) {
       console.log(`[CACHE HIT] Historical trends for ${symbol} (${type}, ${years}y)`);
@@ -133,15 +136,67 @@ export async function GET(request) {
       .filter((item) => new Date(item.date) >= cutoffDate)
       .sort((a, b) => new Date(b.date) - new Date(a.date));
 
-    // Find trends
-    const trends = findTrends(historicalData, type);
+    let result;
 
-    const result = {
-      symbol,
-      type,
-      trends,
-      dataPoints: historicalData.length,
-    };
+    if (type === "bigmoves") {
+      // Find big single-day moves
+      const bigMoves = [];
+
+      for (let i = 0; i < historicalData.length - 3; i++) {
+        const today = historicalData[i];
+        const yesterday = i < historicalData.length - 1 ? historicalData[i + 1] : null;
+
+        if (!yesterday) continue;
+
+        const dayChange = ((today.close - yesterday.close) / yesterday.close) * 100;
+
+        // Check if it exceeds threshold
+        if (Math.abs(dayChange) >= threshold) {
+          // Calculate after effects
+          const after1Day = i > 0 && i < historicalData.length - 1
+            ? ((historicalData[i - 1].close - today.close) / today.close) * 100
+            : 0;
+
+          const after2Days = i > 1 && i < historicalData.length - 2
+            ? ((historicalData[i - 2].close - today.close) / today.close) * 100
+            : 0;
+
+          const after3Days = i > 2 && i < historicalData.length - 3
+            ? ((historicalData[i - 3].close - today.close) / today.close) * 100
+            : 0;
+
+          bigMoves.push({
+            date: today.date,
+            dayChange,
+            after1Day,
+            after2Days,
+            after3Days,
+            price: today.close,
+          });
+        }
+      }
+
+      // Sort by absolute day change magnitude and take top 30
+      bigMoves.sort((a, b) => Math.abs(b.dayChange) - Math.abs(a.dayChange));
+
+      result = {
+        symbol,
+        type,
+        threshold,
+        bigMoves: bigMoves.slice(0, 30),
+        dataPoints: historicalData.length,
+      };
+    } else {
+      // Find trends
+      const trends = findTrends(historicalData, type);
+
+      result = {
+        symbol,
+        type,
+        trends,
+        dataPoints: historicalData.length,
+      };
+    }
 
     // Cache the result (4 hours)
     setCache(cacheKey, result, FOUR_HOUR_TTL_MINUTES);
