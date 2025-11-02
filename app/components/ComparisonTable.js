@@ -280,19 +280,25 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 onClick={() => onStockCodeClick && onStockCodeClick(selectedStock.code)}
                 role="link"
                 tabIndex={0}
-                className="text-blue-400 hover:text-blue-300 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                className="text-yellow-400 hover:text-yellow-300 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded"
               >
                 {selectedStock.code}
               </span>
             </td>
             <td className="px-2 py-3 font-medium text-white max-w-[160px]" style={{width:'160px'}}>
-              <span
-                onClick={() => onStockCodeClick && onStockCodeClick(selectedStock.code)}
-                role="link"
-                tabIndex={0}
-                className="text-blue-300 hover:text-blue-200 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 rounded block truncate"
-                title={selectedStock.name}
-              >{selectedStock.name}</span>
+              {selectedStock.website ? (
+                <a href={selectedStock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-300 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate" title={selectedStock.name}>
+                  {selectedStock.name}
+                </a>
+              ) : (
+                <span
+                  onClick={() => onStockCodeClick && onStockCodeClick(selectedStock.code)}
+                  role="link"
+                  tabIndex={0}
+                  className="text-yellow-400 hover:text-yellow-300 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate"
+                  title={selectedStock.name}
+                >{selectedStock.name}</span>
+              )}
             </td>
             <td className="px-4 py-3 text-right text-gray-200">${selectedStock.marketCap}</td>
             <td className="px-4 py-3">
@@ -333,19 +339,25 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                   onClick={() => onStockCodeClick && onStockCodeClick(stock.code)}
                   role="link"
                   tabIndex={0}
-                  className="text-blue-400 hover:text-blue-300 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
+                  className="text-yellow-400 hover:text-yellow-300 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded"
                 >
                   {stock.code}
                 </span>
               </td>
               <td className="px-2 py-3 text-gray-200 max-w-[160px]" style={{width:'160px'}}>
-                <span
-                  onClick={() => onStockCodeClick && onStockCodeClick(stock.code)}
-                  role="link"
-                  tabIndex={0}
-                  className="text-blue-300 hover:text-blue-200 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-blue-500 rounded block truncate"
-                  title={stock.name}
-                >{stock.name}</span>
+                {stock.website ? (
+                  <a href={stock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-300 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate" title={stock.name}>
+                    {stock.name}
+                  </a>
+                ) : (
+                  <span
+                    onClick={() => onStockCodeClick && onStockCodeClick(stock.code)}
+                    role="link"
+                    tabIndex={0}
+                    className="text-yellow-400 hover:text-yellow-300 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate"
+                    title={stock.name}
+                  >{stock.name}</span>
+                )}
               </td>
               <td className="px-4 py-3 text-right text-gray-200">${stock.marketCap}</td>
               <td className="px-4 py-3">
