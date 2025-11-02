@@ -255,17 +255,17 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       })()}
 
       {/* No Results */}
-          {!loading && trends.length === 0 && !error && stockCode && (
-            <div className="text-gray-400 text-center py-8">
-              Click "Analyze Trends" to see historical performance data
-            </div>
-          )}
+      {!loading && trends.length === 0 && !error && stockCode && (
+        <div className="text-gray-400 text-center py-8">
+          Click "Analyze Trends" to see historical performance data
+        </div>
+      )}
 
-          {!stockCode && (
-            <div className="text-gray-400 text-center py-8">
-              Search for a stock to analyze historical trends
-            </div>
-          )}
+      {!stockCode && (
+        <div className="text-gray-400 text-center py-8">
+          Search for a stock to analyze historical trends
+        </div>
+      )}
         </div>
       )}
     </div>
