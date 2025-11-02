@@ -162,13 +162,13 @@ export function HistoricalPerformanceCheck({ stockCode }) {
         };
 
         const getColorForDays = (value, min, max) => {
-          if (max === min) return "rgba(59, 130, 246, 0.3)";
+          if (max === min) return "rgba(16, 185, 129, 0.3)";
 
-          // Days: pale blue to deep blue
+          // Days: pale green to deep green (higher days = deeper green)
           const intensity = (value - min) / (max - min);
-          const r = Math.round(59 + (30 - 59) * intensity);
-          const g = Math.round(130 + (80 - 130) * intensity);
-          const b = Math.round(246 + (200 - 246) * intensity);
+          const r = Math.round(200 - (200 - 16) * intensity);
+          const g = Math.round(255 - (255 - 185) * intensity);
+          const b = Math.round(200 - (200 - 129) * intensity);
           const alpha = 0.2 + intensity * 0.6;
           return `rgba(${r}, ${g}, ${b}, ${alpha})`;
         };
