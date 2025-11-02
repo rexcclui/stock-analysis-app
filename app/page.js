@@ -356,7 +356,7 @@ export default function StockAnalysisDashboard() {
         <div className="bg-gray-800 rounded-2xl shadow-2xl p-8 mb-6 border border-gray-700">
           <h1 className="text-4xl font-bold text-white mb-6 flex items-center gap-3">
             <BarChart3 className="text-blue-400" size={40} />
-            Stock Performance Analysis
+            Stock Analysis
           </h1>
           
           <div className="flex gap-3 mb-6">
