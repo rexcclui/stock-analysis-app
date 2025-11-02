@@ -3,6 +3,7 @@ import { useState } from "react";
 import { TrendingUp, TrendingDown, ChevronDown, ChevronUp, BarChart3 } from "lucide-react";
 import { TrendsTable } from "./TrendsTable";
 import { BigMovesTable } from "./BigMovesTable";
+import { SpyCorrelationTable } from "./SpyCorrelationTable";
 
 export function HistoricalPerformanceCheck({ stockCode }) {
   const [isExpanded, setIsExpanded] = useState(false);
@@ -10,6 +11,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
   const [trendType, setTrendType] = useState("up");
   const [trends, setTrends] = useState([]);
   const [bigMoves, setBigMoves] = useState([]);
+  const [spyCorrelations, setSpyCorrelations] = useState([]);
+  const [spyDirection, setSpyDirection] = useState("up");
   const [thresholdPercent, setThresholdPercent] = useState(5);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
@@ -94,6 +97,46 @@ export function HistoricalPerformanceCheck({ stockCode }) {
     }
   };
 
+  const analyzeSpyCorrelation = async () => {
+    if (!stockCode) {
+      setError("No stock selected");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Track API call
+      const apiCounts = { historicalTrends: 1 };
+
+      // Fetch SPY correlation data
+      const response = await fetch(
+        `/api/spy-correlation?symbol=${stockCode}&years=5&direction=${spyDirection}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch SPY correlation data");
+      }
+
+      const data = await response.json();
+      setSpyCorrelations(data.correlations || []);
+
+      // Log API call to tracking endpoint
+      fetch('/api/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ counts: apiCounts })
+      }).catch(err => console.error('Failed to send tracking data:', err));
+
+    } catch (err) {
+      setError(err.message);
+      console.error("Error analyzing SPY correlation:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div className="bg-gray-800 rounded-lg mt-4 border border-gray-700">
       {/* Collapsible Header */}
@@ -124,15 +167,19 @@ export function HistoricalPerformanceCheck({ stockCode }) {
             setSelectedOption(e.target.value);
             setTrends([]);
             setBigMoves([]);
+            setSpyCorrelations([]);
             setError(null);
           }}
           className="w-full md:w-auto px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="top10">
-            Show me the top 10 up or down trends
+            Show me the top 20 up or down trends
           </option>
           <option value="bigmoves">
             Big Drop/Rise - Single day movements
+          </option>
+          <option value="spycorr">
+            Show me top 20 up or down day change on SPY
           </option>
         </select>
       </div>
@@ -191,6 +238,43 @@ export function HistoricalPerformanceCheck({ stockCode }) {
         </div>
       )}
 
+      {/* SPY Direction Selection - Only for spycorr */}
+      {selectedOption === "spycorr" && (
+        <div className="mb-6">
+          <div className="flex gap-4 mb-4">
+            <button
+              onClick={() => setSpyDirection("up")}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all"
+              style={{
+                backgroundColor: spyDirection === "up" ? "#10b981" : "#374151",
+                color: spyDirection === "up" ? "#ffffff" : "#d1d5db",
+              }}
+            >
+              <TrendingUp size={20} />
+              SPY Upward Days
+            </button>
+            <button
+              onClick={() => setSpyDirection("down")}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all"
+              style={{
+                backgroundColor: spyDirection === "down" ? "#10b981" : "#374151",
+                color: spyDirection === "down" ? "#ffffff" : "#d1d5db",
+              }}
+            >
+              <TrendingDown size={20} />
+              SPY Downward Days
+            </button>
+          </div>
+          <button
+            onClick={analyzeSpyCorrelation}
+            disabled={loading || !stockCode}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-all"
+          >
+            {loading ? "Analyzing..." : "Analyze SPY Correlation"}
+          </button>
+        </div>
+      )}
+
       {/* Analyze Button - Only for top10 */}
       {selectedOption === "top10" && (
         <button
@@ -215,10 +299,13 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {/* Big Moves Table */}
       <BigMovesTable bigMoves={bigMoves} />
 
+      {/* SPY Correlation Table */}
+      <SpyCorrelationTable correlations={spyCorrelations} />
+
       {/* No Results */}
-      {!loading && trends.length === 0 && bigMoves.length === 0 && !error && stockCode && (
+      {!loading && trends.length === 0 && bigMoves.length === 0 && spyCorrelations.length === 0 && !error && stockCode && (
         <div className="text-gray-400 text-center py-8">
-          Click &quot;Analyze {selectedOption === "top10" ? "Trends" : "Big Moves"}&quot; to see historical performance data
+          Click &quot;Analyze {selectedOption === "top10" ? "Trends" : selectedOption === "bigmoves" ? "Big Moves" : "SPY Correlation"}&quot; to see historical performance data
         </div>
       )}
 

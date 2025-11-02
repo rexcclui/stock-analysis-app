@@ -70,11 +70,11 @@ function findTrends(historicalData, type = "up") {
     });
   }
 
-  // Sort by total change (descending) and take top 10
+  // Sort by total change (descending) and take top 20
   trends.sort((a, b) => b.totalChange - a.totalChange);
 
   // Format for output
-  return trends.slice(0, 10).map((trend) => ({
+  return trends.slice(0, 20).map((trend) => ({
     startDate: trend.startDate,
     endDate: trend.endDate,
     days: trend.days,
