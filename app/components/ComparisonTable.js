@@ -447,30 +447,9 @@ function HeatmapView({ selectedStock, comparisonStocks, heatmapColorBy, heatmapS
                   tabIndex={0}
                   className="text-white font-bold text-2xl mb-1 underline decoration-dotted cursor-pointer hover:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
                 >{stock.code}</span>
-                <div className="text-white text-sm opacity-90 mb-2">
-                  <span
-                    onClick={() => onStockCodeClick && onStockCodeClick(stock.code)}
-                    role="link"
-                    tabIndex={0}
-                    className="underline decoration-dotted cursor-pointer hover:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
-                  >{stock.name}</span>
-                </div>
                 <div className="text-white font-bold text-3xl">
                   {performance > 0 ? '+' : ''}{performance.toFixed(1)}%
                 </div>
-                <div className="text-white text-xs mt-2 opacity-80">
-                  {heatmapColorBy} Performance
-                </div>
-                {heatmapSizeBy === 'marketCap' && (
-                  <div className="text-white text-xs mt-1 opacity-70">
-                    Cap: ${stock.marketCap}
-                  </div>
-                )}
-                {heatmapSizeBy === 'pe' && (
-                  <div className="text-white text-xs mt-1 opacity-70">
-                    P/E: {stock.pe}
-                  </div>
-                )}
               </div>
               {stock.code !== selectedStock.code && (
                 <button
