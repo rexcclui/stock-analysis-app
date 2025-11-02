@@ -190,6 +190,36 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
 
   const isActive = (col) => sortColumn === col;
 
+  const lerpColor = (c1, c2, t) => {
+    const hexToRgb = h => h.match(/.{2}/g).map(x => parseInt(x, 16));
+    const [r1,g1,b1] = hexToRgb(c1);
+    const [r2,g2,b2] = hexToRgb(c2);
+    const r = Math.round(r1 + (r2 - r1) * t);
+    const g = Math.round(g1 + (g2 - g1) * t);
+    const b = Math.round(b1 + (b2 - b1) * t);
+    return `rgb(${r}, ${g}, ${b})`;
+  };
+
+  // Collect all Market Cap numeric values
+  const allMarketCapValues = [selectedStock, ...comparisonStocks]
+    .map(s => getMarketCapValue(s.marketCap))
+    .filter(v => v > 0);
+  const minMarketCap = allMarketCapValues.length ? Math.min(...allMarketCapValues) : null;
+  const maxMarketCap = allMarketCapValues.length ? Math.max(...allMarketCapValues) : null;
+
+  const getMarketCapCellStyle = (marketCap) => {
+    const numericCap = getMarketCapValue(marketCap);
+    const baseStyle = { color: 'white', borderRadius: '0.5rem', padding: '0.5rem', textAlign: 'right', fontWeight: '600' };
+    if (isNaN(numericCap) || numericCap <= 0 || minMarketCap === null || maxMarketCap === null || minMarketCap === maxMarketCap) {
+      return { ...baseStyle, backgroundColor: '#4B5563' };
+    }
+    // Normalize 0..1
+    const ratio = (numericCap - minMarketCap) / (maxMarketCap - minMarketCap);
+    // Interpolate between light blue (e.g., blue-200: 90cdf4) and deep blue (e.g., blue-900: 2c5282)
+    const bg = lerpColor('90cdf4', '1e3a8a', ratio);
+    return { ...baseStyle, backgroundColor: bg };
+  };
+
   // Collect all P/E numeric values (exclude non-numeric and dash)
   const allPeValues = [selectedStock, ...comparisonStocks]
     .map(s => parseFloat(s.pe))
@@ -205,15 +235,6 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
     // Normalize 0..1
     const ratio = (numericPe - minPe) / (maxPe - minPe);
     // Interpolate between blue (#1d4ed8) and red (#dc2626)
-    const lerpColor = (c1, c2, t) => {
-      const hexToRgb = h => h.match(/.{2}/g).map(x => parseInt(x, 16));
-      const [r1,g1,b1] = hexToRgb(c1);
-      const [r2,g2,b2] = hexToRgb(c2);
-      const r = Math.round(r1 + (r2 - r1) * t);
-      const g = Math.round(g1 + (g2 - g1) * t);
-      const b = Math.round(b1 + (b2 - b1) * t);
-      return `rgb(${r}, ${g}, ${b})`;
-    };
     const bg = lerpColor('1d4ed8', 'dc2626', ratio);
     return { backgroundColor: bg, color: 'white', borderRadius: '0.5rem', padding: '0.5rem', textAlign: 'right', fontWeight: '600' };
   };
@@ -300,7 +321,11 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 >{selectedStock.name}</span>
               )}
             </td>
-            <td className="px-4 py-3 text-right text-gray-200">${selectedStock.marketCap}</td>
+            <td className="px-4 py-3">
+              <div style={getMarketCapCellStyle(selectedStock.marketCap)}>
+                ${selectedStock.marketCap}
+              </div>
+            </td>
             <td className="px-4 py-3">
               <div style={getPeCellStyle(selectedStock.pe)}>
                 {selectedStock.pe === '—' ? '—' : selectedStock.pe}
@@ -359,7 +384,11 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                   >{stock.name}</span>
                 )}
               </td>
-              <td className="px-4 py-3 text-right text-gray-200">${stock.marketCap}</td>
+              <td className="px-4 py-3">
+                <div style={getMarketCapCellStyle(stock.marketCap)}>
+                  ${stock.marketCap}
+                </div>
+              </td>
               <td className="px-4 py-3">
                 <div style={getPeCellStyle(stock.pe)}>
                   {stock.pe === '—' ? '—' : stock.pe}
