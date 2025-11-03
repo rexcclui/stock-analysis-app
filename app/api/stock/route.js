@@ -71,16 +71,33 @@ export async function GET(request) {
         '5Y': historical.historical.length > 1260 ? calculatePerformance(1260) : (historical.historical.length > 252 ? calculatePerformance(historical.historical.length - 1) : 0)
       };
 
+      // Helper function to format dates based on period
+      const formatDate = (dateStr, isLongPeriod) => {
+        const d = new Date(dateStr);
+        if (isLongPeriod) {
+          // yyyy-mm format for periods > 3 years
+          const yyyy = d.getFullYear();
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          return `${yyyy}-${mm}`;
+        } else {
+          // yy-mm-dd format for shorter periods
+          const yy = String(d.getFullYear()).slice(-2);
+          const mm = String(d.getMonth() + 1).padStart(2, '0');
+          const dd = String(d.getDate()).padStart(2, '0');
+          return `${yy}-${mm}-${dd}`;
+        }
+      };
+
       // Prepare chart data for different periods
       chartData = {
-        '1D': historical.historical.slice(0, 1).reverse().map(d => ({ date: d.date, price: d.close })),
-        '7D': historical.historical.slice(0, 7).reverse().map(d => ({ date: d.date, price: d.close })),
-        '1M': historical.historical.slice(0, 30).reverse().map(d => ({ date: d.date, price: d.close })),
-        '3M': historical.historical.slice(0, 90).reverse().map(d => ({ date: d.date, price: d.close })),
-        '6M': historical.historical.slice(0, 180).reverse().map(d => ({ date: d.date, price: d.close })),
-        '1Y': historical.historical.slice(0, 252).reverse().map(d => ({ date: d.date, price: d.close })),
-        '3Y': historical.historical.slice(0, 756).reverse().map(d => ({ date: d.date, price: d.close })),
-        '5Y': historical.historical.slice(0, 1260).reverse().map(d => ({ date: d.date, price: d.close }))
+        '1D': historical.historical.slice(0, 1).reverse().map(d => ({ date: formatDate(d.date, false), price: d.close })),
+        '7D': historical.historical.slice(0, 7).reverse().map(d => ({ date: formatDate(d.date, false), price: d.close })),
+        '1M': historical.historical.slice(0, 30).reverse().map(d => ({ date: formatDate(d.date, false), price: d.close })),
+        '3M': historical.historical.slice(0, 90).reverse().map(d => ({ date: formatDate(d.date, false), price: d.close })),
+        '6M': historical.historical.slice(0, 180).reverse().map(d => ({ date: formatDate(d.date, false), price: d.close })),
+        '1Y': historical.historical.slice(0, 252).reverse().map(d => ({ date: formatDate(d.date, false), price: d.close })),
+        '3Y': historical.historical.slice(0, 756).reverse().map(d => ({ date: formatDate(d.date, true), price: d.close })),
+        '5Y': historical.historical.slice(0, 1260).reverse().map(d => ({ date: formatDate(d.date, true), price: d.close }))
       };
     }
 

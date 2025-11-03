@@ -100,11 +100,13 @@ export function PricePerformanceChart({
                   localStorage.setItem('chartPeriod', period);
                 }
               }}
-              className={`px-3 py-1 rounded-lg text-sm font-medium transition ${
-                chartPeriod === period
-                  ? 'bg-blue-600 text-white'
-                  : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-              }`}
+              className="px-3 py-1 rounded-lg text-sm font-medium transition"
+              style={{
+                backgroundColor: chartPeriod === period ? '#2563eb' : '#374151',
+                color: chartPeriod === period ? '#ffffff' : '#9ca3af',
+                border: chartPeriod === period ? '2px solid #3b82f6' : '2px solid transparent',
+                fontWeight: chartPeriod === period ? 'bold' : 'normal'
+              }}
             >
               {period}
             </button>
@@ -154,7 +156,14 @@ export function PricePerformanceChart({
               return (
                 <LineChart data={multiData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                  <XAxis dataKey="date" stroke="#9CA3AF" />
+                  <XAxis
+                    dataKey="date"
+                    stroke="#9CA3AF"
+                    angle={-90}
+                    textAnchor="end"
+                    height={80}
+                    tick={{ fontSize: 10 }}
+                  />
                 {chartCompareStocks.length === 0 ? (
                   (() => {
                     const hasData = chartData.length > 0;
@@ -184,7 +193,7 @@ export function PricePerformanceChart({
                   labelStyle={{ color: '#F3F4F6' }}
                   formatter={(value, name) => [chartCompareStocks.length === 0 ? `$${value.toFixed(2)}` : `${value.toFixed(2)}%`, name]}
                 />
-                <Legend />
+                <Legend wrapperStyle={{ paddingTop: '0px', marginTop: '0px' }} />
                 {chartCompareStocks.length === 0 && selectedStock?.resistance && (
                   <>
                     <ReferenceLine 
