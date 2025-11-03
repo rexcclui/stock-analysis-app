@@ -222,7 +222,10 @@ export default function StockAnalysisDashboard() {
     const savedComparisonStocks = localStorage.getItem('comparisonStocks');
     if (savedComparisonStocks) {
       try {
-        setComparisonStocks(JSON.parse(savedComparisonStocks));
+        const parsed = JSON.parse(savedComparisonStocks);
+        // Filter out SPY and QQQ as they're automatically added
+        const filtered = parsed.filter(s => s.code !== 'SPY' && s.code !== 'QQQ');
+        setComparisonStocks(filtered);
       } catch {}
     }
   }, []);
@@ -273,7 +276,13 @@ export default function StockAnalysisDashboard() {
     if (!isClient) return;
     try {
       if (comparisonStocks && comparisonStocks.length > 0) {
-        localStorage.setItem('comparisonStocks', JSON.stringify(comparisonStocks));
+        // Filter out SPY and QQQ before saving (they're auto-added on search)
+        const filtered = comparisonStocks.filter(s => s.code !== 'SPY' && s.code !== 'QQQ');
+        if (filtered.length > 0) {
+          localStorage.setItem('comparisonStocks', JSON.stringify(filtered));
+        } else {
+          localStorage.removeItem('comparisonStocks');
+        }
       } else {
         localStorage.removeItem('comparisonStocks');
       }
@@ -330,17 +339,31 @@ export default function StockAnalysisDashboard() {
       const benchmarkData = await Promise.all(benchmarkPromises);
       const validBenchmarks = benchmarkData.filter(b => b !== null);
 
-      const competitorPromises = stockData.competitors.map(code => fetchCompleteStockData(code, apiCounts));
+      // Filter out SPY and QQQ from competitors to avoid duplicates
+      const competitorPromises = stockData.competitors
+        .filter(code => code !== 'SPY' && code !== 'QQQ')
+        .map(code => fetchCompleteStockData(code, apiCounts));
       const competitorData = await Promise.all(competitorPromises);
       const validCompetitors = competitorData.filter(c => c !== null);
 
       const saved = savedComparisons[stockCode] || [];
-      const savedPromises = saved.map(code => fetchCompleteStockData(code, apiCounts));
+      // Filter out SPY and QQQ from saved comparisons to avoid duplicates
+      const savedPromises = saved
+        .filter(code => code !== 'SPY' && code !== 'QQQ')
+        .map(code => fetchCompleteStockData(code, apiCounts));
       const savedData = await Promise.all(savedPromises);
       const validSaved = savedData.filter(s => s !== null);
 
       // SPY and QQQ first, then competitors and saved stocks
-      setComparisonStocks([...validBenchmarks, ...validCompetitors, ...validSaved]);
+      // Deduplicate based on stock code to prevent duplicates
+      const allStocks = [...validBenchmarks, ...validCompetitors, ...validSaved];
+      const uniqueStocks = allStocks.reduce((acc, stock) => {
+        if (!acc.find(s => s.code === stock.code)) {
+          acc.push(stock);
+        }
+        return acc;
+      }, []);
+      setComparisonStocks(uniqueStocks);
 
       // Add to detailed history table
       addSearchHistoryStock({ code: stockData.code, dayChange: stockData.dayChange || 0 });
@@ -408,9 +431,15 @@ export default function StockAnalysisDashboard() {
 
   const addManualComparison = async () => {
     const code = manualStock.toUpperCase();
-    
+
     if (!code || !selectedStock) return;
-    
+
+    if (code === 'SPY' || code === 'QQQ') {
+      alert('SPY and QQQ are automatically included as benchmarks');
+      setManualStock('');
+      return;
+    }
+
     if (comparisonStocks.find(s => s.code === code)) {
       alert('Stock already in comparison');
       return;
