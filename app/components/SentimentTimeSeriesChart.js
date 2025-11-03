@@ -10,13 +10,35 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
  * - sentimentTimeSeries: array of { date, score } objects
  */
 export function SentimentTimeSeriesChart({ sentimentTimeSeries }) {
+  // Calculate the actual period from the data
+  let periodLabel = "No Data";
+  let dayCount = 0;
+
+  if (sentimentTimeSeries && sentimentTimeSeries.length > 0) {
+    const firstDate = new Date(sentimentTimeSeries[0].date);
+    const lastDate = new Date(sentimentTimeSeries[sentimentTimeSeries.length - 1].date);
+    dayCount = Math.round((lastDate - firstDate) / (1000 * 60 * 60 * 24)) + 1;
+
+    if (dayCount <= 1) {
+      periodLabel = "1 Day";
+    } else if (dayCount <= 7) {
+      periodLabel = `${dayCount} Days`;
+    } else if (dayCount <= 14) {
+      periodLabel = `${Math.round(dayCount / 7)} Week${dayCount > 10 ? 's' : ''}`;
+    } else if (dayCount <= 60) {
+      periodLabel = `${Math.round(dayCount / 7)} Weeks`;
+    } else {
+      periodLabel = `${Math.round(dayCount / 30)} Month${dayCount > 45 ? 's' : ''}`;
+    }
+  }
+
   if (!sentimentTimeSeries || sentimentTimeSeries.length === 0) {
     return (
       <div className="mb-6" style={{ marginTop: '1rem' }}>
-        <h3 className="text-xl font-bold text-white mb-4">Sentiment Trend (1 Month)</h3>
+        <h3 className="text-xl font-bold text-white mb-4">Sentiment Trend ({periodLabel})</h3>
         <div className="bg-gray-800 rounded-xl p-4 shadow-xl border border-gray-700">
           <div className="text-center py-8 text-gray-400">
-            No sentiment data available for the past month
+            No sentiment data available
           </div>
         </div>
       </div>
@@ -42,11 +64,11 @@ export function SentimentTimeSeriesChart({ sentimentTimeSeries }) {
 
   return (
     <div className="mb-6" style={{ marginTop: '1rem' }}>
-      <h3 className="text-xl font-bold text-white mb-4">Sentiment Trend (1 Month)</h3>
+      <h3 className="text-xl font-bold text-white mb-4">Sentiment Trend ({periodLabel})</h3>
       <div className="bg-gray-800 rounded-xl p-4 shadow-xl border border-gray-700">
         <div className="mb-3 flex items-center justify-between">
           <div className="text-sm text-gray-300">
-            Social media sentiment score over the past 30 days
+            Social media sentiment score over the available period ({dayCount} day{dayCount !== 1 ? 's' : ''})
           </div>
           <div className="flex items-center gap-4 text-xs">
             <div className="flex items-center gap-2">

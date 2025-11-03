@@ -19,14 +19,15 @@ export async function GET(request) {
 
   try {
     const sentimentResponse = await fetch(
-      `https://financialmodelingprep.com/api/v4/social-sentiment?symbol=${symbol}&apikey=${process.env.FMP_KEY}`
+      `https://financialmodelingprep.com/api/v4/social-sentiment?symbol=${symbol}&page=0&apikey=${process.env.FMP_KEY}`
     );
-    
+
     if (!sentimentResponse.ok) {
       throw new Error(`API returned status ${sentimentResponse.status}`);
     }
 
     const sentimentData = await sentimentResponse.json();
+    console.log(`[SENTIMENT API] Received ${Array.isArray(sentimentData) ? sentimentData.length : 0} records for ${symbol}`);
 
     let score = 0.5;
     let positive = 50;
@@ -62,12 +63,13 @@ export async function GET(request) {
             }
         });
 
+        // Convert daily sentiments to time series (only days with actual data)
         sentimentTimeSeries = Object.keys(dailySentiments)
             .map(day => {
                 const dayData = dailySentiments[day];
                 const stocktwitsAvg = dayData.stocktwitsCount > 0 ? dayData.stocktwitsTotal / dayData.stocktwitsCount : 0;
                 const twitterAvg = dayData.twitterCount > 0 ? dayData.twitterTotal / dayData.twitterCount : 0;
-                
+
                 let score = 0.5; // Default score
                 if (stocktwitsAvg > 0 && twitterAvg > 0) {
                     score = (stocktwitsAvg + twitterAvg) / 2;
