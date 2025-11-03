@@ -441,6 +441,52 @@ export default function StockAnalysisDashboard() {
     setChartCompareStocks(chartCompareStocks.filter(s => s.code !== code));
   };
 
+  // Handler to toggle stock in chart from comparison table
+  const handleAddToChart = async (code) => {
+    if (!selectedStock) {
+      alert('Load a primary stock first');
+      return;
+    }
+    if (code === selectedStock.code) {
+      alert('This is the primary stock');
+      return;
+    }
+
+    // Check if stock is already in chart - if so, remove it
+    if (chartCompareStocks.find(s => s.code === code)) {
+      setChartCompareStocks(chartCompareStocks.filter(s => s.code !== code));
+      return;
+    }
+
+    // Add to chart
+    // Check if stock is already in comparisonStocks
+    const existingStock = comparisonStocks.find(s => s.code === code);
+    if (existingStock) {
+      // Use existing stock data
+      const series = buildNormalizedSeries(existingStock, chartPeriod);
+      if (!series.length) {
+        alert('No chart data for this period');
+        return;
+      }
+      setChartCompareStocks([...chartCompareStocks, { code, series, __stockRef: existingStock }]);
+    } else {
+      // Fetch the stock data
+      setLoading(true);
+      const stock = await fetchCompleteStockData(code, null);
+      setLoading(false);
+      if (!stock) {
+        alert('Stock not found');
+        return;
+      }
+      const series = buildNormalizedSeries(stock, chartPeriod);
+      if (!series.length) {
+        alert('No chart data for this period');
+        return;
+      }
+      setChartCompareStocks([...chartCompareStocks, { code, series, __stockRef: stock }]);
+    }
+  };
+
   const addManualComparison = async () => {
     const code = manualStock.toUpperCase();
 
@@ -635,6 +681,8 @@ export default function StockAnalysisDashboard() {
                 searchHistoryStocks={searchHistoryStocks}
                 onSearchHistoryCodeClick={(code)=> { handleSearch(code); }}
                 onReloadSearchHistory={reloadRecentSearches}
+                onAddToChart={handleAddToChart}
+                chartCompareStocks={chartCompareStocks}
               />
 
               <SentimentSection sentiment={selectedStock.sentiment} />

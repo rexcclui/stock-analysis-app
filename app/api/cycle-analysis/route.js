@@ -320,21 +320,45 @@ function analyzeMovingAverageCrossovers(data) {
 
     // Golden Cross (bullish)
     if (prev50 < prev200 && curr50 > curr200) {
+      const crossoverPrice = data[i].close;
+      
+      // Calculate performance at different time periods
+      const perf3day = i + 3 < data.length ? ((data[i + 3].close - crossoverPrice) / crossoverPrice * 100) : null;
+      const perf7day = i + 7 < data.length ? ((data[i + 7].close - crossoverPrice) / crossoverPrice * 100) : null;
+      const perf14day = i + 14 < data.length ? ((data[i + 14].close - crossoverPrice) / crossoverPrice * 100) : null;
+      const perf30day = i + 30 < data.length ? ((data[i + 30].close - crossoverPrice) / crossoverPrice * 100) : null;
+
       crossovers.push({
         date: data[i].date,
         type: 'Golden Cross',
         price: data[i].close.toFixed(2),
-        signal: 'Bullish'
+        signal: 'Bullish',
+        perf3day: perf3day?.toFixed(2),
+        perf7day: perf7day?.toFixed(2),
+        perf14day: perf14day?.toFixed(2),
+        perf30day: perf30day?.toFixed(2)
       });
     }
 
     // Death Cross (bearish)
     if (prev50 > prev200 && curr50 < curr200) {
+      const crossoverPrice = data[i].close;
+      
+      // Calculate performance at different time periods
+      const perf3day = i + 3 < data.length ? ((data[i + 3].close - crossoverPrice) / crossoverPrice * 100) : null;
+      const perf7day = i + 7 < data.length ? ((data[i + 7].close - crossoverPrice) / crossoverPrice * 100) : null;
+      const perf14day = i + 14 < data.length ? ((data[i + 14].close - crossoverPrice) / crossoverPrice * 100) : null;
+      const perf30day = i + 30 < data.length ? ((data[i + 30].close - crossoverPrice) / crossoverPrice * 100) : null;
+
       crossovers.push({
         date: data[i].date,
         type: 'Death Cross',
         price: data[i].close.toFixed(2),
-        signal: 'Bearish'
+        signal: 'Bearish',
+        perf3day: perf3day?.toFixed(2),
+        perf7day: perf7day?.toFixed(2),
+        perf14day: perf14day?.toFixed(2),
+        perf30day: perf30day?.toFixed(2)
       });
     }
   }

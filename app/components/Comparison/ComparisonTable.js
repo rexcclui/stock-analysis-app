@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { X, ArrowUp, ArrowDown } from 'lucide-react';
+import { X, ArrowUp, ArrowDown, LineChart } from 'lucide-react';
 import SentimentChart from '../SentimentChart';
 import { HeatmapView } from './HeatmapView';
 
@@ -53,7 +53,8 @@ export function ComparisonTable({
   heatmapSizeBy,
   onHeatmapColorByChange,
   onHeatmapSizeByChange,
-  onStockCodeClick
+  onStockCodeClick,
+  onAddToChart
 }) {
   const [colorMode, setColorMode] = useState('historical'); // 'historical' | 'relative'
 
@@ -139,6 +140,7 @@ export function ComparisonTable({
           periods={periods}
           onRemoveComparison={onRemoveComparison}
           onStockCodeClick={onStockCodeClick}
+          onAddToChart={onAddToChart}
           colorMode={colorMode}
           setColorMode={setColorMode}
         />
@@ -150,6 +152,7 @@ export function ComparisonTable({
           heatmapSizeBy={heatmapSizeBy}
           onRemoveComparison={onRemoveComparison}
           onStockCodeClick={onStockCodeClick}
+          onAddToChart={onAddToChart}
         />
       )}
       
@@ -166,7 +169,7 @@ const SortIcon = ({ active, direction }) => {
     : <ArrowDown size={14} className="inline ml-1" />;
 };
 
-function TableView({ selectedStock, comparisonStocks, periods, onRemoveComparison, onStockCodeClick, colorMode }) {
+function TableView({ selectedStock, comparisonStocks, periods, onRemoveComparison, onStockCodeClick, onAddToChart, colorMode }) {
   const [sortColumn, setSortColumn] = useState(null);
   const [sortDirection, setSortDirection] = useState('asc');
 
@@ -397,14 +400,25 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
         <tbody>
           <tr className="bg-blue-900/30 border-b-2 border-blue-700">
             <td className="px-4 py-3 font-bold text-white">
-              <span
-                onClick={() => onStockCodeClick && onStockCodeClick(selectedStock.code)}
-                role="link"
-                tabIndex={0}
-                className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded"
-              >
-                {selectedStock.code}
-              </span>
+              <div className="flex items-center gap-2">
+                <span
+                  onClick={() => onStockCodeClick && onStockCodeClick(selectedStock.code)}
+                  role="link"
+                  tabIndex={0}
+                  className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded"
+                >
+                  {selectedStock.code}
+                </span>
+                {onAddToChart && (
+                  <button
+                    onClick={() => onAddToChart(selectedStock.code)}
+                    className="p-1 text-blue-400 hover:text-blue-300 hover:bg-blue-900/30 rounded transition"
+                    title="Add to chart"
+                  >
+                    <LineChart size={16} />
+                  </button>
+                )}
+              </div>
             </td>
             <td className="px-2 py-3 font-medium text-white max-w-[160px]" style={{width:'160px'}}>
               {selectedStock.website ? (
@@ -493,14 +507,25 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
           {sortedComparisonStocks.map((stock, idx) => (
             <tr key={stock.code} className={idx % 2 === 0 ? 'bg-gray-700/50' : 'bg-gray-800/50'}>
               <td className="px-4 py-3 font-medium text-white">
-                <span
-                  onClick={() => onStockCodeClick && onStockCodeClick(stock.code)}
-                  role="link"
-                  tabIndex={0}
-                  className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded"
-                >
-                  {stock.code}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span
+                    onClick={() => onStockCodeClick && onStockCodeClick(stock.code)}
+                    role="link"
+                    tabIndex={0}
+                    className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded"
+                  >
+                    {stock.code}
+                  </span>
+                  {onAddToChart && (
+                    <button
+                      onClick={() => onAddToChart(stock.code)}
+                      className="p-1 text-blue-400 hover:text-blue-300 hover:bg-blue-900/30 rounded transition"
+                      title="Add to chart"
+                    >
+                      <LineChart size={16} />
+                    </button>
+                  )}
+                </div>
               </td>
               <td className="px-2 py-3 text-gray-200 max-w-[160px]" style={{width:'160px'}}>
                 {stock.website ? (

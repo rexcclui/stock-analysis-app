@@ -1,5 +1,5 @@
 import React from "react";
-import { X } from "lucide-react";
+import { X, LineChart } from "lucide-react";
 
 const getMarketCapValue = (marketCap) => {
   if (!marketCap || marketCap === "N/A") return 0;
@@ -26,6 +26,7 @@ export function HeatmapView({
   heatmapSizeBy,
   onRemoveComparison,
   onStockCodeClick,
+  onAddToChart,
 }) {
   // Calculate size values for all stocks and sort by size (largest first)
   const allStocks = [selectedStock, ...comparisonStocks];
@@ -114,6 +115,17 @@ export function HeatmapView({
                 padding: '12px',
               }}
             >
+              {onAddToChart && (
+                <button
+                  onClick={() => onAddToChart(stock.code)}
+                  className="absolute p-1 bg-blue-500/80 hover:bg-blue-600 rounded-full transition-all"
+                  style={{ top: "6px", left: "6px", zIndex: 10 }}
+                  title="Add to chart"
+                  aria-label="Add to chart"
+                >
+                  <LineChart size={14} className="text-white" />
+                </button>
+              )}
               <div className="text-center">
                 <span
                   onClick={() =>
