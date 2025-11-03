@@ -356,7 +356,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       >
         <h2 className="text-xl font-bold text-white flex items-center gap-2">
           <BarChart3 className="text-blue-400" size={24} />
-          Historical Performance Check
+          Historical Data Analysis
         </h2>
         <div className="style={{ color: '#93c5fd' }}">
           {isExpanded ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
