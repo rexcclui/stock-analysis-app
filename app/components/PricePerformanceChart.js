@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
 
 /**
@@ -31,17 +31,71 @@ export function PricePerformanceChart({
   buildMultiStockDataset
 }) {
   const chartData = selectedStock?.chartData?.[chartPeriod] || [];
+  const [zoomDomain, setZoomDomain] = useState({ start: 0, end: 100 });
+  const chartContainerRef = useRef(null);
+
+  const handleWheel = (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    const delta = e.deltaY > 0 ? 1.1 : 0.9; // Zoom out or in
+    const { start, end } = zoomDomain;
+    const range = end - start;
+    const newRange = Math.min(100, Math.max(10, range * delta)); // Keep range between 10% and 100%
+    const center = (start + end) / 2;
+    let newStart = center - newRange / 2;
+    let newEnd = center + newRange / 2;
+
+    // Adjust if out of bounds
+    if (newStart < 0) {
+      newStart = 0;
+      newEnd = newRange;
+    }
+    if (newEnd > 100) {
+      newEnd = 100;
+      newStart = 100 - newRange;
+    }
+
+    setZoomDomain({ start: newStart, end: newEnd });
+  };
+
+  const resetZoom = () => {
+    setZoomDomain({ start: 0, end: 100 });
+  };
+
+  // Attach wheel event listener with passive: false to allow preventDefault
+  useEffect(() => {
+    const chartElement = chartContainerRef.current;
+    if (chartElement) {
+      chartElement.addEventListener('wheel', handleWheel, { passive: false });
+      return () => {
+        chartElement.removeEventListener('wheel', handleWheel);
+      };
+    }
+  }, [zoomDomain]);
 
   return (
     <div className="mb-6" style={{ marginTop: '1rem' }}>
       <div className="flex items-center justify-between mb-4">
-        <h3 className="text-xl font-bold text-white">Price Performance</h3>
+        <div className="flex items-center gap-3">
+          <h3 className="text-xl font-bold text-white">Price Performance</h3>
+          {(zoomDomain.start !== 0 || zoomDomain.end !== 100) && (
+            <button
+              onClick={resetZoom}
+              className="px-3 py-1 rounded-lg text-xs font-medium bg-gray-700 text-gray-300 hover:bg-gray-600 transition"
+              title="Reset zoom"
+            >
+              Reset Zoom
+            </button>
+          )}
+          <span className="text-xs text-gray-400 italic">Scroll to zoom in/out</span>
+        </div>
         <div className="flex gap-2">
           {periods.map(period => (
             <button
               key={period}
               onClick={() => {
                 setChartPeriod(period);
+                setZoomDomain({ start: 0, end: 100 });
                 if (typeof window !== 'undefined') {
                   localStorage.setItem('chartPeriod', period);
                 }
@@ -84,16 +138,23 @@ export function PricePerformanceChart({
             ))}
           </div>
         )}
-        <ResponsiveContainer width="100%" height={320}>
-          {(() => {
-            const primarySeries = buildNormalizedSeries(selectedStock, chartPeriod);
-            const multiData = chartCompareStocks.length === 0
-              ? chartData
-              : buildMultiStockDataset(primarySeries, chartCompareStocks);
-            return (
-              <LineChart data={multiData}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
-                <XAxis dataKey="date" stroke="#9CA3AF" />
+        <div ref={chartContainerRef}>
+          <ResponsiveContainer width="100%" height={320}>
+            {(() => {
+              const primarySeries = buildNormalizedSeries(selectedStock, chartPeriod);
+              const fullData = chartCompareStocks.length === 0
+                ? chartData
+                : buildMultiStockDataset(primarySeries, chartCompareStocks);
+
+              // Apply zoom by slicing data based on domain
+              const startIndex = Math.floor((zoomDomain.start / 100) * fullData.length);
+              const endIndex = Math.ceil((zoomDomain.end / 100) * fullData.length);
+              const multiData = fullData.slice(startIndex, endIndex);
+
+              return (
+                <LineChart data={multiData}>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                  <XAxis dataKey="date" stroke="#9CA3AF" />
                 {chartCompareStocks.length === 0 ? (
                   (() => {
                     const hasData = chartData.length > 0;
@@ -164,6 +225,7 @@ export function PricePerformanceChart({
             );
           })()}
         </ResponsiveContainer>
+        </div>
       </div>
     </div>
   );
