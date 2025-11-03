@@ -32,7 +32,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
 
       // Fetch 5 years of historical data
       const response = await fetch(
-        `/api/historical-trends?symbol=${stockCode}&years=5&type=${trendType}`
+        `/api/historical-trends?symbol=${stockCode}&years=5&type=${trendType}`,
+        { cache: 'no-store' }
       );
 
       if (!response.ok) {
@@ -46,7 +47,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       fetch('/api/track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ counts: apiCounts })
+        body: JSON.stringify({ counts: apiCounts }),
+        cache: 'no-store'
       }).catch(err => console.error('Failed to send tracking data:', err));
 
     } catch (err) {
@@ -72,7 +74,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
 
       // Fetch big moves data
       const response = await fetch(
-        `/api/historical-trends?symbol=${stockCode}&years=5&type=bigmoves&direction=${bigMovesDirection}`
+        `/api/historical-trends?symbol=${stockCode}&years=5&type=bigmoves&direction=${bigMovesDirection}`,
+        { cache: 'no-store' }
       );
 
       if (!response.ok) {
@@ -86,7 +89,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       fetch('/api/track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ counts: apiCounts })
+        body: JSON.stringify({ counts: apiCounts }),
+        cache: 'no-store'
       }).catch(err => console.error('Failed to send tracking data:', err));
 
     } catch (err) {
@@ -112,7 +116,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
 
       // Fetch SPY correlation data
       const response = await fetch(
-        `/api/spy-correlation?symbol=${stockCode}&years=5&direction=${spyDirection}`
+        `/api/spy-correlation?symbol=${stockCode}&years=5&direction=${spyDirection}`,
+        { cache: 'no-store' }
       );
 
       if (!response.ok) {
@@ -126,7 +131,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       fetch('/api/track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ counts: apiCounts })
+        body: JSON.stringify({ counts: apiCounts }),
+        cache: 'no-store'
       }).catch(err => console.error('Failed to send tracking data:', err));
 
     } catch (err) {
