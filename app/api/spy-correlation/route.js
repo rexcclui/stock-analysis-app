@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { getCache, setCache, getCacheKey, FOUR_HOUR_TTL_MINUTES } from '../../../lib/cache';
 import { createNoCacheResponse } from '../../../lib/response';
 
+export const dynamic = 'force-dynamic';
+
 const FMP_KEY = process.env.FMP_KEY;
 
 export async function GET(request) {
