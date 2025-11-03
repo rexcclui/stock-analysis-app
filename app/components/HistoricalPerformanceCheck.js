@@ -4,6 +4,7 @@ import { TrendingUp, TrendingDown, ChevronDown, ChevronUp, BarChart3 } from "luc
 import { TrendsTable } from "./HistoricalPerformance/TrendsTable";
 import { BigMovesTable } from "./HistoricalPerformance/BigMovesTable";
 import { SpyCorrelationTable } from "./HistoricalPerformance/SpyCorrelationTable";
+import { GapOpenTable } from "./HistoricalPerformance/GapOpenTable";
 import { SeasonalAnalysis } from "./HistoricalPerformance/CycleAnalysis/SeasonalAnalysis";
 import { PeakTroughAnalysis } from "./HistoricalPerformance/CycleAnalysis/PeakTroughAnalysis";
 import { MovingAverageCrossoverAnalysis } from "./HistoricalPerformance/CycleAnalysis/MovingAverageCrossoverAnalysis";
@@ -17,9 +18,11 @@ export function HistoricalPerformanceCheck({ stockCode }) {
   const [trends, setTrends] = useState([]);
   const [bigMoves, setBigMoves] = useState([]);
   const [spyCorrelations, setSpyCorrelations] = useState([]);
+  const [gapOpens, setGapOpens] = useState([]);
   const [cycleAnalysis, setCycleAnalysis] = useState(null);
   const [spyDirection, setSpyDirection] = useState("up");
   const [bigMovesDirection, setBigMovesDirection] = useState("up");
+  const [gapOpenDirection, setGapOpenDirection] = useState("up");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -98,6 +101,46 @@ export function HistoricalPerformanceCheck({ stockCode }) {
     } catch (err) {
       setError(err.message);
       console.error("Error analyzing big moves:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const analyzeGapOpens = async () => {
+    if (!stockCode) {
+      setError("No stock selected");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Track API call
+      const apiCounts = { historicalTrends: 1 };
+
+      // Fetch gap open data
+      const response = await fetch(
+        `/api/historical-trends?symbol=${stockCode}&years=5&type=gapopen&direction=${gapOpenDirection}`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch gap open data");
+      }
+
+      const data = await response.json();
+      setGapOpens(data.gapOpens || []);
+
+      // Log API call to tracking endpoint
+      fetch('/api/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ counts: apiCounts })
+      }).catch(err => console.error('Failed to send tracking data:', err));
+
+    } catch (err) {
+      setError(err.message);
+      console.error("Error analyzing gap opens:", err);
     } finally {
       setLoading(false);
     }
@@ -220,6 +263,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
             setTrends([]);
             setBigMoves([]);
             setSpyCorrelations([]);
+            setGapOpens([]);
             setCycleAnalysis(null);
             setError(null);
           }}
@@ -233,6 +277,9 @@ export function HistoricalPerformanceCheck({ stockCode }) {
           </option>
           <option value="spycorr">
             Show me top 20 up or down day change on SPY
+          </option>
+          <option value="gapopen">
+            Up/Down Gap Open
           </option>
           <option value="seasonal">
             Seasonal/Calendar Patterns
@@ -354,6 +401,43 @@ export function HistoricalPerformanceCheck({ stockCode }) {
         </div>
       )}
 
+      {/* Gap Open Direction Selection - Only for gapopen */}
+      {selectedOption === "gapopen" && (
+        <div className="mb-6">
+          <div className="flex gap-4 mb-4">
+            <button
+              onClick={() => setGapOpenDirection("up")}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all"
+              style={{
+                backgroundColor: gapOpenDirection === "up" ? "#10b981" : "#374151",
+                color: gapOpenDirection === "up" ? "#ffffff" : "#d1d5db",
+              }}
+            >
+              <TrendingUp size={20} />
+              Top 20 Gap Up
+            </button>
+            <button
+              onClick={() => setGapOpenDirection("down")}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all"
+              style={{
+                backgroundColor: gapOpenDirection === "down" ? "#10b981" : "#374151",
+                color: gapOpenDirection === "down" ? "#ffffff" : "#d1d5db",
+              }}
+            >
+              <TrendingDown size={20} />
+              Top 20 Gap Down
+            </button>
+          </div>
+          <button
+            onClick={analyzeGapOpens}
+            disabled={loading || !stockCode}
+            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-all"
+          >
+            {loading ? "Analyzing..." : "Analyze Gap Opens"}
+          </button>
+        </div>
+      )}
+
       {/* Analyze Button - Only for top10 */}
       {selectedOption === "top10" && (
         <button
@@ -389,6 +473,9 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {/* SPY Correlation Table */}
       <SpyCorrelationTable correlations={spyCorrelations} />
 
+      {/* Gap Open Table */}
+      <GapOpenTable gapOpens={gapOpens} />
+
       {/* Cycle Analysis Results */}
       {cycleAnalysis && selectedOption === "seasonal" && (
         <SeasonalAnalysis cycleAnalysis={cycleAnalysis} stockCode={stockCode} />
@@ -411,12 +498,13 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       )}
 
       {/* No Results */}
-      {!loading && trends.length === 0 && bigMoves.length === 0 && spyCorrelations.length === 0 && !cycleAnalysis && !error && stockCode && (
+      {!loading && trends.length === 0 && bigMoves.length === 0 && spyCorrelations.length === 0 && gapOpens.length === 0 && !cycleAnalysis && !error && stockCode && (
         <div className="style={{ color: '#93c5fd' }} text-center py-8">
           Click &quot;Analyze {
             selectedOption === "top10" ? "Trends" :
             selectedOption === "bigmoves" ? "Big Moves" :
             selectedOption === "spycorr" ? "SPY Correlation" :
+            selectedOption === "gapopen" ? "Gap Opens" :
             "Cycles"
           }&quot; to see historical performance data
         </div>

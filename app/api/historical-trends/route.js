@@ -155,8 +155,8 @@ export async function GET(request) {
     }
 
     // Check cache first
-    const cacheKey = type === "bigmoves"
-      ? getCacheKey(`bigmoves-${direction}-${years}y`, symbol)
+    const cacheKey = (type === "bigmoves" || type === "gapopen")
+      ? getCacheKey(`${type}-${direction}-${years}y`, symbol)
       : getCacheKey(`trends-${type}-${years}y`, symbol);
     const cachedData = getCache(cacheKey);
     if (cachedData) {
@@ -242,6 +242,50 @@ export async function GET(request) {
         type,
         direction,
         bigMoves: bigMoves.slice(0, 20),
+        dataPoints: historicalData.length,
+      };
+    } else if (type === "gapopen") {
+      // Find all gap opens (open price different from previous day's close)
+      const gapOpens = [];
+
+      for (let i = 0; i < historicalData.length - 1; i++) {
+        const today = historicalData[i];
+        const yesterday = i < historicalData.length - 1 ? historicalData[i + 1] : null;
+
+        if (!yesterday) continue;
+
+        // Gap Open % = (today's open - yesterday's close) / yesterday's close * 100
+        const gapOpenPercent = ((today.open - yesterday.close) / yesterday.close) * 100;
+
+        // Intraday change % = (today's close - today's open) / today's open * 100
+        const intradayChange = ((today.close - today.open) / today.open) * 100;
+
+        // Day change % = (today's close - yesterday's close) / yesterday's close * 100
+        const dayChange = ((today.close - yesterday.close) / yesterday.close) * 100;
+
+        // Filter by direction
+        const matchesDirection =
+          (direction === "up" && gapOpenPercent > 0) ||
+          (direction === "down" && gapOpenPercent < 0);
+
+        if (matchesDirection) {
+          gapOpens.push({
+            date: today.date,
+            gapOpenPercent,
+            intradayChange,
+            dayChange,
+          });
+        }
+      }
+
+      // Sort by absolute gap open magnitude and take top 20
+      gapOpens.sort((a, b) => Math.abs(b.gapOpenPercent) - Math.abs(a.gapOpenPercent));
+
+      result = {
+        symbol,
+        type,
+        direction,
+        gapOpens: gapOpens.slice(0, 20),
         dataPoints: historicalData.length,
       };
     } else {
