@@ -5,6 +5,7 @@ import { TrendsTable } from "./HistoricalPerformance/TrendsTable";
 import { BigMovesTable } from "./HistoricalPerformance/BigMovesTable";
 import { SpyCorrelationTable } from "./HistoricalPerformance/SpyCorrelationTable";
 import { GapOpenTable } from "./HistoricalPerformance/GapOpenTable";
+import { StatisticsTable } from "./HistoricalPerformance/StatisticsTable";
 import { SeasonalAnalysis } from "./HistoricalPerformance/CycleAnalysis/SeasonalAnalysis";
 import { PeakTroughAnalysis } from "./HistoricalPerformance/CycleAnalysis/PeakTroughAnalysis";
 import { MovingAverageCrossoverAnalysis } from "./HistoricalPerformance/CycleAnalysis/MovingAverageCrossoverAnalysis";
@@ -19,6 +20,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
   const [bigMoves, setBigMoves] = useState([]);
   const [spyCorrelations, setSpyCorrelations] = useState([]);
   const [gapOpens, setGapOpens] = useState([]);
+  const [gapOpenStats, setGapOpenStats] = useState(null);
+  const [intradayStats, setIntradayStats] = useState(null);
   const [cycleAnalysis, setCycleAnalysis] = useState(null);
   const [spyDirection, setSpyDirection] = useState("up");
   const [bigMovesDirection, setBigMovesDirection] = useState("up");
@@ -146,6 +149,86 @@ export function HistoricalPerformanceCheck({ stockCode }) {
     }
   };
 
+  const analyzeGapOpenStats = async () => {
+    if (!stockCode) {
+      setError("No stock selected");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Track API call
+      const apiCounts = { historicalTrends: 1 };
+
+      // Fetch gap open statistics
+      const response = await fetch(
+        `/api/historical-trends?symbol=${stockCode}&years=5&type=gapopenstat`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch gap open statistics");
+      }
+
+      const data = await response.json();
+      setGapOpenStats(data.statistics || null);
+
+      // Log API call to tracking endpoint
+      fetch('/api/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ counts: apiCounts })
+      }).catch(err => console.error('Failed to send tracking data:', err));
+
+    } catch (err) {
+      setError(err.message);
+      console.error("Error analyzing gap open statistics:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const analyzeIntradayStats = async () => {
+    if (!stockCode) {
+      setError("No stock selected");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Track API call
+      const apiCounts = { historicalTrends: 1 };
+
+      // Fetch intraday statistics
+      const response = await fetch(
+        `/api/historical-trends?symbol=${stockCode}&years=5&type=intradaystat`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch intraday statistics");
+      }
+
+      const data = await response.json();
+      setIntradayStats(data.statistics || null);
+
+      // Log API call to tracking endpoint
+      fetch('/api/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ counts: apiCounts })
+      }).catch(err => console.error('Failed to send tracking data:', err));
+
+    } catch (err) {
+      setError(err.message);
+      console.error("Error analyzing intraday statistics:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const analyzeSpyCorrelation = async () => {
     if (!stockCode) {
       setError("No stock selected");
@@ -232,6 +315,16 @@ export function HistoricalPerformanceCheck({ stockCode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedOption, stockCode]);
 
+  // Auto-trigger statistics analysis when a statistics mode is selected
+  useEffect(() => {
+    if (selectedOption === "gapopenstat" && stockCode) {
+      analyzeGapOpenStats();
+    } else if (selectedOption === "intradaystat" && stockCode) {
+      analyzeIntradayStats();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedOption, stockCode]);
+
   return (
     <div className="bg-gray-800 rounded-lg border border-gray-700" style={{ marginTop: '1rem' }}>
       {/* Collapsible Header */}
@@ -264,22 +357,30 @@ export function HistoricalPerformanceCheck({ stockCode }) {
             setBigMoves([]);
             setSpyCorrelations([]);
             setGapOpens([]);
+            setGapOpenStats(null);
+            setIntradayStats(null);
             setCycleAnalysis(null);
             setError(null);
           }}
           className="w-full md:w-auto px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="top10">
-            Show me the top 20 up or down trends
+            Show me the top 30 up or down trends
           </option>
           <option value="bigmoves">
             Big Drop/Rise - Single day movements
           </option>
           <option value="spycorr">
-            Show me top 20 up or down day change on SPY
+            Show me top 30 up or down day change on SPY
           </option>
           <option value="gapopen">
             Up/Down Gap Open
+          </option>
+          <option value="gapopenstat">
+            Gap Open Statistic
+          </option>
+          <option value="intradaystat">
+            Intraday Statistic
           </option>
           <option value="seasonal">
             Seasonal/Calendar Patterns
@@ -340,7 +441,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
               }}
             >
               <TrendingUp size={20} />
-              Top 20 Upward Days
+              Top 30 Upward Days
             </button>
             <button
               onClick={() => setBigMovesDirection("down")}
@@ -351,7 +452,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
               }}
             >
               <TrendingDown size={20} />
-              Top 20 Downward Days
+              Top 30 Downward Days
             </button>
           </div>
           <button
@@ -406,35 +507,34 @@ export function HistoricalPerformanceCheck({ stockCode }) {
         <div className="mb-6">
           <div className="flex gap-4 mb-4">
             <button
-              onClick={() => setGapOpenDirection("up")}
-              className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all"
-              style={{
-                backgroundColor: gapOpenDirection === "up" ? "#10b981" : "#374151",
-                color: gapOpenDirection === "up" ? "#ffffff" : "#d1d5db",
+              onClick={() => {
+                setGapOpenDirection("down");
+                analyzeGapOpens();
               }}
-            >
-              <TrendingUp size={20} />
-              Top 20 Gap Up
-            </button>
-            <button
-              onClick={() => setGapOpenDirection("down")}
               className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all"
               style={{
                 backgroundColor: gapOpenDirection === "down" ? "#10b981" : "#374151",
                 color: gapOpenDirection === "down" ? "#ffffff" : "#d1d5db",
               }}
             >
+              <TrendingUp size={20} />
+              {loading && gapOpenDirection === "down" ? "Analyzing..." : "Top 30 Gap Up"}
+            </button>
+            <button
+              onClick={() => {
+                setGapOpenDirection("up");
+                analyzeGapOpens();
+              }}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all"
+              style={{
+                backgroundColor: gapOpenDirection === "up" ? "#10b981" : "#374151",
+                color: gapOpenDirection === "up" ? "#ffffff" : "#d1d5db",
+              }}
+            >
               <TrendingDown size={20} />
-              Top 20 Gap Down
+              {loading && gapOpenDirection === "up" ? "Analyzing..." : "Top 30 Gap Down"}
             </button>
           </div>
-          <button
-            onClick={analyzeGapOpens}
-            disabled={loading || !stockCode}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-all"
-          >
-            {loading ? "Analyzing..." : "Analyze Gap Opens"}
-          </button>
         </div>
       )}
 
@@ -457,6 +557,14 @@ export function HistoricalPerformanceCheck({ stockCode }) {
         </div>
       )}
 
+      {/* Loading indicator for statistics modes */}
+      {["gapopenstat", "intradaystat"].includes(selectedOption) && loading && (
+        <div className="flex items-center gap-2 text-blue-400 mb-6">
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-400"></div>
+          <span>Analyzing {selectedOption === "gapopenstat" ? "Gap Open Statistics" : "Intraday Statistics"}...</span>
+        </div>
+      )}
+
       {/* Error Display */}
       {error && (
         <div className="bg-red-900/30 border border-red-500 text-red-300 px-4 py-3 rounded-lg mb-6">
@@ -475,6 +583,16 @@ export function HistoricalPerformanceCheck({ stockCode }) {
 
       {/* Gap Open Table */}
       <GapOpenTable gapOpens={gapOpens} />
+
+      {/* Gap Open Statistics */}
+      {gapOpenStats && selectedOption === "gapopenstat" && (
+        <StatisticsTable statistics={gapOpenStats} title="Gap Open %" />
+      )}
+
+      {/* Intraday Statistics */}
+      {intradayStats && selectedOption === "intradaystat" && (
+        <StatisticsTable statistics={intradayStats} title="Intraday Change %" />
+      )}
 
       {/* Cycle Analysis Results */}
       {cycleAnalysis && selectedOption === "seasonal" && (
@@ -498,13 +616,15 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       )}
 
       {/* No Results */}
-      {!loading && trends.length === 0 && bigMoves.length === 0 && spyCorrelations.length === 0 && gapOpens.length === 0 && !cycleAnalysis && !error && stockCode && (
+      {!loading && trends.length === 0 && bigMoves.length === 0 && spyCorrelations.length === 0 && gapOpens.length === 0 && !gapOpenStats && !intradayStats && !cycleAnalysis && !error && stockCode && (
         <div className="style={{ color: '#93c5fd' }} text-center py-8">
           Click &quot;Analyze {
             selectedOption === "top10" ? "Trends" :
             selectedOption === "bigmoves" ? "Big Moves" :
             selectedOption === "spycorr" ? "SPY Correlation" :
             selectedOption === "gapopen" ? "Gap Opens" :
+            selectedOption === "gapopenstat" ? "" :
+            selectedOption === "intradaystat" ? "" :
             "Cycles"
           }&quot; to see historical performance data
         </div>

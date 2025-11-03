@@ -82,11 +82,11 @@ function findTrends(historicalData, type = "up") {
     });
   }
 
-  // Sort by total change (descending) and take top 20
+  // Sort by total change (descending) and take top 30
   trends.sort((a, b) => b.totalChange - a.totalChange);
 
   // Format for output and calculate opposite direction data
-  return trends.slice(0, 20).map((trend) => {
+  return trends.slice(0, 30).map((trend) => {
     // Find opposite direction trend that follows the main trend
     // Since trends now only end when opposite direction is encountered,
     // there should always be at least 1 opposite day (unless we're at the data boundary)
@@ -234,14 +234,14 @@ export async function GET(request) {
         }
       }
 
-      // Sort by absolute day change magnitude and take top 20
+      // Sort by absolute day change magnitude and take top 30
       bigMoves.sort((a, b) => Math.abs(b.dayChange) - Math.abs(a.dayChange));
 
       result = {
         symbol,
         type,
         direction,
-        bigMoves: bigMoves.slice(0, 20),
+        bigMoves: bigMoves.slice(0, 30),
         dataPoints: historicalData.length,
       };
     } else if (type === "gapopen") {
@@ -278,14 +278,114 @@ export async function GET(request) {
         }
       }
 
-      // Sort by absolute gap open magnitude and take top 20
+      // Sort by absolute gap open magnitude and take top 30
       gapOpens.sort((a, b) => Math.abs(b.gapOpenPercent) - Math.abs(a.gapOpenPercent));
 
       result = {
         symbol,
         type,
         direction,
-        gapOpens: gapOpens.slice(0, 20),
+        gapOpens: gapOpens.slice(0, 30),
+        dataPoints: historicalData.length,
+      };
+    } else if (type === "gapopenstat" || type === "intradaystat") {
+      // Calculate statistics grouped by time periods
+      const stats = {
+        weekdays: { Mon: [], Tue: [], Wed: [], Thu: [], Fri: [] },
+        months: { Jan: [], Feb: [], Mar: [], Apr: [], May: [], Jun: [], Jul: [], Aug: [], Sep: [], Oct: [], Nov: [], Dec: [] },
+        quarters: { Q1: [], Q2: [], Q3: [], Q4: [] },
+        firstDayOfMonth: [],
+        lastDayOfMonth: [],
+      };
+
+      for (let i = 0; i < historicalData.length - 1; i++) {
+        const today = historicalData[i];
+        const yesterday = i < historicalData.length - 1 ? historicalData[i + 1] : null;
+
+        if (!yesterday) continue;
+
+        const date = new Date(today.date);
+        const dayOfWeek = date.toLocaleDateString('en-US', { weekday: 'short' });
+        const month = date.toLocaleDateString('en-US', { month: 'short' });
+        const quarter = `Q${Math.floor(date.getMonth() / 3) + 1}`;
+        const dayOfMonth = date.getDate();
+        const lastDay = new Date(date.getFullYear(), date.getMonth() + 1, 0).getDate();
+
+        let value;
+        if (type === "gapopenstat") {
+          // Gap Open % = (today's open - yesterday's close) / yesterday's close * 100
+          value = ((today.open - yesterday.close) / yesterday.close) * 100;
+        } else {
+          // Intraday % = (today's close - today's open) / today's open * 100
+          value = ((today.close - today.open) / today.open) * 100;
+        }
+
+        // Group by weekday
+        if (stats.weekdays[dayOfWeek]) {
+          stats.weekdays[dayOfWeek].push(value);
+        }
+
+        // Group by month
+        if (stats.months[month]) {
+          stats.months[month].push(value);
+        }
+
+        // Group by quarter
+        stats.quarters[quarter].push(value);
+
+        // First day of month
+        if (dayOfMonth === 1) {
+          stats.firstDayOfMonth.push(value);
+        }
+
+        // Last day of month
+        if (dayOfMonth === lastDay) {
+          stats.lastDayOfMonth.push(value);
+        }
+      }
+
+      // Calculate averages and counts, separated by up/down
+      const calculateStats = (data) => {
+        const upValues = data.filter(v => v > 0);
+        const downValues = data.filter(v => v < 0);
+
+        return {
+          upAverage: upValues.length > 0 ? upValues.reduce((a, b) => a + b, 0) / upValues.length : 0,
+          upCount: upValues.length,
+          downAverage: downValues.length > 0 ? downValues.reduce((a, b) => a + b, 0) / downValues.length : 0,
+          downCount: downValues.length,
+        };
+      };
+
+      const weekdayStats = Object.entries(stats.weekdays).map(([day, values]) => ({
+        label: day,
+        ...calculateStats(values),
+      }));
+
+      const monthStats = Object.entries(stats.months).map(([month, values]) => ({
+        label: month,
+        ...calculateStats(values),
+      }));
+
+      const quarterStats = Object.entries(stats.quarters).map(([quarter, values]) => ({
+        label: quarter,
+        ...calculateStats(values),
+      }));
+
+      const specialDayStats = [
+        { label: 'First Day of Month', ...calculateStats(stats.firstDayOfMonth) },
+        { label: 'Last Day of Month', ...calculateStats(stats.lastDayOfMonth) },
+      ];
+
+      result = {
+        symbol,
+        type,
+        statistics: {
+          weekdays: weekdayStats,
+          months: monthStats,
+          quarters: quarterStats,
+          specialDays: specialDayStats,
+        },
         dataPoints: historicalData.length,
       };
     } else {
