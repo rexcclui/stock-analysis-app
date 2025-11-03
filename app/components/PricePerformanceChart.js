@@ -60,26 +60,6 @@ export function PricePerformanceChart({
       <div className="bg-gray-800 rounded-xl p-4 shadow-xl border border-gray-700">
         <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
           <div className="flex gap-2 flex-1">
-            {periods.map(period => (
-              <button
-                key={period}
-                onClick={() => {
-                  setChartPeriod(period);
-                  if (typeof window !== 'undefined') {
-                    localStorage.setItem('chartPeriod', period);
-                  }
-                }}
-                className={`px-3 py-1 rounded-lg text-sm font-medium transition ${
-                  chartPeriod === period
-                    ? 'bg-blue-600 text-white'
-                    : 'bg-gray-700 text-gray-300 hover:bg-gray-600'
-                }`}
-              >
-                {period}
-              </button>
-            ))}
-          </div>
-          <div className="flex gap-2 flex-1">
             <input
               type="text"
               placeholder="Add stock to chart (e.g. MSFT)"
