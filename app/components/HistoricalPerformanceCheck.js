@@ -195,7 +195,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
           <BarChart3 className="text-blue-400" size={24} />
           Historical Performance Check
         </h2>
-        <div className="text-gray-400">
+        <div className="style={{ color: '#93c5fd' }}">
           {isExpanded ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
         </div>
       </button>
@@ -205,7 +205,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
         <div className="p-6 pt-0">
           {/* Option Selection */}
           <div className="mb-6">
-        <label className="block text-gray-300 text-sm font-medium mb-2">
+        <label className="block text-sm font-medium mb-2" style={{ color: '#bfdbfe' }}>
           Analysis Type
         </label>
         <select
@@ -396,44 +396,44 @@ export function HistoricalPerformanceCheck({ stockCode }) {
             </p>
           </div>
 
-          <div className="bg-gray-900/50 rounded-lg p-6 border border-gray-700">
-            <h3 className="text-lg font-bold text-white mb-4">Monthly Performance</h3>
+          <div className="rounded-lg p-6 border" style={{ backgroundColor: 'rgba(23, 37, 84, 0.5)', borderColor: '#1e3a8a' }}>
+            <h3 className="text-lg font-bold mb-4" style={{ color: '#dbeafe' }}>Monthly Performance</h3>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-700">
-                    <th className="text-left text-gray-400 py-2 px-3">Month</th>
-                    <th className="text-center text-gray-400 py-2 px-3" colSpan="2">{stockCode}</th>
+                  <tr style={{ borderBottom: '1px solid #1d4ed8' }}>
+                    <th className="text-left py-2 px-3" style={{ color: '#93c5fd' }}>Month</th>
+                    <th className="text-center py-2 px-3" colSpan="2" style={{ color: '#93c5fd' }}>{stockCode}</th>
                     {cycleAnalysis.benchmarks?.map((benchmark, idx) => (
-                      <th key={idx} className="text-center text-gray-400 py-2 px-3" colSpan="2">{benchmark}</th>
+                      <th key={idx} className="text-center py-2 px-3" style={{ color: '#93c5fd' }} colSpan="2">{benchmark}</th>
                     ))}
                   </tr>
-                  <tr className="border-b border-gray-700">
-                    <th className="text-left text-gray-400 py-2 px-3"></th>
-                    <th className="text-right text-gray-400 py-2 px-2 text-xs">Avg Return</th>
-                    <th className="text-right text-gray-400 py-2 px-2 text-xs">Win Rate</th>
+                  <tr style={{ borderBottom: '1px solid #1d4ed8' }}>
+                    <th className="text-left py-2 px-3" style={{ color: '#93c5fd' }}></th>
+                    <th className="text-right py-2 px-2 text-xs" style={{ color: '#93c5fd' }}>Avg Return</th>
+                    <th className="text-right py-2 px-2 text-xs" style={{ color: '#93c5fd' }}>Win Rate</th>
                     {cycleAnalysis.benchmarks?.map((benchmark, idx) => (
                       <React.Fragment key={idx}>
-                        <th className="text-right text-gray-400 py-2 px-2 text-xs">Avg Return</th>
-                        <th className="text-right text-gray-400 py-2 px-2 text-xs">Win Rate</th>
+                        <th className="text-right py-2 px-2 text-xs" style={{ color: '#93c5fd' }}>Avg Return</th>
+                        <th className="text-right py-2 px-2 text-xs" style={{ color: '#93c5fd' }}>Win Rate</th>
                       </React.Fragment>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {cycleAnalysis.monthly?.map((item, idx) => (
-                    <tr key={idx} className="border-b border-gray-800">
-                      <td className="text-white py-2 px-3 font-medium">{item.month}</td>
+                    <tr key={idx} style={{ borderBottom: '1px solid #1e3a8a' }}>
+                      <td className="py-2 px-3 font-medium" style={{ color: '#dbeafe' }}>{item.month}</td>
                       <td className={`text-right py-2 px-2 text-sm ${parseFloat(item.avgReturn) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {item.avgReturn}%
                       </td>
-                      <td className="text-right text-gray-300 py-2 px-2 text-sm">{item.winRate}%</td>
+                      <td className="text-right py-2 px-2 text-sm" style={{ color: '#bfdbfe' }}>{item.winRate}%</td>
                       {cycleAnalysis.benchmarks?.map((benchmark, bIdx) => (
                         <React.Fragment key={bIdx}>
                           <td className={`text-right py-2 px-2 text-sm ${parseFloat(item[`${benchmark}_avgReturn`]) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                             {item[`${benchmark}_avgReturn`]}%
                           </td>
-                          <td className="text-right text-gray-300 py-2 px-2 text-sm">{item[`${benchmark}_winRate`]}%</td>
+                          <td className="text-right py-2 px-2 text-sm" style={{ color: '#bfdbfe' }}>{item[`${benchmark}_winRate`]}%</td>
                         </React.Fragment>
                       ))}
                     </tr>
@@ -443,44 +443,44 @@ export function HistoricalPerformanceCheck({ stockCode }) {
             </div>
           </div>
 
-          <div className="bg-gray-900/50 rounded-lg p-6 border border-gray-700">
-            <h3 className="text-lg font-bold text-white mb-4">Quarterly Performance</h3>
+          <div className="rounded-lg p-6 border" style={{ backgroundColor: 'rgba(23, 37, 84, 0.5)', borderColor: '#1e3a8a' }}>
+            <h3 className="text-lg font-bold mb-4" style={{ color: '#dbeafe' }}>Quarterly Performance</h3>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-700">
-                    <th className="text-left text-gray-400 py-2 px-3">Quarter</th>
-                    <th className="text-center text-gray-400 py-2 px-3" colSpan="2">{stockCode}</th>
+                  <tr style={{ borderBottom: '1px solid #1d4ed8' }}>
+                    <th className="text-left py-2 px-3" style={{ color: '#93c5fd' }}>Quarter</th>
+                    <th className="text-center py-2 px-3" style={{ color: '#93c5fd' }} colSpan="2">{stockCode}</th>
                     {cycleAnalysis.benchmarks?.map((benchmark, idx) => (
-                      <th key={idx} className="text-center text-gray-400 py-2 px-3" colSpan="2">{benchmark}</th>
+                      <th key={idx} className="text-center py-2 px-3" style={{ color: '#93c5fd' }} colSpan="2">{benchmark}</th>
                     ))}
                   </tr>
-                  <tr className="border-b border-gray-700">
-                    <th className="text-left text-gray-400 py-2 px-3"></th>
-                    <th className="text-right text-gray-400 py-2 px-2 text-xs">Avg Return</th>
-                    <th className="text-right text-gray-400 py-2 px-2 text-xs">Win Rate</th>
+                  <tr style={{ borderBottom: '1px solid #1d4ed8' }}>
+                    <th className="text-left py-2 px-3" style={{ color: '#93c5fd' }}></th>
+                    <th className="text-right py-2 px-2 text-xs" style={{ color: '#93c5fd' }}>Avg Return</th>
+                    <th className="text-right py-2 px-2 text-xs" style={{ color: '#93c5fd' }}>Win Rate</th>
                     {cycleAnalysis.benchmarks?.map((benchmark, idx) => (
                       <React.Fragment key={idx}>
-                        <th className="text-right text-gray-400 py-2 px-2 text-xs">Avg Return</th>
-                        <th className="text-right text-gray-400 py-2 px-2 text-xs">Win Rate</th>
+                        <th className="text-right py-2 px-2 text-xs" style={{ color: '#93c5fd' }}>Avg Return</th>
+                        <th className="text-right py-2 px-2 text-xs" style={{ color: '#93c5fd' }}>Win Rate</th>
                       </React.Fragment>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {cycleAnalysis.quarterly?.map((item, idx) => (
-                    <tr key={idx} className="border-b border-gray-800">
-                      <td className="text-white py-2 px-3 font-medium">{item.quarter}</td>
+                    <tr key={idx} style={{ borderBottom: '1px solid #1e3a8a' }}>
+                      <td className="py-2 px-3 font-medium" style={{ color: '#dbeafe' }}>{item.quarter}</td>
                       <td className={`text-right py-2 px-2 text-sm ${parseFloat(item.avgReturn) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {item.avgReturn}%
                       </td>
-                      <td className="text-right text-gray-300 py-2 px-2 text-sm">{item.winRate}%</td>
+                      <td className="text-right py-2 px-2 text-sm" style={{ color: '#bfdbfe' }}>{item.winRate}%</td>
                       {cycleAnalysis.benchmarks?.map((benchmark, bIdx) => (
                         <React.Fragment key={bIdx}>
                           <td className={`text-right py-2 px-2 text-sm ${parseFloat(item[`${benchmark}_avgReturn`]) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                             {item[`${benchmark}_avgReturn`]}%
                           </td>
-                          <td className="text-right text-gray-300 py-2 px-2 text-sm">{item[`${benchmark}_winRate`]}%</td>
+                          <td className="text-right py-2 px-2 text-sm" style={{ color: '#bfdbfe' }}>{item[`${benchmark}_winRate`]}%</td>
                         </React.Fragment>
                       ))}
                     </tr>
@@ -490,44 +490,44 @@ export function HistoricalPerformanceCheck({ stockCode }) {
             </div>
           </div>
 
-          <div className="bg-gray-900/50 rounded-lg p-6 border border-gray-700">
-            <h3 className="text-lg font-bold text-white mb-4">Day of Week Performance</h3>
+          <div className="rounded-lg p-6 border" style={{ backgroundColor: 'rgba(23, 37, 84, 0.5)', borderColor: '#1e3a8a' }}>
+            <h3 className="text-lg font-bold mb-4" style={{ color: '#dbeafe' }}>Day of Week Performance</h3>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-700">
-                    <th className="text-left text-gray-400 py-2 px-3">Day</th>
-                    <th className="text-center text-gray-400 py-2 px-3" colSpan="2">{stockCode}</th>
+                  <tr style={{ borderBottom: '1px solid #1d4ed8' }}>
+                    <th className="text-left py-2 px-3" style={{ color: '#93c5fd' }}>Day</th>
+                    <th className="text-center py-2 px-3" style={{ color: '#93c5fd' }} colSpan="2">{stockCode}</th>
                     {cycleAnalysis.benchmarks?.map((benchmark, idx) => (
-                      <th key={idx} className="text-center text-gray-400 py-2 px-3" colSpan="2">{benchmark}</th>
+                      <th key={idx} className="text-center py-2 px-3" style={{ color: '#93c5fd' }} colSpan="2">{benchmark}</th>
                     ))}
                   </tr>
-                  <tr className="border-b border-gray-700">
-                    <th className="text-left text-gray-400 py-2 px-3"></th>
-                    <th className="text-right text-gray-400 py-2 px-2 text-xs">Avg Return</th>
-                    <th className="text-right text-gray-400 py-2 px-2 text-xs">Win Rate</th>
+                  <tr style={{ borderBottom: '1px solid #1d4ed8' }}>
+                    <th className="text-left py-2 px-3" style={{ color: '#93c5fd' }}></th>
+                    <th className="text-right py-2 px-2 text-xs" style={{ color: '#93c5fd' }}>Avg Return</th>
+                    <th className="text-right py-2 px-2 text-xs" style={{ color: '#93c5fd' }}>Win Rate</th>
                     {cycleAnalysis.benchmarks?.map((benchmark, idx) => (
                       <React.Fragment key={idx}>
-                        <th className="text-right text-gray-400 py-2 px-2 text-xs">Avg Return</th>
-                        <th className="text-right text-gray-400 py-2 px-2 text-xs">Win Rate</th>
+                        <th className="text-right py-2 px-2 text-xs" style={{ color: '#93c5fd' }}>Avg Return</th>
+                        <th className="text-right py-2 px-2 text-xs" style={{ color: '#93c5fd' }}>Win Rate</th>
                       </React.Fragment>
                     ))}
                   </tr>
                 </thead>
                 <tbody>
                   {cycleAnalysis.dayOfWeek?.map((item, idx) => (
-                    <tr key={idx} className="border-b border-gray-800">
-                      <td className="text-white py-2 px-3 font-medium">{item.day}</td>
+                    <tr key={idx} style={{ borderBottom: '1px solid #1e3a8a' }}>
+                      <td className="py-2 px-3 font-medium" style={{ color: '#dbeafe' }}>{item.day}</td>
                       <td className={`text-right py-2 px-2 text-sm ${parseFloat(item.avgReturn) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {item.avgReturn}%
                       </td>
-                      <td className="text-right text-gray-300 py-2 px-2 text-sm">{item.winRate}%</td>
+                      <td className="text-right py-2 px-2 text-sm" style={{ color: '#bfdbfe' }}>{item.winRate}%</td>
                       {cycleAnalysis.benchmarks?.map((benchmark, bIdx) => (
                         <React.Fragment key={bIdx}>
                           <td className={`text-right py-2 px-2 text-sm ${parseFloat(item[`${benchmark}_avgReturn`]) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                             {item[`${benchmark}_avgReturn`]}%
                           </td>
-                          <td className="text-right text-gray-300 py-2 px-2 text-sm">{item[`${benchmark}_winRate`]}%</td>
+                          <td className="text-right py-2 px-2 text-sm" style={{ color: '#bfdbfe' }}>{item[`${benchmark}_winRate`]}%</td>
                         </React.Fragment>
                       ))}
                     </tr>
@@ -550,44 +550,44 @@ export function HistoricalPerformanceCheck({ stockCode }) {
             </p>
           </div>
 
-          <div className="bg-gray-900/50 rounded-lg p-6 border border-gray-700">
-            <h3 className="text-lg font-bold text-white mb-4">
+          <div className="rounded-lg p-6 border" style={{ backgroundColor: 'rgba(23, 37, 84, 0.5)', borderColor: '#1e3a8a' }}>
+            <h3 className="text-lg font-bold mb-4" style={{ color: '#dbeafe' }}>
               Cycle Statistics
             </h3>
             <div className="grid grid-cols-3 gap-4 mb-4">
               <div className="text-center">
-                <div className="text-gray-400 text-sm">Total Peaks</div>
-                <div className="text-2xl font-bold text-white">{cycleAnalysis.totalPeaks}</div>
+                <div className="text-sm" style={{ color: '#93c5fd' }}>Total Peaks</div>
+                <div className="text-2xl font-bold" style={{ color: '#dbeafe' }}>{cycleAnalysis.totalPeaks}</div>
               </div>
               <div className="text-center">
-                <div className="text-gray-400 text-sm">Total Troughs</div>
-                <div className="text-2xl font-bold text-white">{cycleAnalysis.totalTroughs}</div>
+                <div className="text-sm" style={{ color: '#93c5fd' }}>Total Troughs</div>
+                <div className="text-2xl font-bold" style={{ color: '#dbeafe' }}>{cycleAnalysis.totalTroughs}</div>
               </div>
               <div className="text-center">
-                <div className="text-gray-400 text-sm">Avg Cycle Length</div>
-                <div className="text-2xl font-bold text-white">{cycleAnalysis.avgCycleLength} days</div>
+                <div className="text-sm" style={{ color: '#93c5fd' }}>Avg Cycle Length</div>
+                <div className="text-2xl font-bold" style={{ color: '#dbeafe' }}>{cycleAnalysis.avgCycleLength} days</div>
               </div>
             </div>
           </div>
 
-          <div className="bg-gray-900/50 rounded-lg p-6 border border-gray-700">
-            <h3 className="text-lg font-bold text-white mb-4">Recent Peak-to-Peak Cycles</h3>
+          <div className="rounded-lg p-6 border" style={{ backgroundColor: 'rgba(23, 37, 84, 0.5)', borderColor: '#1e3a8a' }}>
+            <h3 className="text-lg font-bold mb-4" style={{ color: '#dbeafe' }}>Recent Peak-to-Peak Cycles</h3>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-700">
-                    <th className="text-left text-gray-400 py-2 px-4">From</th>
-                    <th className="text-left text-gray-400 py-2 px-4">To</th>
-                    <th className="text-right text-gray-400 py-2 px-4">Days</th>
-                    <th className="text-right text-gray-400 py-2 px-4">Price Change</th>
+                  <tr style={{ borderBottom: '1px solid #1d4ed8' }}>
+                    <th className="text-left style={{ color: '#93c5fd' }} py-2 px-4">From</th>
+                    <th className="text-left style={{ color: '#93c5fd' }} py-2 px-4">To</th>
+                    <th className="text-right style={{ color: '#93c5fd' }} py-2 px-4">Days</th>
+                    <th className="text-right style={{ color: '#93c5fd' }} py-2 px-4">Price Change</th>
                   </tr>
                 </thead>
                 <tbody>
                   {cycleAnalysis.cycles?.map((cycle, idx) => (
-                    <tr key={idx} className="border-b border-gray-800">
-                      <td className="text-gray-300 py-2 px-4">{cycle.from}</td>
-                      <td className="text-gray-300 py-2 px-4">{cycle.to}</td>
-                      <td className="text-right text-white py-2 px-4">{cycle.days}</td>
+                    <tr key={idx} style={{ borderBottom: '1px solid #1e3a8a' }}>
+                      <td className="style={{ color: '#bfdbfe' }} py-2 px-4">{cycle.from}</td>
+                      <td className="style={{ color: '#bfdbfe' }} py-2 px-4">{cycle.to}</td>
+                      <td className="text-right style={{ color: '#dbeafe' }} py-2 px-4">{cycle.days}</td>
                       <td className={`text-right py-2 px-4 ${parseFloat(cycle.priceChange) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                         {cycle.priceChange}%
                       </td>
@@ -611,23 +611,23 @@ export function HistoricalPerformanceCheck({ stockCode }) {
             </p>
           </div>
 
-          <div className="bg-gray-900/50 rounded-lg p-6 border border-gray-700">
-            <h3 className="text-lg font-bold text-white mb-4">Current Moving Average Status</h3>
+          <div className="rounded-lg p-6 border" style={{ backgroundColor: 'rgba(23, 37, 84, 0.5)', borderColor: '#1e3a8a' }}>
+            <h3 className="text-lg font-bold mb-4" style={{ color: '#dbeafe' }}>Current Moving Average Status</h3>
             <div className="grid grid-cols-4 gap-4">
               <div className="text-center">
-                <div className="text-gray-400 text-sm">Current Price</div>
-                <div className="text-xl font-bold text-white">${cycleAnalysis.currentPrice}</div>
+                <div className="text-sm" style={{ color: '#93c5fd' }}>Current Price</div>
+                <div className="text-xl font-bold style={{ color: '#dbeafe' }}">${cycleAnalysis.currentPrice}</div>
               </div>
               <div className="text-center">
-                <div className="text-gray-400 text-sm">50-Day MA</div>
+                <div className="text-sm" style={{ color: '#93c5fd' }}>50-Day MA</div>
                 <div className="text-xl font-bold text-blue-400">${cycleAnalysis.currentMA50}</div>
               </div>
               <div className="text-center">
-                <div className="text-gray-400 text-sm">200-Day MA</div>
+                <div className="text-sm" style={{ color: '#93c5fd' }}>200-Day MA</div>
                 <div className="text-xl font-bold text-purple-400">${cycleAnalysis.currentMA200}</div>
               </div>
               <div className="text-center">
-                <div className="text-gray-400 text-sm">Signal</div>
+                <div className="text-sm" style={{ color: '#93c5fd' }}>Signal</div>
                 <div className={`text-xl font-bold ${cycleAnalysis.currentSignal === 'Bullish' ? 'text-green-400' : 'text-red-400'}`}>
                   {cycleAnalysis.currentSignal}
                 </div>
@@ -635,26 +635,26 @@ export function HistoricalPerformanceCheck({ stockCode }) {
             </div>
           </div>
 
-          <div className="bg-gray-900/50 rounded-lg p-6 border border-gray-700">
-            <h3 className="text-lg font-bold text-white mb-4">
+          <div className="rounded-lg p-6 border" style={{ backgroundColor: 'rgba(23, 37, 84, 0.5)', borderColor: '#1e3a8a' }}>
+            <h3 className="text-lg font-bold mb-4" style={{ color: '#dbeafe' }}>
               Recent Crossovers (Total: {cycleAnalysis.totalCrossovers})
             </h3>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-700">
-                    <th className="text-left text-gray-400 py-2 px-4">Date</th>
-                    <th className="text-left text-gray-400 py-2 px-4">Type</th>
-                    <th className="text-right text-gray-400 py-2 px-4">Price</th>
-                    <th className="text-center text-gray-400 py-2 px-4">Signal</th>
+                  <tr style={{ borderBottom: '1px solid #1d4ed8' }}>
+                    <th className="text-left style={{ color: '#93c5fd' }} py-2 px-4">Date</th>
+                    <th className="text-left style={{ color: '#93c5fd' }} py-2 px-4">Type</th>
+                    <th className="text-right style={{ color: '#93c5fd' }} py-2 px-4">Price</th>
+                    <th className="text-center style={{ color: '#93c5fd' }} py-2 px-4">Signal</th>
                   </tr>
                 </thead>
                 <tbody>
                   {cycleAnalysis.crossovers?.map((cross, idx) => (
-                    <tr key={idx} className="border-b border-gray-800">
-                      <td className="text-gray-300 py-2 px-4">{cross.date}</td>
-                      <td className="text-white py-2 px-4">{cross.type}</td>
-                      <td className="text-right text-gray-300 py-2 px-4">${cross.price}</td>
+                    <tr key={idx} style={{ borderBottom: '1px solid #1e3a8a' }}>
+                      <td className="style={{ color: '#bfdbfe' }} py-2 px-4">{cross.date}</td>
+                      <td className="style={{ color: '#dbeafe' }} py-2 px-4">{cross.type}</td>
+                      <td className="text-right style={{ color: '#bfdbfe' }} py-2 px-4">${cross.price}</td>
                       <td className="text-center py-2 px-4">
                         <span className={`px-2 py-1 rounded text-sm ${cross.signal === 'Bullish' ? 'bg-green-900/50 text-green-400' : 'bg-red-900/50 text-red-400'}`}>
                           {cross.signal}
@@ -680,22 +680,22 @@ export function HistoricalPerformanceCheck({ stockCode }) {
             </p>
           </div>
 
-          <div className="bg-gray-900/50 rounded-lg p-6 border border-gray-700">
-            <h3 className="text-lg font-bold text-white mb-4">Dominant Cycles Detected</h3>
-            <p className="text-gray-300 mb-4">{cycleAnalysis.interpretation}</p>
+          <div className="rounded-lg p-6 border" style={{ backgroundColor: 'rgba(23, 37, 84, 0.5)', borderColor: '#1e3a8a' }}>
+            <h3 className="text-lg font-bold mb-4" style={{ color: '#dbeafe' }}>Dominant Cycles Detected</h3>
+            <p className="style={{ color: '#bfdbfe' }} mb-4">{cycleAnalysis.interpretation}</p>
             <div className="overflow-x-auto">
               <table className="w-full">
                 <thead>
-                  <tr className="border-b border-gray-700">
-                    <th className="text-left text-gray-400 py-2 px-4">Period (Days)</th>
-                    <th className="text-right text-gray-400 py-2 px-4">Strength</th>
+                  <tr style={{ borderBottom: '1px solid #1d4ed8' }}>
+                    <th className="text-left style={{ color: '#93c5fd' }} py-2 px-4">Period (Days)</th>
+                    <th className="text-right style={{ color: '#93c5fd' }} py-2 px-4">Strength</th>
                   </tr>
                 </thead>
                 <tbody>
                   {cycleAnalysis.dominantCycles?.map((cycle, idx) => (
-                    <tr key={idx} className="border-b border-gray-800">
-                      <td className="text-white py-2 px-4">{cycle.period}</td>
-                      <td className="text-right text-gray-300 py-2 px-4">{cycle.strength}</td>
+                    <tr key={idx} style={{ borderBottom: '1px solid #1e3a8a' }}>
+                      <td className="style={{ color: '#dbeafe' }} py-2 px-4">{cycle.period}</td>
+                      <td className="text-right style={{ color: '#bfdbfe' }} py-2 px-4">{cycle.strength}</td>
                     </tr>
                   ))}
                 </tbody>
@@ -717,42 +717,42 @@ export function HistoricalPerformanceCheck({ stockCode }) {
             </p>
           </div>
 
-          <div className="bg-gray-900/50 rounded-lg p-6 border border-gray-700">
-            <h3 className="text-lg font-bold text-white mb-4">Current Price & Key Levels</h3>
+          <div className="rounded-lg p-6 border" style={{ backgroundColor: 'rgba(23, 37, 84, 0.5)', borderColor: '#1e3a8a' }}>
+            <h3 className="text-lg font-bold mb-4" style={{ color: '#dbeafe' }}>Current Price & Key Levels</h3>
             <div className="grid grid-cols-3 gap-4 mb-4">
               <div className="text-center">
-                <div className="text-gray-400 text-sm">Current Price</div>
-                <div className="text-2xl font-bold text-white">${cycleAnalysis.currentPrice}</div>
+                <div className="text-sm" style={{ color: '#93c5fd' }}>Current Price</div>
+                <div className="text-2xl font-bold" style={{ color: '#dbeafe' }}>${cycleAnalysis.currentPrice}</div>
               </div>
               <div className="text-center">
-                <div className="text-gray-400 text-sm">Nearest Support</div>
+                <div className="text-sm" style={{ color: '#93c5fd' }}>Nearest Support</div>
                 <div className="text-2xl font-bold text-green-400">${cycleAnalysis.nearestSupport}</div>
               </div>
               <div className="text-center">
-                <div className="text-gray-400 text-sm">Nearest Resistance</div>
+                <div className="text-sm" style={{ color: '#93c5fd' }}>Nearest Resistance</div>
                 <div className="text-2xl font-bold text-red-400">${cycleAnalysis.nearestResistance}</div>
               </div>
             </div>
           </div>
 
           <div className="grid grid-cols-2 gap-6">
-            <div className="bg-gray-900/50 rounded-lg p-6 border border-gray-700">
+            <div className="rounded-lg p-6 border" style={{ backgroundColor: 'rgba(23, 37, 84, 0.5)', borderColor: '#1e3a8a' }}>
               <h3 className="text-lg font-bold text-green-400 mb-4">Support Levels</h3>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-gray-700">
-                      <th className="text-left text-gray-400 py-2 px-4">Price</th>
-                      <th className="text-right text-gray-400 py-2 px-4">Touches</th>
-                      <th className="text-right text-gray-400 py-2 px-4">Distance</th>
+                    <tr style={{ borderBottom: '1px solid #1d4ed8' }}>
+                      <th className="text-left style={{ color: '#93c5fd' }} py-2 px-4">Price</th>
+                      <th className="text-right style={{ color: '#93c5fd' }} py-2 px-4">Touches</th>
+                      <th className="text-right style={{ color: '#93c5fd' }} py-2 px-4">Distance</th>
                     </tr>
                   </thead>
                   <tbody>
                     {cycleAnalysis.support?.map((level, idx) => (
-                      <tr key={idx} className="border-b border-gray-800">
-                        <td className="text-white py-2 px-4">${level.price}</td>
-                        <td className="text-right text-gray-300 py-2 px-4">{level.touches}</td>
-                        <td className="text-right text-gray-400 py-2 px-4">{level.distance}</td>
+                      <tr key={idx} style={{ borderBottom: '1px solid #1e3a8a' }}>
+                        <td className="style={{ color: '#dbeafe' }} py-2 px-4">${level.price}</td>
+                        <td className="text-right style={{ color: '#bfdbfe' }} py-2 px-4">{level.touches}</td>
+                        <td className="text-right style={{ color: '#93c5fd' }} py-2 px-4">{level.distance}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -760,23 +760,23 @@ export function HistoricalPerformanceCheck({ stockCode }) {
               </div>
             </div>
 
-            <div className="bg-gray-900/50 rounded-lg p-6 border border-gray-700">
+            <div className="rounded-lg p-6 border" style={{ backgroundColor: 'rgba(23, 37, 84, 0.5)', borderColor: '#1e3a8a' }}>
               <h3 className="text-lg font-bold text-red-400 mb-4">Resistance Levels</h3>
               <div className="overflow-x-auto">
                 <table className="w-full">
                   <thead>
-                    <tr className="border-b border-gray-700">
-                      <th className="text-left text-gray-400 py-2 px-4">Price</th>
-                      <th className="text-right text-gray-400 py-2 px-4">Touches</th>
-                      <th className="text-right text-gray-400 py-2 px-4">Distance</th>
+                    <tr style={{ borderBottom: '1px solid #1d4ed8' }}>
+                      <th className="text-left style={{ color: '#93c5fd' }} py-2 px-4">Price</th>
+                      <th className="text-right style={{ color: '#93c5fd' }} py-2 px-4">Touches</th>
+                      <th className="text-right style={{ color: '#93c5fd' }} py-2 px-4">Distance</th>
                     </tr>
                   </thead>
                   <tbody>
                     {cycleAnalysis.resistance?.map((level, idx) => (
-                      <tr key={idx} className="border-b border-gray-800">
-                        <td className="text-white py-2 px-4">${level.price}</td>
-                        <td className="text-right text-gray-300 py-2 px-4">{level.touches}</td>
-                        <td className="text-right text-gray-400 py-2 px-4">{level.distance}</td>
+                      <tr key={idx} style={{ borderBottom: '1px solid #1e3a8a' }}>
+                        <td className="style={{ color: '#dbeafe' }} py-2 px-4">${level.price}</td>
+                        <td className="text-right style={{ color: '#bfdbfe' }} py-2 px-4">{level.touches}</td>
+                        <td className="text-right style={{ color: '#93c5fd' }} py-2 px-4">{level.distance}</td>
                       </tr>
                     ))}
                   </tbody>
@@ -789,7 +789,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
 
       {/* No Results */}
       {!loading && trends.length === 0 && bigMoves.length === 0 && spyCorrelations.length === 0 && !cycleAnalysis && !error && stockCode && (
-        <div className="text-gray-400 text-center py-8">
+        <div className="style={{ color: '#93c5fd' }} text-center py-8">
           Click &quot;Analyze {
             selectedOption === "top10" ? "Trends" :
             selectedOption === "bigmoves" ? "Big Moves" :
@@ -800,7 +800,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       )}
 
       {!stockCode && (
-        <div className="text-gray-400 text-center py-8">
+        <div className="style={{ color: '#93c5fd' }} text-center py-8">
           Search for a stock to analyze historical trends
         </div>
       )}
