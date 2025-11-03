@@ -261,7 +261,7 @@ export function PricePerformanceChart({
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
   return (
-    <div className="mb-6" style={{ marginTop: '1rem' }}>
+    <div className="mb-6" style={{ marginTop: '1rem', marginRight: '2rem' }}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <h3 className="text-xl font-bold text-white">Price Performance</h3>
@@ -403,7 +403,7 @@ export function PricePerformanceChart({
                   labelStyle={{ color: '#F3F4F6' }}
                   formatter={(value, name) => [chartCompareStocks.length === 0 ? `$${value.toFixed(2)}` : `${value.toFixed(2)}%`, name]}
                 />
-                <Legend wrapperStyle={{ paddingTop: '0px', marginTop: '0px' }} />
+                <Legend wrapperStyle={{ paddingTop: '0px', marginTop: '0px', marginLeft: '0px', paddingLeft: '0px', width: 'auto' }} layout="vertical" verticalAlign="top" height={30} />
                 {chartCompareStocks.length === 0 && selectedStock?.resistance && (
                   <>
                     <ReferenceLine 
