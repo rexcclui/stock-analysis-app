@@ -1,13 +1,29 @@
 import React from 'react';
+import { RefreshCw } from 'lucide-react';
 
 // props: historyStocks: array of { code, dayChange }
 // onClickCode(code): optional callback to trigger a search again
-export function SearchHistoryTable({ historyStocks, onClickCode }) {
+// onReload: optional callback to reload all stocks
+// loading: boolean to show loading state
+export function SearchHistoryTable({ historyStocks, onClickCode, onReload, loading }) {
   if (!historyStocks || historyStocks.length === 0) return null;
 
   return (
     <div className="bg-gray-800 rounded-xl p-4 mb-6 border border-gray-700 shadow-md">
-      <h3 className="text-lg font-semibold text-white mb-3">Previous Search:</h3>
+      <div className="flex items-center gap-3 mb-3">
+        <h3 className="text-lg font-semibold text-white">Previous Search:</h3>
+        {onReload && (
+          <button
+            onClick={onReload}
+            disabled={loading}
+            className="px-3 py-1 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-1 ml-8"
+            title="Reload all stocks with latest data from API (bypass cache)"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            Reload
+          </button>
+        )}
+      </div>
       <div className="flex flex-wrap gap-3">
         {historyStocks.map(item => {
           const pct = item.dayChange ?? 0;

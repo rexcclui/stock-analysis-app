@@ -442,6 +442,42 @@ export default function StockAnalysisDashboard() {
     }
   };
 
+  const reloadRecentSearches = async () => {
+    if (searchHistoryStocks.length === 0) return;
+
+    setLoading(true);
+    try {
+      // Fetch fresh data for all stocks in search history with cache bypass
+      const promises = searchHistoryStocks.map(item =>
+        fetch(`/api/stock?symbol=${item.code}&nocache=${Date.now()}`, { cache: 'no-store' })
+          .then(res => res.json())
+          .catch(err => {
+            console.error(`Failed to reload ${item.code}:`, err);
+            return null;
+          })
+      );
+
+      const results = await Promise.all(promises);
+
+      // Update searchHistoryStocks with fresh data
+      const updatedHistory = results
+        .filter(stock => stock && !stock.error)
+        .map(stock => ({
+          code: stock.code,
+          dayChange: normalizeDayChange(stock.dayChange || 0)
+        }));
+
+      setSearchHistoryStocks(updatedHistory);
+
+      console.log('Recent searches reloaded with fresh data');
+    } catch (error) {
+      console.error('Error reloading recent searches:', error);
+      alert('Failed to reload some stocks. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const periods = ['1D', '7D', '1M', '3M', '6M', '1Y', '3Y', '5Y'];
 
   return (
@@ -554,6 +590,7 @@ export default function StockAnalysisDashboard() {
                 periods={periods}
                 searchHistoryStocks={searchHistoryStocks}
                 onSearchHistoryCodeClick={(code)=> { handleSearch(code); }}
+                onReloadSearchHistory={reloadRecentSearches}
               />
 
               <SentimentSection sentiment={selectedStock.sentiment} />

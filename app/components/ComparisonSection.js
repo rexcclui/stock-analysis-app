@@ -19,7 +19,8 @@ export function ComparisonSection({
   onHeatmapSizeByChange,
   periods,
   searchHistoryStocks,
-  onSearchHistoryCodeClick
+  onSearchHistoryCodeClick,
+  onReloadSearchHistory
 }) {
   //console.log('TEMP_LOG[7] ComparisonSection> comparisonStocks :', comparisonStocks );
   return (
@@ -27,6 +28,8 @@ export function ComparisonSection({
       <SearchHistoryTable
         historyStocks={searchHistoryStocks}
         onClickCode={onSearchHistoryCodeClick}
+        onReload={onReloadSearchHistory}
+        loading={loading}
       />
       <AddCustomComparison
         manualStock={manualStock}
