@@ -1,0 +1,458 @@
+import { NextResponse } from 'next/server';
+import { createNoCacheResponse } from '../../../lib/response';
+
+export async function GET(request) {
+  const { searchParams } = new URL(request.url);
+  const symbol = searchParams.get('symbol');
+  const years = parseInt(searchParams.get('years') || '5');
+  const mode = searchParams.get('mode'); // seasonal, peak-trough, ma-crossover, fourier, support-resistance
+
+  if (!symbol) {
+    return createNoCacheResponse({ error: 'Symbol required' }, 400);
+  }
+
+  if (!mode) {
+    return createNoCacheResponse({ error: 'Analysis mode required' }, 400);
+  }
+
+  try {
+    // Fetch historical data from FMP
+    const endDate = new Date();
+    const startDate = new Date();
+    startDate.setFullYear(startDate.getFullYear() - years);
+
+    const response = await fetch(
+      `https://financialmodelingprep.com/api/v3/historical-price-full/${symbol}?from=${startDate.toISOString().split('T')[0]}&to=${endDate.toISOString().split('T')[0]}&apikey=${process.env.FMP_KEY}`
+    );
+
+    if (!response.ok) {
+      throw new Error(`API returned status ${response.status}`);
+    }
+
+    const data = await response.json();
+    const historicalData = data.historical || [];
+
+    if (historicalData.length === 0) {
+      return createNoCacheResponse({ error: 'No historical data available' }, 404);
+    }
+
+    // Sort by date ascending
+    historicalData.sort((a, b) => new Date(a.date) - new Date(b.date));
+
+    let result = {};
+
+    switch (mode) {
+      case 'seasonal':
+        // For seasonal analysis, also fetch SPY and QQQ data for comparison
+        const benchmarks = ['SPY', 'QQQ'].filter(b => b !== symbol);
+        const benchmarkData = {};
+
+        for (const benchmarkSymbol of benchmarks) {
+          try {
+            const benchmarkResponse = await fetch(
+              `https://financialmodelingprep.com/api/v3/historical-price-full/${benchmarkSymbol}?from=${startDate.toISOString().split('T')[0]}&to=${endDate.toISOString().split('T')[0]}&apikey=${process.env.FMP_KEY}`
+            );
+            if (benchmarkResponse.ok) {
+              const benchmarkJson = await benchmarkResponse.json();
+              const benchmarkHistorical = benchmarkJson.historical || [];
+              benchmarkHistorical.sort((a, b) => new Date(a.date) - new Date(b.date));
+              benchmarkData[benchmarkSymbol] = benchmarkHistorical;
+            }
+          } catch (err) {
+            console.error(`Failed to fetch ${benchmarkSymbol}:`, err);
+          }
+        }
+
+        result = analyzeSeasonalPatterns(historicalData, symbol, benchmarkData);
+        break;
+      case 'peak-trough':
+        result = analyzePeakTrough(historicalData);
+        break;
+      case 'ma-crossover':
+        result = analyzeMovingAverageCrossovers(historicalData);
+        break;
+      case 'fourier':
+        result = analyzeFourier(historicalData);
+        break;
+      case 'support-resistance':
+        result = analyzeSupportResistance(historicalData);
+        break;
+      default:
+        return createNoCacheResponse({ error: 'Invalid analysis mode' }, 400);
+    }
+
+    return createNoCacheResponse({
+      mode,
+      symbol,
+      dataPoints: historicalData.length,
+      ...result
+    });
+  } catch (error) {
+    console.error('Cycle Analysis API Error:', error);
+    return createNoCacheResponse({ error: 'Failed to analyze cycles' }, 500);
+  }
+}
+
+// 1. Seasonal/Calendar Patterns Analysis
+function analyzeSeasonalPatterns(data, symbol, benchmarkData = {}) {
+  // Helper function to calculate seasonal patterns for a single symbol
+  const calculatePatterns = (historicalData) => {
+    const monthlyReturns = {};
+    const quarterlyReturns = {};
+    const dayOfWeekReturns = {};
+
+    // Initialize structures
+    for (let m = 0; m < 12; m++) {
+      monthlyReturns[m] = { returns: [], count: 0, avgReturn: 0 };
+    }
+    for (let q = 1; q <= 4; q++) {
+      quarterlyReturns[q] = { returns: [], count: 0, avgReturn: 0 };
+    }
+    for (let d = 0; d < 7; d++) {
+      dayOfWeekReturns[d] = { returns: [], count: 0, avgReturn: 0 };
+    }
+
+    // Calculate daily returns and aggregate
+    for (let i = 1; i < historicalData.length; i++) {
+      const prevClose = historicalData[i - 1].close;
+      const currClose = historicalData[i].close;
+      const dailyReturn = ((currClose - prevClose) / prevClose) * 100;
+
+      const date = new Date(historicalData[i].date);
+      const month = date.getMonth();
+      const quarter = Math.floor(month / 3) + 1;
+      const dayOfWeek = date.getDay();
+
+      monthlyReturns[month].returns.push(dailyReturn);
+      monthlyReturns[month].count++;
+
+      quarterlyReturns[quarter].returns.push(dailyReturn);
+      quarterlyReturns[quarter].count++;
+
+      dayOfWeekReturns[dayOfWeek].returns.push(dailyReturn);
+      dayOfWeekReturns[dayOfWeek].count++;
+    }
+
+    return { monthlyReturns, quarterlyReturns, dayOfWeekReturns };
+  };
+
+  // Calculate patterns for main symbol
+  const mainPatterns = calculatePatterns(data);
+
+  // Calculate patterns for benchmarks
+  const benchmarkPatterns = {};
+  Object.keys(benchmarkData).forEach(benchmarkSymbol => {
+    benchmarkPatterns[benchmarkSymbol] = calculatePatterns(benchmarkData[benchmarkSymbol]);
+  });
+
+  // Format results
+  const monthNames = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+  const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+
+  const monthlyAnalysis = Object.keys(mainPatterns.monthlyReturns).map(m => {
+    const returns = mainPatterns.monthlyReturns[m].returns;
+    const avg = returns.length > 0 ? returns.reduce((a, b) => a + b, 0) / returns.length : 0;
+    const winRate = returns.length > 0 ? (returns.filter(r => r > 0).length / returns.length) * 100 : 0;
+
+    const result = {
+      month: monthNames[m],
+      avgReturn: avg.toFixed(2),
+      winRate: winRate.toFixed(1),
+      count: returns.length
+    };
+
+    // Add benchmark data
+    Object.keys(benchmarkPatterns).forEach(benchmarkSymbol => {
+      const benchmarkReturns = benchmarkPatterns[benchmarkSymbol].monthlyReturns[m].returns;
+      const benchmarkAvg = benchmarkReturns.length > 0 ? benchmarkReturns.reduce((a, b) => a + b, 0) / benchmarkReturns.length : 0;
+      const benchmarkWinRate = benchmarkReturns.length > 0 ? (benchmarkReturns.filter(r => r > 0).length / benchmarkReturns.length) * 100 : 0;
+
+      result[`${benchmarkSymbol}_avgReturn`] = benchmarkAvg.toFixed(2);
+      result[`${benchmarkSymbol}_winRate`] = benchmarkWinRate.toFixed(1);
+    });
+
+    return result;
+  });
+
+  const quarterlyAnalysis = Object.keys(mainPatterns.quarterlyReturns).map(q => {
+    const returns = mainPatterns.quarterlyReturns[q].returns;
+    const avg = returns.length > 0 ? returns.reduce((a, b) => a + b, 0) / returns.length : 0;
+    const winRate = returns.length > 0 ? (returns.filter(r => r > 0).length / returns.length) * 100 : 0;
+
+    const result = {
+      quarter: `Q${q}`,
+      avgReturn: avg.toFixed(2),
+      winRate: winRate.toFixed(1),
+      count: returns.length
+    };
+
+    // Add benchmark data
+    Object.keys(benchmarkPatterns).forEach(benchmarkSymbol => {
+      const benchmarkReturns = benchmarkPatterns[benchmarkSymbol].quarterlyReturns[q].returns;
+      const benchmarkAvg = benchmarkReturns.length > 0 ? benchmarkReturns.reduce((a, b) => a + b, 0) / benchmarkReturns.length : 0;
+      const benchmarkWinRate = benchmarkReturns.length > 0 ? (benchmarkReturns.filter(r => r > 0).length / benchmarkReturns.length) * 100 : 0;
+
+      result[`${benchmarkSymbol}_avgReturn`] = benchmarkAvg.toFixed(2);
+      result[`${benchmarkSymbol}_winRate`] = benchmarkWinRate.toFixed(1);
+    });
+
+    return result;
+  });
+
+  const dayOfWeekAnalysis = Object.keys(mainPatterns.dayOfWeekReturns).map(d => {
+    const returns = mainPatterns.dayOfWeekReturns[d].returns;
+    const avg = returns.length > 0 ? returns.reduce((a, b) => a + b, 0) / returns.length : 0;
+    const winRate = returns.length > 0 ? (returns.filter(r => r > 0).length / returns.length) * 100 : 0;
+
+    const result = {
+      day: dayNames[d],
+      avgReturn: avg.toFixed(2),
+      winRate: winRate.toFixed(1),
+      count: returns.length
+    };
+
+    // Add benchmark data
+    Object.keys(benchmarkPatterns).forEach(benchmarkSymbol => {
+      const benchmarkReturns = benchmarkPatterns[benchmarkSymbol].dayOfWeekReturns[d].returns;
+      const benchmarkAvg = benchmarkReturns.length > 0 ? benchmarkReturns.reduce((a, b) => a + b, 0) / benchmarkReturns.length : 0;
+      const benchmarkWinRate = benchmarkReturns.length > 0 ? (benchmarkReturns.filter(r => r > 0).length / benchmarkReturns.length) * 100 : 0;
+
+      result[`${benchmarkSymbol}_avgReturn`] = benchmarkAvg.toFixed(2);
+      result[`${benchmarkSymbol}_winRate`] = benchmarkWinRate.toFixed(1);
+    });
+
+    return result;
+  });
+
+  return {
+    monthly: monthlyAnalysis,
+    quarterly: quarterlyAnalysis,
+    dayOfWeek: dayOfWeekAnalysis,
+    benchmarks: Object.keys(benchmarkData)
+  };
+}
+
+// 2. Peak-to-Trough Analysis
+function analyzePeakTrough(data) {
+  const peaks = [];
+  const troughs = [];
+  const cycles = [];
+
+  // Find peaks and troughs using simple algorithm
+  for (let i = 5; i < data.length - 5; i++) {
+    const current = data[i].close;
+    const isPeak = data.slice(i - 5, i).every(d => d.close < current) &&
+                   data.slice(i + 1, i + 6).every(d => d.close < current);
+    const isTrough = data.slice(i - 5, i).every(d => d.close > current) &&
+                     data.slice(i + 1, i + 6).every(d => d.close > current);
+
+    if (isPeak) {
+      peaks.push({ date: data[i].date, price: current, index: i });
+    }
+    if (isTrough) {
+      troughs.push({ date: data[i].date, price: current, index: i });
+    }
+  }
+
+  // Calculate cycles (peak to peak)
+  for (let i = 1; i < peaks.length; i++) {
+    const daysBetween = Math.round((new Date(peaks[i].date) - new Date(peaks[i - 1].date)) / (1000 * 60 * 60 * 24));
+    const priceChange = ((peaks[i].price - peaks[i - 1].price) / peaks[i - 1].price) * 100;
+
+    cycles.push({
+      from: peaks[i - 1].date,
+      to: peaks[i].date,
+      days: daysBetween,
+      priceChange: priceChange.toFixed(2),
+      fromPrice: peaks[i - 1].price.toFixed(2),
+      toPrice: peaks[i].price.toFixed(2)
+    });
+  }
+
+  const avgCycleLength = cycles.length > 0 ? cycles.reduce((sum, c) => sum + c.days, 0) / cycles.length : 0;
+
+  return {
+    peaks: peaks.slice(-10).map(p => ({ date: p.date, price: p.price.toFixed(2) })),
+    troughs: troughs.slice(-10).map(t => ({ date: t.date, price: t.price.toFixed(2) })),
+    cycles: cycles.slice(-10),
+    avgCycleLength: avgCycleLength.toFixed(0),
+    totalPeaks: peaks.length,
+    totalTroughs: troughs.length
+  };
+}
+
+// 3. Moving Average Crossover Analysis
+function analyzeMovingAverageCrossovers(data) {
+  const MA_50 = 50;
+  const MA_200 = 200;
+
+  if (data.length < MA_200) {
+    return { error: 'Not enough data for MA analysis' };
+  }
+
+  const ma50 = [];
+  const ma200 = [];
+  const crossovers = [];
+
+  // Calculate MAs
+  for (let i = 0; i < data.length; i++) {
+    if (i >= MA_50 - 1) {
+      const sum50 = data.slice(i - MA_50 + 1, i + 1).reduce((sum, d) => sum + d.close, 0);
+      ma50.push(sum50 / MA_50);
+    } else {
+      ma50.push(null);
+    }
+
+    if (i >= MA_200 - 1) {
+      const sum200 = data.slice(i - MA_200 + 1, i + 1).reduce((sum, d) => sum + d.close, 0);
+      ma200.push(sum200 / MA_200);
+    } else {
+      ma200.push(null);
+    }
+  }
+
+  // Find crossovers
+  for (let i = MA_200; i < data.length - 1; i++) {
+    const prev50 = ma50[i - 1];
+    const curr50 = ma50[i];
+    const prev200 = ma200[i - 1];
+    const curr200 = ma200[i];
+
+    // Golden Cross (bullish)
+    if (prev50 < prev200 && curr50 > curr200) {
+      crossovers.push({
+        date: data[i].date,
+        type: 'Golden Cross',
+        price: data[i].close.toFixed(2),
+        signal: 'Bullish'
+      });
+    }
+
+    // Death Cross (bearish)
+    if (prev50 > prev200 && curr50 < curr200) {
+      crossovers.push({
+        date: data[i].date,
+        type: 'Death Cross',
+        price: data[i].close.toFixed(2),
+        signal: 'Bearish'
+      });
+    }
+  }
+
+  const currentMA50 = ma50[ma50.length - 1];
+  const currentMA200 = ma200[ma200.length - 1];
+  const currentPrice = data[data.length - 1].close;
+
+  return {
+    crossovers: crossovers.slice(-10),
+    currentMA50: currentMA50?.toFixed(2),
+    currentMA200: currentMA200?.toFixed(2),
+    currentPrice: currentPrice.toFixed(2),
+    currentSignal: currentMA50 > currentMA200 ? 'Bullish' : 'Bearish',
+    totalCrossovers: crossovers.length
+  };
+}
+
+// 4. Fourier / Spectral Analysis (simplified)
+function analyzeFourier(data) {
+  const prices = data.map(d => d.close);
+  const N = Math.min(prices.length, 512); // Use up to 512 points for performance
+  const truncatedPrices = prices.slice(-N);
+
+  // Simple autocorrelation to find dominant periods
+  const maxLag = Math.min(200, Math.floor(N / 2));
+  const correlations = [];
+
+  for (let lag = 1; lag <= maxLag; lag++) {
+    let sum = 0;
+    let count = 0;
+    for (let i = lag; i < truncatedPrices.length; i++) {
+      sum += truncatedPrices[i] * truncatedPrices[i - lag];
+      count++;
+    }
+    correlations.push({
+      period: lag,
+      correlation: count > 0 ? sum / count : 0
+    });
+  }
+
+  // Find peaks in autocorrelation (dominant cycles)
+  const dominantCycles = [];
+  for (let i = 5; i < correlations.length - 5; i++) {
+    const isLocalMax = correlations.slice(i - 5, i).every(c => c.correlation < correlations[i].correlation) &&
+                       correlations.slice(i + 1, i + 6).every(c => c.correlation < correlations[i].correlation);
+
+    if (isLocalMax && correlations[i].correlation > 0) {
+      dominantCycles.push({
+        period: correlations[i].period,
+        strength: correlations[i].correlation.toFixed(2)
+      });
+    }
+  }
+
+  // Sort by strength and take top 5
+  dominantCycles.sort((a, b) => b.strength - a.strength);
+
+  return {
+    dominantCycles: dominantCycles.slice(0, 5),
+    interpretation: dominantCycles.length > 0
+      ? `Found ${dominantCycles.length} significant cycles. Primary cycle is approximately ${dominantCycles[0].period} days.`
+      : 'No significant cycles detected in the data.'
+  };
+}
+
+// 5. Support and Resistance Levels
+function analyzeSupportResistance(data) {
+  const prices = data.map(d => d.close);
+  const currentPrice = prices[prices.length - 1];
+
+  // Find price clusters (potential support/resistance)
+  const priceRange = Math.max(...prices) - Math.min(...prices);
+  const bucketSize = priceRange / 50; // Divide into 50 buckets
+  const buckets = {};
+
+  prices.forEach(price => {
+    const bucket = Math.floor(price / bucketSize) * bucketSize;
+    buckets[bucket] = (buckets[bucket] || 0) + 1;
+  });
+
+  // Find significant levels (high frequency buckets)
+  const levels = Object.keys(buckets)
+    .map(bucket => ({
+      price: parseFloat(bucket),
+      touches: buckets[bucket],
+      distance: Math.abs(parseFloat(bucket) - currentPrice)
+    }))
+    .filter(level => level.touches >= 5) // At least 5 touches
+    .sort((a, b) => b.touches - a.touches)
+    .slice(0, 10);
+
+  // Classify as support or resistance based on current price
+  const support = levels
+    .filter(l => l.price < currentPrice)
+    .sort((a, b) => b.price - a.price)
+    .slice(0, 5)
+    .map(l => ({
+      price: l.price.toFixed(2),
+      touches: l.touches,
+      distance: ((currentPrice - l.price) / currentPrice * 100).toFixed(2) + '%'
+    }));
+
+  const resistance = levels
+    .filter(l => l.price > currentPrice)
+    .sort((a, b) => a.price - b.price)
+    .slice(0, 5)
+    .map(l => ({
+      price: l.price.toFixed(2),
+      touches: l.touches,
+      distance: ((l.price - currentPrice) / currentPrice * 100).toFixed(2) + '%'
+    }));
+
+  return {
+    currentPrice: currentPrice.toFixed(2),
+    support,
+    resistance,
+    nearestSupport: support[0]?.price || 'N/A',
+    nearestResistance: resistance[0]?.price || 'N/A'
+  };
+}

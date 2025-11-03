@@ -39,7 +39,7 @@ export async function GET(request) {
       }
     }
 
-    // If no industry competitors found, fallback to sector
+    // If no industry competitors found, fallback to sector (same sector, different industries)
     if (competitors.length === 0 && sector) {
       console.log(`No industry competitors found, falling back to sector: ${sector}`);
       comparisonType = 'sector'; // Update comparison type
@@ -49,8 +49,9 @@ export async function GET(request) {
       const sectorData = await sectorResponse.json();
 
       if (Array.isArray(sectorData) && sectorData.length > 0) {
+        // Filter to exclude same industry if we know it, and exclude the selected stock
         competitors = sectorData
-          .filter(stock => stock.symbol !== exclude)
+          .filter(stock => stock.symbol !== exclude && (!industry || stock.industry !== industry))
           .slice(0, 29)
           .map(stock => stock.symbol);
       }
