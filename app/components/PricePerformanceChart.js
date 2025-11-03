@@ -37,22 +37,64 @@ export function PricePerformanceChart({
   const handleWheel = (e) => {
     e.preventDefault();
     e.stopPropagation();
-    const delta = e.deltaY > 0 ? 1.1 : 0.9; // Zoom out or in
+    const isZoomingIn = e.deltaY < 0; // Negative deltaY = zoom in (scroll up)
+    const isZoomingOut = e.deltaY > 0; // Positive deltaY = zoom out (scroll down)
+    const delta = isZoomingOut ? 1.1 : 0.9;
     const { start, end } = zoomDomain;
     const range = end - start;
-    const newRange = Math.min(100, Math.max(10, range * delta)); // Keep range between 10% and 100%
-    const center = (start + end) / 2;
-    let newStart = center - newRange / 2;
-    let newEnd = center + newRange / 2;
+    const newRange = range * delta;
+
+    // Check if we need to switch periods
+    const currentIndex = periods.indexOf(chartPeriod);
+
+    // Zoom in to limit - switch to shorter/more detailed period
+    if (isZoomingIn && range <= 12 && currentIndex > 0) {
+      setChartPeriod(periods[currentIndex - 1]);
+      setZoomDomain({ start: 0, end: 100 });
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chartPeriod', periods[currentIndex - 1]);
+      }
+      return;
+    }
+
+    // Zoom out to limit - switch to longer/broader period
+    if (isZoomingOut && range >= 98 && currentIndex < periods.length - 1) {
+      setChartPeriod(periods[currentIndex + 1]);
+      setZoomDomain({ start: 0, end: 100 });
+      if (typeof window !== 'undefined') {
+        localStorage.setItem('chartPeriod', periods[currentIndex + 1]);
+      }
+      return;
+    }
+
+    // Calculate mouse position as zoom center
+    const chartElement = chartContainerRef.current;
+    if (!chartElement) return;
+
+    const rect = chartElement.getBoundingClientRect();
+    const mouseX = e.clientX - rect.left;
+    const chartWidth = rect.width;
+    const mousePercent = (mouseX / chartWidth) * 100; // Position in chart 0-100
+
+    // Convert mouse position to position within current zoom domain
+    const mousePositionInData = start + (mousePercent / 100) * range;
+
+    // Normal zoom behavior centered on mouse cursor
+    const clampedRange = Math.min(100, Math.max(10, newRange));
+
+    // Calculate how much of the new range should be before/after the mouse position
+    const mouseRatioInView = (mousePositionInData - start) / range;
+    let newStart = mousePositionInData - clampedRange * mouseRatioInView;
+    let newEnd = mousePositionInData + clampedRange * (1 - mouseRatioInView);
 
     // Adjust if out of bounds
     if (newStart < 0) {
       newStart = 0;
-      newEnd = newRange;
+      newEnd = clampedRange;
     }
     if (newEnd > 100) {
       newEnd = 100;
-      newStart = 100 - newRange;
+      newStart = 100 - clampedRange;
     }
 
     setZoomDomain({ start: newStart, end: newEnd });
