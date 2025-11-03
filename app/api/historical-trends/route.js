@@ -31,10 +31,12 @@ function findTrends(historicalData, type = "up") {
     if (matchesTrendType) {
       if (!currentTrend) {
         // Start a new trend
+        // Data is sorted newest to oldest. For a 1-day trend from yesterday->today:
+        // - Chronologically: yesterday is START, today is END
         currentTrend = {
-          startDate: today.date,
+          startDate: yesterday.date,     // Chronological start (older date)
           startPrice: yesterday.close,
-          endDate: today.date,
+          endDate: today.date,           // Chronological end (newer date)
           endPrice: today.close,
           days: 1,
           firstDayChange: dailyChange,
@@ -43,11 +45,12 @@ function findTrends(historicalData, type = "up") {
           endIndex: i, // Track where trend ends (oldest day)
         };
       } else {
-        // Continue the current trend (startIndex stays the same, endIndex updates)
-        currentTrend.endDate = today.date;
-        currentTrend.endPrice = today.close;
+        // Continue the current trend going backwards in time
+        // yesterday becomes the new chronological start
+        currentTrend.startDate = yesterday.date;  // Push start date further back
+        currentTrend.startPrice = yesterday.close; // Update to earlier price
         currentTrend.days++;
-        currentTrend.prices.push(today.close);
+        currentTrend.prices.unshift(yesterday.close); // Add to beginning since going back in time
         currentTrend.endIndex = i;
       }
     } else if (isOppositeDirection) {
@@ -88,7 +91,7 @@ function findTrends(historicalData, type = "up") {
     // Since trends now only end when opposite direction is encountered,
     // there should always be at least 1 opposite day (unless we're at the data boundary)
     let oppositeDays = 0;
-    let oppositeEndPrice = trend.startPrice; // Start from where the trend began (most recent price)
+    let oppositeEndPrice = trend.endPrice; // Start from where the trend ended (most recent price chronologically)
 
     // Data is sorted newest to oldest (index 0 = most recent)
     // trend.startIndex = index of most recent day of the trend
@@ -119,7 +122,7 @@ function findTrends(historicalData, type = "up") {
     }
 
     const oppositeChange = oppositeDays > 0
-      ? ((oppositeEndPrice - trend.startPrice) / trend.startPrice) * 100
+      ? ((oppositeEndPrice - trend.endPrice) / trend.endPrice) * 100
       : 0;
 
     return {
