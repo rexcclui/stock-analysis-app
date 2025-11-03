@@ -77,11 +77,12 @@ const fetchCompleteStockData = async (symbol, apiCounts = null) => {
         const newsRes = await fetchWithTimeout(`/api/news?symbol=${symbol}`, 10000);
         if (newsRes.ok) {
             news = await newsRes.json();
+            console.log(`[PAGE] News received: ${Array.isArray(news) ? news.length : 0} articles`);
         } else {
-            console.warn(`News API returned: ${newsRes.status}`);
+            console.warn(`[PAGE] News API returned: ${newsRes.status}`);
         }
     } catch (err) {
-        console.warn('News fetch failed:', err.message);
+        console.warn('[PAGE] News fetch failed:', err.message);
     }
 
     return {
