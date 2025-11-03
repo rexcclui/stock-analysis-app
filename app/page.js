@@ -204,6 +204,27 @@ export default function StockAnalysisDashboard() {
     if (savedPeriod) {
       setChartPeriod(savedPeriod);
     }
+    // Load selected stock and related data from localStorage
+    const savedStock = localStorage.getItem('selectedStock');
+    if (savedStock) {
+      try {
+        const stockData = JSON.parse(savedStock);
+        setSelectedStock(stockData);
+        setSearchInput(stockData.code);
+      } catch {}
+    }
+    const savedNews = localStorage.getItem('selectedStockNews');
+    if (savedNews) {
+      try {
+        setNews(JSON.parse(savedNews));
+      } catch {}
+    }
+    const savedComparisonStocks = localStorage.getItem('comparisonStocks');
+    if (savedComparisonStocks) {
+      try {
+        setComparisonStocks(JSON.parse(savedComparisonStocks));
+      } catch {}
+    }
   }, []);
 
   // Rebuild normalized comparison series when chartPeriod changes
@@ -222,6 +243,50 @@ export default function StockAnalysisDashboard() {
       localStorage.setItem('stockSearchHistoryDetailed', JSON.stringify(searchHistoryStocks));
     } catch {}
   }, [searchHistoryStocks, isClient]);
+
+  // Persist selected stock whenever it changes
+  React.useEffect(() => {
+    if (!isClient) return;
+    try {
+      if (selectedStock) {
+        localStorage.setItem('selectedStock', JSON.stringify(selectedStock));
+      } else {
+        localStorage.removeItem('selectedStock');
+      }
+    } catch {}
+  }, [selectedStock, isClient]);
+
+  // Persist news whenever it changes
+  React.useEffect(() => {
+    if (!isClient) return;
+    try {
+      if (news && news.length > 0) {
+        localStorage.setItem('selectedStockNews', JSON.stringify(news));
+      } else {
+        localStorage.removeItem('selectedStockNews');
+      }
+    } catch {}
+  }, [news, isClient]);
+
+  // Persist comparison stocks whenever they change
+  React.useEffect(() => {
+    if (!isClient) return;
+    try {
+      if (comparisonStocks && comparisonStocks.length > 0) {
+        localStorage.setItem('comparisonStocks', JSON.stringify(comparisonStocks));
+      } else {
+        localStorage.removeItem('comparisonStocks');
+      }
+    } catch {}
+  }, [comparisonStocks, isClient]);
+
+  // Persist chart period whenever it changes
+  React.useEffect(() => {
+    if (!isClient) return;
+    try {
+      localStorage.setItem('chartPeriod', chartPeriod);
+    } catch {}
+  }, [chartPeriod, isClient]);
 
 
   // Save search history to localStorage
