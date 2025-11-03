@@ -54,7 +54,8 @@ export function ComparisonTable({
   onHeatmapColorByChange,
   onHeatmapSizeByChange,
   onStockCodeClick,
-  onAddToChart
+  onAddToChart,
+  chartCompareStocks
 }) {
   const [colorMode, setColorMode] = useState('historical'); // 'historical' | 'relative'
 
@@ -141,6 +142,7 @@ export function ComparisonTable({
           onRemoveComparison={onRemoveComparison}
           onStockCodeClick={onStockCodeClick}
           onAddToChart={onAddToChart}
+          chartCompareStocks={chartCompareStocks}
           colorMode={colorMode}
           setColorMode={setColorMode}
         />
@@ -153,6 +155,7 @@ export function ComparisonTable({
           onRemoveComparison={onRemoveComparison}
           onStockCodeClick={onStockCodeClick}
           onAddToChart={onAddToChart}
+          chartCompareStocks={chartCompareStocks}
         />
       )}
       
@@ -169,7 +172,7 @@ const SortIcon = ({ active, direction }) => {
     : <ArrowDown size={14} className="inline ml-1" />;
 };
 
-function TableView({ selectedStock, comparisonStocks, periods, onRemoveComparison, onStockCodeClick, onAddToChart, colorMode }) {
+function TableView({ selectedStock, comparisonStocks, periods, onRemoveComparison, onStockCodeClick, onAddToChart, chartCompareStocks, colorMode }) {
   const [sortColumn, setSortColumn] = useState(null);
   const [sortDirection, setSortDirection] = useState('asc');
 
@@ -409,15 +412,22 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 >
                   {selectedStock.code}
                 </span>
-                {onAddToChart && (
-                  <button
-                    onClick={() => onAddToChart(selectedStock.code)}
-                    className="p-1 text-blue-400 hover:text-blue-300 hover:bg-blue-900/30 rounded transition"
-                    title="Add to chart"
-                  >
-                    <LineChart size={16} />
-                  </button>
-                )}
+                {onAddToChart && (() => {
+                  const isInChart = chartCompareStocks?.find(s => s.code === selectedStock.code);
+                  return (
+                    <button
+                      onClick={() => onAddToChart(selectedStock.code)}
+                      className={`p-1 rounded transition ${
+                        isInChart
+                          ? 'text-green-400 hover:text-green-300 bg-green-900/30'
+                          : 'text-blue-400 hover:text-blue-300 hover:bg-blue-900/30'
+                      }`}
+                      title={isInChart ? "Remove from chart" : "Add to chart"}
+                    >
+                      <LineChart size={16} fill={isInChart ? "currentColor" : "none"} />
+                    </button>
+                  );
+                })()}
               </div>
             </td>
             <td className="px-2 py-3 font-medium text-white max-w-[160px]" style={{width:'160px'}}>
@@ -516,15 +526,22 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                   >
                     {stock.code}
                   </span>
-                  {onAddToChart && (
-                    <button
-                      onClick={() => onAddToChart(stock.code)}
-                      className="p-1 text-blue-400 hover:text-blue-300 hover:bg-blue-900/30 rounded transition"
-                      title="Add to chart"
-                    >
-                      <LineChart size={16} />
-                    </button>
-                  )}
+                  {onAddToChart && (() => {
+                    const isInChart = chartCompareStocks?.find(s => s.code === stock.code);
+                    return (
+                      <button
+                        onClick={() => onAddToChart(stock.code)}
+                        className={`p-1 rounded transition ${
+                          isInChart
+                            ? 'text-green-400 hover:text-green-300 bg-green-900/30'
+                            : 'text-blue-400 hover:text-blue-300 hover:bg-blue-900/30'
+                        }`}
+                        title={isInChart ? "Remove from chart" : "Add to chart"}
+                      >
+                        <LineChart size={16} fill={isInChart ? "currentColor" : "none"} />
+                      </button>
+                    );
+                  })()}
                 </div>
               </td>
               <td className="px-2 py-3 text-gray-200 max-w-[160px]" style={{width:'160px'}}>

@@ -27,6 +27,7 @@ export function HeatmapView({
   onRemoveComparison,
   onStockCodeClick,
   onAddToChart,
+  chartCompareStocks,
 }) {
   // Calculate size values for all stocks and sort by size (largest first)
   const allStocks = [selectedStock, ...comparisonStocks];
@@ -115,17 +116,24 @@ export function HeatmapView({
                 padding: '12px',
               }}
             >
-              {onAddToChart && (
-                <button
-                  onClick={() => onAddToChart(stock.code)}
-                  className="absolute p-1 bg-blue-500/80 hover:bg-blue-600 rounded-full transition-all"
-                  style={{ top: "6px", left: "6px", zIndex: 10 }}
-                  title="Add to chart"
-                  aria-label="Add to chart"
-                >
-                  <LineChart size={14} className="text-white" />
-                </button>
-              )}
+              {onAddToChart && (() => {
+                const isInChart = chartCompareStocks?.find(s => s.code === stock.code);
+                return (
+                  <button
+                    onClick={() => onAddToChart(stock.code)}
+                    className={`absolute p-1 rounded-full transition-all ${
+                      isInChart
+                        ? 'bg-green-500/80 hover:bg-green-600'
+                        : 'bg-blue-500/80 hover:bg-blue-600'
+                    }`}
+                    style={{ top: "6px", left: "6px", zIndex: 10 }}
+                    title={isInChart ? "Remove from chart" : "Add to chart"}
+                    aria-label={isInChart ? "Remove from chart" : "Add to chart"}
+                  >
+                    <LineChart size={14} className="text-white" fill={isInChart ? "currentColor" : "none"} />
+                  </button>
+                );
+              })()}
               <div className="text-center">
                 <span
                   onClick={() =>

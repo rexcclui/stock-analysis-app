@@ -22,7 +22,8 @@ export function ComparisonSection({
   searchHistoryStocks,
   onSearchHistoryCodeClick,
   onReloadSearchHistory,
-  onAddToChart
+  onAddToChart,
+  chartCompareStocks
 }) {
   //console.log('TEMP_LOG[7] ComparisonSection> comparisonStocks :', comparisonStocks );
   return (
@@ -54,6 +55,7 @@ export function ComparisonSection({
         onHeatmapSizeByChange={onHeatmapSizeByChange}
         onStockCodeClick={onSearchHistoryCodeClick}
         onAddToChart={onAddToChart}
+        chartCompareStocks={chartCompareStocks}
       />
     </>
   );

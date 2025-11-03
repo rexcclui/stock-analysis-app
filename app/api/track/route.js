@@ -6,10 +6,48 @@ export async function POST(request) {
   try {
     const body = await request.json();
     const { counts } = body;
-    
+
+    // Get client IP address
+    const forwarded = request.headers.get('x-forwarded-for');
+    const ip = forwarded ? forwarded.split(',')[0].trim() :
+               request.headers.get('x-real-ip') ||
+               'unknown';
+
+    // Fetch geolocation data (with fallback)
+    let geoInfo = { ip, location: 'Unknown' };
+    try {
+      if (ip !== 'unknown' && ip !== '::1' && !ip.startsWith('127.')) {
+        const geoResponse = await fetch(`http://ip-api.com/json/${ip}?fields=status,country,regionName,city,lat,lon,timezone`, {
+          signal: AbortSignal.timeout(2000) // 2 second timeout
+        });
+        if (geoResponse.ok) {
+          const geoData = await geoResponse.json();
+          if (geoData.status === 'success') {
+            geoInfo = {
+              ip,
+              city: geoData.city || 'Unknown',
+              region: geoData.regionName || 'Unknown',
+              country: geoData.country || 'Unknown',
+              location: `${geoData.city || 'Unknown'}, ${geoData.regionName || 'Unknown'}, ${geoData.country || 'Unknown'}`,
+              timezone: geoData.timezone || 'Unknown',
+              coordinates: geoData.lat && geoData.lon ? `${geoData.lat}, ${geoData.lon}` : null
+            };
+          }
+        }
+      } else {
+        geoInfo.location = 'localhost';
+      }
+    } catch (geoError) {
+      console.warn('Geolocation fetch failed:', geoError.message);
+    }
+
     console.log('\n' + '='.repeat(60));
     console.log('📊 API CALL TRACKING');
     console.log('='.repeat(60));
+    console.log('📍 Request from:', geoInfo.location);
+    console.log('🌐 IP:', geoInfo.ip);
+    if (geoInfo.timezone) console.log('🕐 Timezone:', geoInfo.timezone);
+    if (geoInfo.coordinates) console.log('📌 Coordinates:', geoInfo.coordinates);
     console.log('Raw counts received:', counts);
     
     if (counts) {
