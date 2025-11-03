@@ -33,7 +33,7 @@ export function PricePerformanceChart({
   const chartData = selectedStock?.chartData?.[chartPeriod] || [];
 
   return (
-    <div className="mb-6">
+    <div className="mb-6" style={{ marginTop: '1rem' }}>
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-xl font-bold text-white">Price Performance</h3>
         <div className="flex gap-2">

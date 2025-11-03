@@ -10,7 +10,7 @@ import { TrendingUp, TrendingDown } from 'lucide-react';
 export function NewsSection({ news = [], title = 'Latest News' }) {
   if (!news.length) return null;
   return (
-    <div className="mt-6 bg-gray-800 rounded-xl shadow-xl p-6 border border-gray-700">
+    <div className="bg-gray-800 rounded-xl shadow-xl p-6 border border-gray-700" style={{ marginTop: '1rem' }}>
       <h3 className="text-xl font-bold text-white mb-4">{title}</h3>
       <div className="space-y-3">
         {news.map((article, idx) => (

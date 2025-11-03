@@ -12,7 +12,7 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContai
 export function SentimentTimeSeriesChart({ sentimentTimeSeries }) {
   if (!sentimentTimeSeries || sentimentTimeSeries.length === 0) {
     return (
-      <div className="mb-6">
+      <div className="mb-6" style={{ marginTop: '1rem' }}>
         <h3 className="text-xl font-bold text-white mb-4">Sentiment Trend (1 Month)</h3>
         <div className="bg-gray-800 rounded-xl p-4 shadow-xl border border-gray-700">
           <div className="text-center py-8 text-gray-400">
@@ -41,7 +41,7 @@ export function SentimentTimeSeriesChart({ sentimentTimeSeries }) {
   }));
 
   return (
-    <div className="mb-6">
+    <div className="mb-6" style={{ marginTop: '1rem' }}>
       <h3 className="text-xl font-bold text-white mb-4">Sentiment Trend (1 Month)</h3>
       <div className="bg-gray-800 rounded-xl p-4 shadow-xl border border-gray-700">
         <div className="mb-3 flex items-center justify-between">

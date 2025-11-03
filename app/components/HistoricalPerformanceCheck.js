@@ -138,7 +138,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
   };
 
   return (
-    <div className="bg-gray-800 rounded-lg mt-4 border border-gray-700">
+    <div className="bg-gray-800 rounded-lg border border-gray-700" style={{ marginTop: '1rem' }}>
       {/* Collapsible Header */}
       <button
         onClick={() => setIsExpanded(!isExpanded)}

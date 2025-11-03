@@ -9,7 +9,7 @@ export function SearchHistoryTable({ historyStocks, onClickCode, onReload, loadi
   if (!historyStocks || historyStocks.length === 0) return null;
 
   return (
-    <div className="bg-gray-800 rounded-xl p-4 mb-6 border border-gray-700 shadow-md">
+    <div className="bg-gray-800 rounded-xl p-4 mb-6 border border-gray-700 shadow-md" style={{ marginTop: '1rem' }}>
       <div className="flex items-center gap-3 mb-3">
         <h3 className="text-lg font-semibold text-white">Previous Search:</h3>
         {onReload && (

@@ -19,7 +19,7 @@ export function StockResultCard({ stock }) {
   if (!stock) return null;
 
   return (
-    <div className="bg-gradient-to-r from-blue-900/40 to-indigo-900/40 rounded-xl p-6 mb-6 border border-blue-800/30">
+    <div className="bg-gradient-to-r from-blue-900/40 to-indigo-900/40 rounded-xl p-6 mb-6 border border-blue-800/30" style={{ marginTop: '1rem' }}>
       <div className="flex justify-between items-start mb-4">
         <div>
           <h2 className="text-3xl font-bold text-white">

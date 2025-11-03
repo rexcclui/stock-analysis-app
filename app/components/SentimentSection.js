@@ -14,7 +14,7 @@ const getSentimentColor = (score) => {
 export function SentimentSection({ sentiment }) {
   if (!sentiment) return null;
   return (
-    <div className="mt-6 bg-gray-800 rounded-xl shadow-xl p-6 border border-gray-700">
+    <div className="bg-gray-800 rounded-xl shadow-xl p-6 border border-gray-700" style={{ marginTop: '1rem' }}>
       <h3 className="text-xl font-bold text-white mb-4">Social Media Sentiment</h3>
       <div className="grid grid-cols-4 gap-4 mb-4">
         <div className="bg-gray-700/20 rounded-lg p-4 border border-gray-600">
