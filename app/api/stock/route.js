@@ -121,8 +121,8 @@ export async function GET(request) {
       exchange: profile.exchangeShortName || profile.exchange || 'N/A',
       currentPrice: price,
       dayChange: quote.changesPercentage || 0,
-      marketCap: profile.mktCap 
-        ? (profile.mktCap / 1e9).toFixed(2) + 'B'
+      marketCap: profile.mktCap
+        ? (profile.mktCap / 1e9).toFixed(1) + 'B'
         : 'N/A',
   pe: peValue,
   beta: betaValue,
