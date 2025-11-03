@@ -11,12 +11,22 @@ import { SentimentTimeSeriesChart } from './components/SentimentTimeSeriesChart'
 import { StockResultCard } from './components/StockResultCard';
 import { HistoricalPerformanceCheck } from './components/HistoricalPerformanceCheck';
 
+// Helper function to fetch with timeout
+const fetchWithTimeout = (url, timeout = 10000) => {
+  return Promise.race([
+    fetch(url),
+    new Promise((_, reject) =>
+      setTimeout(() => reject(new Error('Request timeout')), timeout)
+    )
+  ]);
+};
+
 // Fetch complete stock data from API routes
 const fetchCompleteStockData = async (symbol, apiCounts = null) => {
   try {
     // Fetch stock data (required)
     if (apiCounts) apiCounts.stock++;
-    const stockRes = await fetch(`/api/stock?symbol=${symbol}`);
+    const stockRes = await fetchWithTimeout(`/api/stock?symbol=${symbol}`, 15000);
     if (!stockRes.ok) {
       console.error(`Stock API error: ${stockRes.status}` + stockRes.statusText);
       return null;
@@ -31,32 +41,32 @@ const fetchCompleteStockData = async (symbol, apiCounts = null) => {
     let sentiment = { score: 0.5, positive: 50, neutral: 30, negative: 20, sentimentHistory: { '1D': 0.5, '7D': 0.5, '1M': 0.5 }, sentimentTimeSeries: [] };
     try {
       if (apiCounts) apiCounts.sentiment++;
-      const sentimentRes = await fetch(`/api/sentiment?symbol=${symbol}`);
+      const sentimentRes = await fetchWithTimeout(`/api/sentiment?symbol=${symbol}`, 10000);
       if (sentimentRes.ok) {
         sentiment = await sentimentRes.json();
       }
-    } catch {
-      console.warn('Sentiment fetch failed, using defaults');
+    } catch (err) {
+      console.warn('Sentiment fetch failed, using defaults:', err.message);
     }
 
     // Fetch competitors (optional)
     let competitors = [];
     try {
       if (apiCounts) apiCounts.competitors++;
-      const competitorsRes = await fetch(`/api/competitors?industry=${stock.industry}&exclude=${symbol}`);
+      const competitorsRes = await fetchWithTimeout(`/api/competitors?industry=${stock.industry}&exclude=${symbol}`, 10000);
       if (competitorsRes.ok) {
         competitors = await competitorsRes.json();
         if (!Array.isArray(competitors)) competitors = [];
       }
-    } catch {
-      console.warn('Competitors fetch failed');
+    } catch (err) {
+      console.warn('Competitors fetch failed:', err.message);
     }
 
     // Fetch news (optional)
     let news = [];
     try {
         if (apiCounts) apiCounts.news++;
-        const newsRes = await fetch(`/api/news?symbol=${symbol}`);
+        const newsRes = await fetchWithTimeout(`/api/news?symbol=${symbol}`, 10000);
         if (newsRes.ok) {
             news = await newsRes.json();
         } else {
@@ -385,7 +395,6 @@ export default function StockAnalysisDashboard() {
               value={searchInput}
               onChange={(e) => setSearchInput(e.target.value)}
               onKeyPress={(e) => e.key === 'Enter' && handleSearch()}
-              autoFocus
               className="flex-1 px-4 py-3 bg-gray-700 border-2 border-gray-600 text-white rounded-lg focus:border-blue-500 focus:outline-none placeholder-gray-400"
             />
             <button
