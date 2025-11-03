@@ -6,6 +6,7 @@ import { SearchHistoryTable } from './SearchHistoryTable';
 export function ComparisonSection({
   selectedStock,
   comparisonStocks,
+  comparisonType,
   manualStock,
   onManualStockChange,
   onAddComparison,
@@ -41,6 +42,7 @@ export function ComparisonSection({
       <ComparisonTable
         selectedStock={selectedStock}
         comparisonStocks={comparisonStocks}
+        comparisonType={comparisonType}
         periods={periods}
         onRemoveComparison={onRemoveComparison}
         viewMode={viewMode}

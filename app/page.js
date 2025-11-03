@@ -51,11 +51,19 @@ const fetchCompleteStockData = async (symbol, apiCounts = null) => {
 
     // Fetch competitors (optional)
     let competitors = [];
+    let fetchedComparisonType = 'industry';
     try {
       if (apiCounts) apiCounts.competitors++;
-      const competitorsRes = await fetchWithTimeout(`/api/competitors?industry=${stock.industry}&exclude=${symbol}`, 10000);
+      const competitorsRes = await fetchWithTimeout(`/api/competitors?industry=${stock.industry}&sector=${stock.sector}&exclude=${symbol}`, 10000);
       if (competitorsRes.ok) {
-        competitors = await competitorsRes.json();
+        const competitorsData = await competitorsRes.json();
+        // Handle both old array format and new object format
+        if (Array.isArray(competitorsData)) {
+          competitors = competitorsData;
+        } else if (competitorsData.competitors) {
+          competitors = competitorsData.competitors;
+          fetchedComparisonType = competitorsData.type || 'industry';
+        }
         if (!Array.isArray(competitors)) competitors = [];
       }
     } catch (err) {
@@ -82,7 +90,8 @@ const fetchCompleteStockData = async (symbol, apiCounts = null) => {
       sentimentHistory: sentiment.sentimentHistory, // Ensure this is passed
       sentimentTimeSeries: sentiment.sentimentTimeSeries,
       competitors: Array.isArray(competitors) ? competitors : [],
-      news: Array.isArray(news) ? news : []
+      news: Array.isArray(news) ? news : [],
+      comparisonType: fetchedComparisonType
     };
   } catch (error) {
     console.error('Fetch error:', error);
@@ -97,6 +106,7 @@ export default function StockAnalysisDashboard() {
   const [selectedStock, setSelectedStock] = useState(null);
   const [chartPeriod, setChartPeriod] = useState('1M');
   const [comparisonStocks, setComparisonStocks] = useState([]);
+  const [comparisonType, setComparisonType] = useState('industry'); // 'industry' or 'sector'
   const [manualStock, setManualStock] = useState('');
   const [savedComparisons, setSavedComparisons] = useState({});
   const [loading, setLoading] = useState(false);
@@ -331,6 +341,7 @@ export default function StockAnalysisDashboard() {
       
       setSelectedStock(stockData);
       setNews(stockData.news);
+      setComparisonType(stockData.comparisonType || 'industry');
       addToSearchHistory(stockCode);
       
       // Always fetch SPY and QQQ for comparison (unless the selected stock is SPY or QQQ)
@@ -612,6 +623,7 @@ export default function StockAnalysisDashboard() {
               <ComparisonSection
                 selectedStock={selectedStock}
                 comparisonStocks={comparisonStocks}
+                comparisonType={comparisonType}
                 manualStock={manualStock}
                 onManualStockChange={setManualStock}
                 onAddComparison={addManualComparison}

@@ -41,10 +41,11 @@ const getMarketCapValue = (marketCap) => {
   return value;
 };
 
-export function ComparisonTable({ 
-  selectedStock, 
-  comparisonStocks, 
-  periods, 
+export function ComparisonTable({
+  selectedStock,
+  comparisonStocks,
+  comparisonType = 'industry',
+  periods,
   onRemoveComparison,
   viewMode,
   onViewModeChange,
@@ -55,10 +56,16 @@ export function ComparisonTable({
   onStockCodeClick
 }) {
   const [colorMode, setColorMode] = useState('historical'); // 'historical' | 'relative'
+
+  // Generate heading based on comparison type
+  const comparisonHeading = comparisonType === 'sector'
+    ? `Sector Comparison - ${selectedStock?.sector || ''}`
+    : `Industry Comparison - ${selectedStock?.industry || ''}`;
+
   return (
     <div className="bg-gray-800 rounded-xl shadow-xl overflow-hidden border border-gray-700">
       <div className="flex items-center justify-between flex-wrap gap-4 px-6 py-4 bg-gray-900 border-b border-gray-700">
-        <span className="text-lg font-semibold text-white">Industry Comparison</span>
+        <span className="text-lg font-semibold text-white">{comparisonHeading}</span>
         <div className="flex items-center gap-6 flex-wrap">
           <div className="flex items-center gap-2">
             <span className="text-gray-300 text-sm">View:</span>
