@@ -434,7 +434,18 @@ export default function StockAnalysisDashboard() {
           {!selectedStock && (
             <div className="text-center py-12">
               <p className="text-gray-300 text-lg mb-4">Search for a stock to get started</p>
-              <p className="text-gray-400 text-sm">Try: AAPL, MSFT, GOOGL, TSLA, AMZN</p>
+              <div className="flex items-center justify-center gap-3 flex-wrap mt-4">
+                <span className="text-gray-400 text-sm">Try:</span>
+                {['AAPL', 'MSFT', 'GOOGL', 'TSLA', 'AMZN'].map((stock) => (
+                  <button
+                    key={stock}
+                    onClick={() => handleSearch(stock)}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-medium hover:bg-blue-700 transition"
+                  >
+                    {stock}
+                  </button>
+                ))}
+              </div>
             </div>
           )}
 
