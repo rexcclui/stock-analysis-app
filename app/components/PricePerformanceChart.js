@@ -352,10 +352,52 @@ export function PricePerformanceChart({
               // Get current data slice based on offset
               const currentData = getCurrentDataSlice();
 
-              const primarySeries = buildNormalizedSeries(selectedStock, chartPeriod);
-              const fullData = chartCompareStocks.length === 0
-                ? currentData
-                : buildMultiStockDataset(primarySeries, chartCompareStocks);
+              let fullData;
+              if (chartCompareStocks.length === 0) {
+                // Single stock: use the sliced data that respects offset
+                fullData = currentData;
+              } else {
+                // Multiple stocks: build normalized series from sliced full historical data
+                if (fullHistoricalData.length > 0) {
+                  // Build sliced and normalized data for the primary stock
+                  const periodDays = getPeriodDays(chartPeriod);
+                  const totalDays = fullHistoricalData.length;
+                  const endIndex = totalDays - dataOffset;
+                  const startIndex = Math.max(0, endIndex - periodDays);
+                  const slicedData = fullHistoricalData.slice(startIndex, endIndex);
+
+                  // Normalize the primary stock
+                  const base = slicedData.length > 0 ? slicedData[0].price : 1;
+                  const primarySeries = slicedData.map(d => ({
+                    date: formatChartDate(d.date, chartPeriod),
+                    pct: base ? parseFloat((((d.price - base) / base) * 100).toFixed(2)) : 0
+                  }));
+
+                  // Build normalized series for comparison stocks with the same offset
+                  const offsetCompareStocks = chartCompareStocks.map(s => {
+                    const stockFullData = s.__stockRef?.chartData?.fullHistorical || [];
+                    if (stockFullData.length === 0) {
+                      return { code: s.code, series: s.series }; // Fallback to original series
+                    }
+                    const stockTotalDays = stockFullData.length;
+                    const stockEndIndex = stockTotalDays - dataOffset;
+                    const stockStartIndex = Math.max(0, stockEndIndex - periodDays);
+                    const stockSlicedData = stockFullData.slice(stockStartIndex, stockEndIndex);
+                    const stockBase = stockSlicedData.length > 0 ? stockSlicedData[0].price : 1;
+                    const series = stockSlicedData.map(d => ({
+                      date: formatChartDate(d.date, chartPeriod),
+                      pct: stockBase ? parseFloat((((d.price - stockBase) / stockBase) * 100).toFixed(2)) : 0
+                    }));
+                    return { code: s.code, series };
+                  });
+
+                  fullData = buildMultiStockDataset(primarySeries, offsetCompareStocks);
+                } else {
+                  // Fallback: use original method without offset support
+                  const primarySeries = buildNormalizedSeries(selectedStock, chartPeriod);
+                  fullData = buildMultiStockDataset(primarySeries, chartCompareStocks);
+                }
+              }
 
               // Apply zoom by slicing data based on domain
               const startIndex = Math.floor((zoomDomain.start / 100) * fullData.length);
