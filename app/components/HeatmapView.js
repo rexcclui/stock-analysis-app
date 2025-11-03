@@ -121,7 +121,7 @@ export function HeatmapView({
                   }
                   role="link"
                   tabIndex={0}
-                  className="text-white font-bold text-lg underline decoration-dotted cursor-pointer hover:text-blue-200 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded block mb-1"
+                  className="text-white font-bold text-lg underline decoration-dotted cursor-pointer hover:text-yellow-400 focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block mb-1"
                 >
                   {stock.code}
                 </span>

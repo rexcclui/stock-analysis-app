@@ -386,7 +386,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
             </td>
             <td className="px-2 py-3 font-medium text-white max-w-[160px]" style={{width:'160px'}}>
               {selectedStock.website ? (
-                <a href={selectedStock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate" title={selectedStock.name}>
+                <a href={selectedStock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate" style={{ color: '#FBBF24' }} title={selectedStock.name}>
                   {selectedStock.name}
                 </a>
               ) : (
@@ -482,7 +482,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
               </td>
               <td className="px-2 py-3 text-gray-200 max-w-[160px]" style={{width:'160px'}}>
                 {stock.website ? (
-                  <a href={stock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate" title={stock.name}>
+                  <a href={stock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate" style={{ color: '#FBBF24' }} title={stock.name}>
                     {stock.name}
                   </a>
                 ) : (

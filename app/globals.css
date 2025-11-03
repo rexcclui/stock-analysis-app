@@ -13,3 +13,13 @@ body {
   color: #ffffff;
   min-height: 100vh;
 }
+
+/* Override default link colors */
+a {
+  color: inherit;
+  text-decoration: inherit;
+}
+
+a:visited {
+  color: inherit;
+}

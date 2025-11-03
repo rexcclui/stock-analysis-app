@@ -24,7 +24,7 @@ export function StockResultCard({ stock }) {
         <div>
           <h2 className="text-3xl font-bold text-white">
             {stock.website ? (
-              <a href={stock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-600">
+              <a href={stock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-600" style={{ color: '#FBBF24', textDecoration: 'none' }}>
                 {stock.name}
               </a>
             ) : (
