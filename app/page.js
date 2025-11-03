@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 // Chart now extracted to PricePerformanceChart component
 import { Search, BarChart3 } from 'lucide-react';
-import { ComparisonSection } from './components/ComparisonSection';
+import { ComparisonSection } from './components/Comparison/ComparisonSection';
 import { PricePerformanceChart } from './components/PricePerformanceChart';
 import { NewsSection } from './components/NewsSection';
 import { SentimentSection } from './components/SentimentSection';

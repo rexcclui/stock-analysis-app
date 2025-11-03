@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { X, ArrowUp, ArrowDown } from 'lucide-react';
-import SentimentChart from './SentimentChart';
+import SentimentChart from '../SentimentChart';
 import { HeatmapView } from './HeatmapView';
 
 const getColorForPerformance = (value) => {

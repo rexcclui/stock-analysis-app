@@ -1,7 +1,7 @@
 import React from 'react';
 import { AddCustomComparison } from './AddCustomComparison';
 import { ComparisonTable } from './ComparisonTable';
-import { SearchHistoryTable } from './SearchHistoryTable';
+import { SearchHistoryTable } from '../SearchHistoryTable';
 
 export function ComparisonSection({
   selectedStock,
