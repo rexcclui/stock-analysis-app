@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCache, setCache, getCacheKey, FOUR_HOUR_TTL_MINUTES } from '../../../lib/cache';
+import { createNoCacheResponse } from '../../../lib/response';
 
 const FMP_KEY = process.env.FMP_KEY;
 
@@ -142,9 +143,9 @@ export async function GET(request) {
     const direction = searchParams.get("direction") || "up";
 
     if (!symbol) {
-      return NextResponse.json(
+      return createNoCacheResponse(
         { error: "Symbol is required" },
-        { status: 400 }
+        400
       );
     }
 
@@ -155,7 +156,7 @@ export async function GET(request) {
     const cachedData = getCache(cacheKey);
     if (cachedData) {
       console.log(`[CACHE HIT] Historical trends for ${symbol} (${type}, ${years}y)`);
-      return NextResponse.json(cachedData);
+      return createNoCacheResponse(cachedData);
     }
 
     // Fetch historical data from FMP
@@ -170,9 +171,9 @@ export async function GET(request) {
     const data = await response.json();
 
     if (!data.historical || data.historical.length === 0) {
-      return NextResponse.json(
+      return createNoCacheResponse(
         { error: "No historical data available" },
-        { status: 404 }
+        404
       );
     }
 
@@ -253,12 +254,12 @@ export async function GET(request) {
     // Cache the result (4 hours)
     setCache(cacheKey, result, FOUR_HOUR_TTL_MINUTES);
 
-    return NextResponse.json(result);
+    return createNoCacheResponse(result);
   } catch (error) {
     console.error("Error in historical-trends API:", error);
-    return NextResponse.json(
+    return createNoCacheResponse(
       { error: error.message || "Internal server error" },
-      { status: 500 }
+      500
     );
   }
 }

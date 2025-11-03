@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getCache, setCache, getCacheKey, FOUR_HOUR_TTL_MINUTES } from '../../../lib/cache';
+import { createNoCacheResponse } from '../../../lib/response';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const symbol = searchParams.get('symbol');
 
   if (!symbol) {
-    return NextResponse.json({ error: 'Symbol required' }, { status: 400 });
+    return createNoCacheResponse({ error: 'Symbol required' }, 400);
   }
 
   // Check cache first
@@ -14,7 +15,7 @@ export async function GET(request) {
   const cachedData = getCache(cacheKey);
   if (cachedData) {
     console.log(`[CACHE HIT] Stock data for ${symbol}`);
-    return NextResponse.json(cachedData);
+    return createNoCacheResponse(cachedData);
   }
 
   try {
@@ -25,7 +26,7 @@ export async function GET(request) {
     const profileData = await profileResponse.json();
 
     if (!profileData || profileData.length === 0) {
-      return NextResponse.json({ error: 'Stock not found' }, { status: 404 });
+      return createNoCacheResponse({ error: 'Stock not found' }, 404);
     }
 
     const profile = profileData[0];
@@ -137,9 +138,9 @@ export async function GET(request) {
   // Cache the result (4 hours)
   setCache(cacheKey, stockData, FOUR_HOUR_TTL_MINUTES);
 
-    return NextResponse.json(stockData);
+    return createNoCacheResponse(stockData);
   } catch (error) {
     console.error('Stock API Error:', error);
-    return NextResponse.json({ error: 'Failed to fetch stock data' }, { status: 500 });
+    return createNoCacheResponse({ error: 'Failed to fetch stock data' }, 500);
   }
 }

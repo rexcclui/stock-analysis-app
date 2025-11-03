@@ -14,7 +14,7 @@ import { HistoricalPerformanceCheck } from './components/HistoricalPerformanceCh
 // Helper function to fetch with timeout
 const fetchWithTimeout = (url, timeout = 10000) => {
   return Promise.race([
-    fetch(url, { cache: 'no-store' }),
+    fetch(url),
     new Promise((_, reject) =>
       setTimeout(() => reject(new Error('Request timeout')), timeout)
     )
@@ -285,8 +285,7 @@ export default function StockAnalysisDashboard() {
       fetch('/api/track', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ counts: apiCounts }),
-        cache: 'no-store'
+        body: JSON.stringify({ counts: apiCounts })
       }).then(res => {
         console.log('[Client] Tracking response:', res.status);
       }).catch(err => console.error('[Client] Failed to send tracking data:', err));

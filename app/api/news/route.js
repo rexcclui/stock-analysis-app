@@ -1,12 +1,13 @@
 import { NextResponse } from 'next/server';
 import { getCache, setCache, getCacheKey, FOUR_HOUR_TTL_MINUTES } from '../../../lib/cache';
+import { createNoCacheResponse } from '../../../lib/response';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const symbol = searchParams.get('symbol');
 
   if (!symbol) {
-    return NextResponse.json({ error: 'Symbol required' }, { status: 400 });
+    return createNoCacheResponse({ error: 'Symbol required' }, 400);
   }
 
   // Check cache first
@@ -14,7 +15,7 @@ export async function GET(request) {
   const cachedData = getCache(cacheKey);
   if (cachedData) {
     console.log(`[CACHE HIT] News data for ${symbol}`);
-    return NextResponse.json(cachedData);
+    return createNoCacheResponse(cachedData);
   }
 
   try {
@@ -37,10 +38,10 @@ export async function GET(request) {
   // Cache the result (4 hours)
   setCache(cacheKey, news, FOUR_HOUR_TTL_MINUTES);
 
-    return NextResponse.json(news);
+    return createNoCacheResponse(news);
   } catch (error) {
     console.error(`News API Error for ${symbol}: ${error.message}`);
-    return NextResponse.json(
+    return createNoCacheResponse(
       [
         {
           title: `Unable to fetch news for ${symbol}`,
@@ -49,7 +50,7 @@ export async function GET(request) {
           error: true,
         },
       ],
-      { status: 500 }
+      500
     );
   }
 }

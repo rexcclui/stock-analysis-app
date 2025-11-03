@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCacheStats } from '../../../lib/cache';
+import { createNoCacheResponse } from '../../../lib/response';
 
 export async function POST(request) {
   try {
@@ -66,9 +67,9 @@ export async function POST(request) {
       competitors: Math.max(0, reported.competitors - (cacheHits.competitors || 0)),
       historicalTrends: Math.max(0, reported.historicalTrends - ((cacheHits['trends-up-5y'] || 0) + (cacheHits['trends-down-5y'] || 0))),
     } : null;
-    return NextResponse.json({ success: true, cache: stats, reported, actualExternal });
+    return createNoCacheResponse({ success: true, cache: stats, reported, actualExternal });
   } catch (error) {
     console.error('Tracking error:', error);
-    return NextResponse.json({ error: 'Tracking failed' }, { status: 500 });
+    return createNoCacheResponse({ error: 'Tracking failed' }, 500);
   }
 }

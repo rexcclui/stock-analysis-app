@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 import { getCache, setCache, getCacheKey, FOUR_HOUR_TTL_MINUTES } from '../../../lib/cache';
+import { createNoCacheResponse } from '../../../lib/response';
 
 const FMP_KEY = process.env.FMP_KEY;
 
@@ -11,9 +12,9 @@ export async function GET(request) {
     const direction = searchParams.get("direction") || "up";
 
     if (!symbol) {
-      return NextResponse.json(
+      return createNoCacheResponse(
         { error: "Symbol is required" },
-        { status: 400 }
+        400
       );
     }
 
@@ -22,7 +23,7 @@ export async function GET(request) {
     const cachedData = getCache(cacheKey);
     if (cachedData) {
       console.log(`[CACHE HIT] SPY correlation for ${symbol} (${direction}, ${years}y)`);
-      return NextResponse.json(cachedData);
+      return createNoCacheResponse(cachedData);
     }
 
     // Fetch SPY historical data
@@ -36,9 +37,9 @@ export async function GET(request) {
     const spyData = await spyResponse.json();
 
     if (!spyData.historical || spyData.historical.length === 0) {
-      return NextResponse.json(
+      return createNoCacheResponse(
         { error: "No SPY data available" },
-        { status: 404 }
+        404
       );
     }
 
@@ -53,9 +54,9 @@ export async function GET(request) {
     const stockData = await stockResponse.json();
 
     if (!stockData.historical || stockData.historical.length === 0) {
-      return NextResponse.json(
+      return createNoCacheResponse(
         { error: "No stock data available" },
-        { status: 404 }
+        404
       );
     }
 
@@ -187,12 +188,12 @@ export async function GET(request) {
     // Cache the result (4 hours)
     setCache(cacheKey, result, FOUR_HOUR_TTL_MINUTES);
 
-    return NextResponse.json(result);
+    return createNoCacheResponse(result);
   } catch (error) {
     console.error("Error in spy-correlation API:", error);
-    return NextResponse.json(
+    return createNoCacheResponse(
       { error: error.message || "Internal server error" },
-      { status: 500 }
+      500
     );
   }
 }

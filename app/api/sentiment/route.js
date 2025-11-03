@@ -1,19 +1,20 @@
 import { NextResponse } from 'next/server';
 import { getCache, setCache, getCacheKey, FOUR_HOUR_TTL_MINUTES } from '../../../lib/cache';
+import { createNoCacheResponse } from '../../../lib/response';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const symbol = searchParams.get('symbol');
 
   if (!symbol) {
-    return NextResponse.json({ error: 'Symbol required' }, { status: 400 });
+    return createNoCacheResponse({ error: 'Symbol required' }, 400);
   }
 
   const cacheKey = getCacheKey('sentiment', symbol);
   const cachedData = getCache(cacheKey);
   if (cachedData) {
     console.log(`[CACHE HIT] Sentiment data for ${symbol}`);
-    return NextResponse.json(cachedData);
+    return createNoCacheResponse(cachedData);
   }
 
   try {
@@ -146,10 +147,10 @@ export async function GET(request) {
 
   setCache(cacheKey, result, FOUR_HOUR_TTL_MINUTES);
 
-    return NextResponse.json(result);
+    return createNoCacheResponse(result);
   } catch (error) {
     console.error('Sentiment API Error:', error.message);
-    return NextResponse.json({
+    return createNoCacheResponse({
       score: 0.5,
       positive: 50,
       neutral: 30,

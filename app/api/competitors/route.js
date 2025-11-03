@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { getCache, setCache, getCacheKey, FOUR_HOUR_TTL_MINUTES } from '../../../lib/cache';
+import { createNoCacheResponse } from '../../../lib/response';
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
@@ -7,7 +8,7 @@ export async function GET(request) {
   const exclude = searchParams.get('exclude');
 
   if (!industry) {
-    return NextResponse.json({ error: 'Industry required' }, { status: 400 });
+    return createNoCacheResponse({ error: 'Industry required' }, 400);
   }
 
   // Check cache first
@@ -15,7 +16,7 @@ export async function GET(request) {
   const cachedData = getCache(cacheKey);
   if (cachedData) {
     console.log(`[CACHE HIT] Competitors data for industry ${industry}`);
-    return NextResponse.json(cachedData);
+    return createNoCacheResponse(cachedData);
   }
 
   try {
@@ -36,9 +37,9 @@ export async function GET(request) {
   // Cache the result (4 hours)
   setCache(cacheKey, competitors, FOUR_HOUR_TTL_MINUTES);
 
-    return NextResponse.json(competitors);
+    return createNoCacheResponse(competitors);
   } catch (error) {
     console.error('Competitors API Error:', error);
-    return NextResponse.json([]);
+    return createNoCacheResponse([]);
   }
 }
