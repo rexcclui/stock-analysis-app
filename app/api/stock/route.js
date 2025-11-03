@@ -88,7 +88,14 @@ export async function GET(request) {
         }
       };
 
-      // Prepare chart data for different periods
+      // Prepare full historical data for chart (reversed so oldest is first, newest is last)
+      const fullHistoricalData = historical.historical.slice().reverse().map(d => ({
+        date: d.date,
+        price: d.close,
+        rawDate: d.date
+      }));
+
+      // Prepare chart data for different periods (for backward compatibility and initial view)
       chartData = {
         '1D': historical.historical.slice(0, 1).reverse().map(d => ({ date: formatDate(d.date, false), price: d.close })),
         '7D': historical.historical.slice(0, 7).reverse().map(d => ({ date: formatDate(d.date, false), price: d.close })),
@@ -99,6 +106,9 @@ export async function GET(request) {
         '3Y': historical.historical.slice(0, 756).reverse().map(d => ({ date: formatDate(d.date, true), price: d.close })),
         '5Y': historical.historical.slice(0, 1260).reverse().map(d => ({ date: formatDate(d.date, true), price: d.close }))
       };
+
+      // Add full historical data
+      chartData.fullHistorical = fullHistoricalData;
     }
 
     // P/E ratio fallbacks & computation
