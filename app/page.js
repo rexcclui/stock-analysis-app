@@ -324,16 +324,23 @@ export default function StockAnalysisDashboard() {
       setNews(stockData.news);
       addToSearchHistory(stockCode);
       
+      // Always fetch SPY and QQQ for comparison (unless the selected stock is SPY or QQQ)
+      const benchmarkCodes = ['SPY', 'QQQ'].filter(code => code !== stockCode);
+      const benchmarkPromises = benchmarkCodes.map(code => fetchCompleteStockData(code, apiCounts));
+      const benchmarkData = await Promise.all(benchmarkPromises);
+      const validBenchmarks = benchmarkData.filter(b => b !== null);
+
       const competitorPromises = stockData.competitors.map(code => fetchCompleteStockData(code, apiCounts));
       const competitorData = await Promise.all(competitorPromises);
       const validCompetitors = competitorData.filter(c => c !== null);
-      
+
       const saved = savedComparisons[stockCode] || [];
       const savedPromises = saved.map(code => fetchCompleteStockData(code, apiCounts));
       const savedData = await Promise.all(savedPromises);
       const validSaved = savedData.filter(s => s !== null);
-      
-      setComparisonStocks([...validCompetitors, ...validSaved]);
+
+      // SPY and QQQ first, then competitors and saved stocks
+      setComparisonStocks([...validBenchmarks, ...validCompetitors, ...validSaved]);
 
       // Add to detailed history table
       addSearchHistoryStock({ code: stockData.code, dayChange: stockData.dayChange || 0 });

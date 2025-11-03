@@ -187,7 +187,19 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
     return 0;
   };
 
-  const sortedComparisonStocks = [...comparisonStocks].sort((a, b) => {
+  // Separate benchmark stocks (SPY, QQQ) from others
+  const benchmarkStocks = comparisonStocks.filter(s => s.code === 'SPY' || s.code === 'QQQ');
+  const otherStocks = comparisonStocks.filter(s => s.code !== 'SPY' && s.code !== 'QQQ');
+
+  // Sort benchmark stocks in fixed order (SPY first, then QQQ)
+  const sortedBenchmarks = benchmarkStocks.sort((a, b) => {
+    if (a.code === 'SPY') return -1;
+    if (b.code === 'SPY') return 1;
+    return 0;
+  });
+
+  // Sort other stocks normally
+  const sortedOthers = [...otherStocks].sort((a, b) => {
     if (!sortColumn) return 0;
 
     const aValue = getSortValue(a, sortColumn);
@@ -203,6 +215,9 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
       ? aValue - bValue
       : bValue - aValue;
   });
+
+  // Benchmarks always at top, followed by sorted others
+  const sortedComparisonStocks = [...sortedBenchmarks, ...sortedOthers];
 
   const isActive = (col) => sortColumn === col;
 
@@ -560,12 +575,16 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 );
               })}
               <td className="px-4 py-3 text-center">
-                <button
-                  onClick={() => onRemoveComparison(stock.code)}
-                  className="p-1 text-red-400 hover:bg-red-900/30 rounded transition"
-                >
-                  <X size={18} />
-                </button>
+                {stock.code !== 'SPY' && stock.code !== 'QQQ' ? (
+                  <button
+                    onClick={() => onRemoveComparison(stock.code)}
+                    className="p-1 text-red-400 hover:bg-red-900/30 rounded transition"
+                  >
+                    <X size={18} />
+                  </button>
+                ) : (
+                  <span className="text-gray-600 text-xs">Benchmark</span>
+                )}
               </td>
             </tr>
           ))}

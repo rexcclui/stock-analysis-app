@@ -136,7 +136,7 @@ export function HeatmapView({
                   </div>
                 )}
               </div>
-              {stock.code !== selectedStock.code && (
+              {stock.code !== selectedStock.code && stock.code !== 'SPY' && stock.code !== 'QQQ' && (
                 <button
                   onClick={() => onRemoveComparison(stock.code)}
                   className="absolute p-0.5 bg-red-500/80 hover:bg-red-600 rounded-full transition-all"
