@@ -114,6 +114,16 @@ export async function GET(request) {
   const dividendYield = dividendYieldRaw ? dividendYieldRaw + '%' : '—';
   const betaValue = (typeof profile.beta === 'number' && profile.beta !== 0) ? profile.beta.toFixed(2) : (profile.beta || 'N/A');
 
+  // Calculate resistance and support from historical data
+  let resistance = null;
+  let support = null;
+  if (historical.historical && Array.isArray(historical.historical) && historical.historical.length > 0) {
+    const last30Days = historical.historical.slice(0, 30);
+    const prices = last30Days.map(d => d.close);
+    resistance = Math.max(...prices);
+    support = Math.min(...prices);
+  }
+
     const stockData = {
       code: symbol,
       name: profile.companyName,
@@ -131,6 +141,8 @@ export async function GET(request) {
       analystRating: profile.dcf > profile.price ? 'Buy' : 'Hold',
       industry: profile.industry || 'N/A',
       sector: profile.sector || 'N/A',
+      resistance,
+      support,
       performance,
       chartData
     };

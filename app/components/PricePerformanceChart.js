@@ -1,5 +1,5 @@
 import React from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
 
 /**
  * PricePerformanceChart
@@ -124,6 +124,24 @@ export function PricePerformanceChart({
                   formatter={(value, name) => [chartCompareStocks.length === 0 ? `$${value.toFixed(2)}` : `${value.toFixed(2)}%`, name]}
                 />
                 <Legend />
+                {chartCompareStocks.length === 0 && selectedStock?.resistance && (
+                  <>
+                    <ReferenceLine 
+                      y={selectedStock.resistance} 
+                      stroke="#ef4444" 
+                      strokeDasharray="5 5" 
+                      label={{ value: `Resistance: $${selectedStock.resistance.toFixed(2)}`, position: 'right', fill: '#ef4444', fontSize: 12 }} 
+                    />
+                    {selectedStock?.support && (
+                      <ReferenceLine 
+                        y={selectedStock.support} 
+                        stroke="#10b981" 
+                        strokeDasharray="5 5" 
+                        label={{ value: `Support: $${selectedStock.support.toFixed(2)}`, position: 'right', fill: '#10b981', fontSize: 12 }} 
+                      />
+                    )}
+                  </>
+                )}
                 {chartCompareStocks.length === 0 ? (
                   <Line type="monotone" dataKey="price" stroke="#3B82F6" strokeWidth={2} dot={false} />
                 ) : (
