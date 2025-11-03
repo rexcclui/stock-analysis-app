@@ -19,7 +19,7 @@ export async function GET(request) {
 
   try {
     const sentimentResponse = await fetch(
-      `https://financialmodelingprep.com/api/v4/social-sentiment?symbol=${symbol}&page=0&apikey=${process.env.FMP_KEY}`
+       `https://financialmodelingprep.com/api/v4/social-sentiment?symbol=${symbol}&page=0&apikey=${process.env.FMP_KEY}`
     );
 
     if (!sentimentResponse.ok) {

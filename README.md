@@ -1,5 +1,16 @@
 This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
 
+## Features
+
+### Page Load Tracking
+This application tracks page loads from each IP address. Every time someone visits the main page (`/`), it's recorded. You can view real-time statistics about unique visitors and page load counts.
+
+**Quick Access:**
+- **View Statistics:** `GET /api/status` (returns HTML dashboard)
+- **JSON Format:** `GET /api/status?format=json`
+
+For detailed documentation, see [IP_TRACKING.md](./IP_TRACKING.md)
+
 ## Getting Started
 
 First, run the development server:
