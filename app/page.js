@@ -557,7 +557,7 @@ export default function StockAnalysisDashboard() {
           </div>
 
           {isClient && searchHistoryStocks.length > 0 && (
-            <div className="mb-6 flex items-center gap-3 flex-wrap">
+            <div className="mb-6 flex items-center flex-wrap" style={{ gap: '3px' }}>
               <span className="text-sm text-gray-400">Recent Searches:</span>
               {searchHistoryStocks.map((item) => (
                 <button
@@ -565,13 +565,8 @@ export default function StockAnalysisDashboard() {
                   onClick={() => {
                     handleSearch(item.code);
                   }}
-                  className={`px-3 py-1 text-white rounded-lg text-sm font-medium transition ${
-                    item.dayChange > 0
-                      ? 'bg-green-700 hover:bg-green-600 border border-green-600 hover:border-green-500'
-                      : item.dayChange < 0
-                      ? 'bg-red-700 hover:bg-red-600 border border-red-600 hover:border-red-500'
-                      : 'bg-gray-700 hover:bg-gray-600 border border-gray-600 hover:border-gray-500'
-                  }`}
+                  style={{ margin: '1px 2px', backgroundColor: 'transparent', color: '#9CA3AF', border: '1px solid #4B5563' }}
+                  className={`px-3 py-1 rounded-lg text-sm font-medium transition hover:border-gray-400 hover:text-gray-300`}
                 >
                   {item.code}
                 </button>
