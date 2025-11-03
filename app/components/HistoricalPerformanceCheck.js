@@ -306,6 +306,28 @@ export function HistoricalPerformanceCheck({ stockCode }) {
     }
   };
 
+  // Auto-trigger analysis when mode is selected
+  useEffect(() => {
+    if (selectedOption === "top10" && stockCode) {
+      analyzeTrends();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedOption, trendType, stockCode]);
+
+  useEffect(() => {
+    if (selectedOption === "bigmoves" && stockCode) {
+      analyzeBigMoves();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedOption, bigMovesDirection, stockCode]);
+
+  useEffect(() => {
+    if (selectedOption === "spycorr" && stockCode) {
+      analyzeSpyCorrelation();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedOption, spyDirection, stockCode]);
+
   // Auto-trigger cycle analysis when a cycle mode is selected
   useEffect(() => {
     const cycleAnalysisModes = ["seasonal", "peak-trough", "ma-crossover", "fourier", "support-resistance"];
@@ -427,8 +449,6 @@ export function HistoricalPerformanceCheck({ stockCode }) {
           </button>
         </div>
       )}
-
-      {/* Big Moves Direction Selection - Only for bigmoves */}
       {selectedOption === "bigmoves" && (
         <div className="mb-6">
           <div className="flex gap-4 mb-4">
@@ -455,13 +475,6 @@ export function HistoricalPerformanceCheck({ stockCode }) {
               Top 30 Downward Days
             </button>
           </div>
-          <button
-            onClick={analyzeBigMoves}
-            disabled={loading || !stockCode}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-all"
-          >
-            {loading ? "Analyzing..." : "Analyze Big Moves"}
-          </button>
         </div>
       )}
 
@@ -492,13 +505,6 @@ export function HistoricalPerformanceCheck({ stockCode }) {
               SPY Downward Days
             </button>
           </div>
-          <button
-            onClick={analyzeSpyCorrelation}
-            disabled={loading || !stockCode}
-            className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-all"
-          >
-            {loading ? "Analyzing..." : "Analyze SPY Correlation"}
-          </button>
         </div>
       )}
 
@@ -536,17 +542,6 @@ export function HistoricalPerformanceCheck({ stockCode }) {
             </button>
           </div>
         </div>
-      )}
-
-      {/* Analyze Button - Only for top10 */}
-      {selectedOption === "top10" && (
-        <button
-          onClick={analyzeTrends}
-          disabled={loading || !stockCode}
-          className="px-6 py-3 bg-blue-600 text-white rounded-lg font-semibold hover:bg-blue-700 disabled:bg-gray-600 disabled:cursor-not-allowed transition-all mb-6"
-        >
-          {loading ? "Analyzing..." : "Analyze Trends"}
-        </button>
       )}
 
       {/* Loading indicator for cycle analysis modes */}
