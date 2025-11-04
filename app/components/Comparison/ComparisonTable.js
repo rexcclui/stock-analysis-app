@@ -398,6 +398,8 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
             >
               Code <SortIcon active={isActive('code')} direction={sortDirection} />
             </th>
+            <th className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
+            </th>
             <th
               className="px-2 py-3 text-left cursor-pointer hover:bg-gray-800 transition max-w-[160px]"
               onClick={() => handleSort('name')}
@@ -455,32 +457,28 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
         <tbody>
           <tr className="bg-blue-900/30 border-b-2 border-blue-700">
             <td className="px-4 py-3 font-bold text-white">
-              <div className="flex items-center gap-2">
-                <span
-                  onClick={() => onStockCodeClick && onStockCodeClick(selectedStock.code)}
-                  role="link"
-                  tabIndex={0}
-                  className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded"
-                >
-                  {selectedStock.code}
-                </span>
-                {onAddToChart && (() => {
-                  const isInChart = chartCompareStocks?.find(s => s.code === selectedStock.code);
-                  return (
-                    <button
-                      onClick={() => onAddToChart(selectedStock.code)}
-                      className={`p-1 rounded transition ${
-                        isInChart
-                          ? 'text-green-400 hover:text-green-300 bg-green-900/30'
-                          : 'text-blue-400 hover:text-blue-300 hover:bg-blue-900/30'
-                      }`}
-                      title={isInChart ? "Remove from chart" : "Add to chart"}
-                    >
-                      <LineChart size={16} fill={isInChart ? "currentColor" : "none"} />
-                    </button>
-                  );
-                })()}
-              </div>
+              <span
+                onClick={() => onStockCodeClick && onStockCodeClick(selectedStock.code)}
+                role="link"
+                tabIndex={0}
+                className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded"
+              >
+                {selectedStock.code}
+              </span>
+            </td>
+            <td className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
+              {onAddToChart && (() => {
+                const isInChart = chartCompareStocks?.find(s => s.code === selectedStock.code);
+                return (
+                  <button
+                    onClick={() => onAddToChart(selectedStock.code)}
+                    className={`p-1 rounded transition`}
+                    title={isInChart ? "Remove from chart" : "Add to chart"}
+                  >
+                    <LineChart size={16} fill={isInChart ? "currentColor" : "none"} className={isInChart ? 'text-green-400' : 'text-blue-400'} />
+                  </button>
+                );
+              })()}
             </td>
             <td className="px-2 py-3 font-medium text-white max-w-[160px]" style={{width:'160px'}}>
               {selectedStock.website ? (
@@ -570,32 +568,28 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
           {sortedComparisonStocks.map((stock, idx) => (
             <tr key={stock.code} className={idx % 2 === 0 ? 'bg-gray-700/50' : 'bg-gray-800/50'}>
               <td className="px-4 py-3 font-medium text-white">
-                <div className="flex items-center gap-2">
-                  <span
-                    onClick={() => onStockCodeClick && onStockCodeClick(stock.code)}
-                    role="link"
-                    tabIndex={0}
-                    className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded"
-                  >
-                    {stock.code}
-                  </span>
-                  {onAddToChart && (() => {
-                    const isInChart = chartCompareStocks?.find(s => s.code === stock.code);
-                    return (
-                      <button
-                        onClick={() => onAddToChart(stock.code)}
-                        className={`p-1 rounded transition ${
-                          isInChart
-                            ? 'text-green-400 hover:text-green-300 bg-green-900/30'
-                            : 'text-blue-400 hover:text-blue-300 hover:bg-blue-900/30'
-                        }`}
-                        title={isInChart ? "Remove from chart" : "Add to chart"}
-                      >
-                        <LineChart size={16} fill={isInChart ? "currentColor" : "none"} />
-                      </button>
-                    );
-                  })()}
-                </div>
+                <span
+                  onClick={() => onStockCodeClick && onStockCodeClick(stock.code)}
+                  role="link"
+                  tabIndex={0}
+                  className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded"
+                >
+                  {stock.code}
+                </span>
+              </td>
+              <td className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
+                {onAddToChart && (() => {
+                  const isInChart = chartCompareStocks?.find(s => s.code === stock.code);
+                  return (
+                    <button
+                      onClick={() => onAddToChart(stock.code)}
+                      className={`p-1 rounded transition`}
+                      title={isInChart ? "Remove from chart" : "Add to chart"}
+                    >
+                      <LineChart size={16} fill={isInChart ? "currentColor" : "none"} className={isInChart ? 'text-green-400' : 'text-blue-400'} />
+                    </button>
+                  );
+                })()}
               </td>
               <td className="px-2 py-3 text-gray-200 max-w-[160px]" style={{width:'160px'}}>
                 {stock.website ? (
