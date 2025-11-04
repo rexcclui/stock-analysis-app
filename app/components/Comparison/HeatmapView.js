@@ -273,6 +273,7 @@ export function HeatmapView({
   onStockCodeClick,
   onAddToChart,
   chartCompareStocks,
+  loading = false,
 }) {
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(1200);
@@ -292,6 +293,25 @@ export function HeatmapView({
     window.addEventListener('resize', updateWidth);
     return () => window.removeEventListener('resize', updateWidth);
   }, []);
+
+  // Check if data is ready
+  const isDataReady = selectedStock && comparisonStocks &&
+                      selectedStock.performance &&
+                      comparisonStocks.length >= 0;
+
+  // Show loading state
+  if (loading || !isDataReady) {
+    return (
+      <div className="p-2" ref={containerRef}>
+        <div className="w-full flex items-center justify-center" style={{ minHeight: '400px' }}>
+          <div className="text-center">
+            <div className="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500 mb-4"></div>
+            <p className="text-gray-400 text-lg">Loading heatmap data...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   // Calculate size values for all stocks
   const allStocks = [selectedStock, ...comparisonStocks];

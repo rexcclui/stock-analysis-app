@@ -71,6 +71,7 @@ export function ComparisonTable({
   chartCompareStocks
 }) {
   const [colorMode, setColorMode] = useState('historical'); // 'historical' | 'relative'
+  const [sentimentExpanded, setSentimentExpanded] = useState(false); // Start collapsed
 
   // Filter comparison stocks based on relationship type
   let filteredComparisonStocks = comparisonStocks.filter(stock => {
@@ -193,6 +194,8 @@ export function ComparisonTable({
             chartCompareStocks={chartCompareStocks}
             colorMode={colorMode}
             setColorMode={setColorMode}
+            sentimentExpanded={sentimentExpanded}
+            setSentimentExpanded={setSentimentExpanded}
           />
         </>
       ) : (
@@ -205,6 +208,7 @@ export function ComparisonTable({
           onStockCodeClick={onStockCodeClick}
           onAddToChart={onAddToChart}
           chartCompareStocks={chartCompareStocks}
+          loading={!selectedStock || !selectedStock.performance}
         />
       )}
       
@@ -221,7 +225,7 @@ const SortIcon = ({ active, direction }) => {
     : <ArrowDown size={14} className="inline ml-1" />;
 };
 
-function TableView({ selectedStock, comparisonStocks, periods, onRemoveComparison, onStockCodeClick, onAddToChart, chartCompareStocks, colorMode }) {
+function TableView({ selectedStock, comparisonStocks, periods, onRemoveComparison, onStockCodeClick, onAddToChart, chartCompareStocks, colorMode, sentimentExpanded, setSentimentExpanded }) {
   const [sortColumn, setSortColumn] = useState(null);
   const [sortDirection, setSortDirection] = useState('asc');
 
@@ -440,7 +444,14 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
             >
               Rating <SortIcon active={isActive('rating')} direction={sortDirection} />
             </th>
-            <th className="px-2 py-3 text-center" style={{width:'90px', minWidth:'90px'}}>Sentiment (1M)</th>
+            <th
+              className="px-2 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
+              style={{width: sentimentExpanded ? '90px' : '30px', minWidth: sentimentExpanded ? '90px' : '30px'}}
+              onClick={() => setSentimentExpanded(!sentimentExpanded)}
+              title={sentimentExpanded ? "Click to collapse" : "Click to expand sentiment"}
+            >
+              {sentimentExpanded ? 'Sentiment (1M)' : '📊'}
+            </th>
             {periods.map(period => (
               <th
                 key={period}
@@ -521,10 +532,14 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 {selectedStock.analystRating}
               </span>
             </td>
-            <td className="px-2 py-3 text-center" style={{width:'90px', minWidth:'90px'}}>
-              <div className="mx-auto" style={{width:'84px'}}>
-                <SentimentChart data={selectedStock.sentimentTimeSeries} />
-              </div>
+            <td className="px-2 py-3 text-center" style={{width: sentimentExpanded ? '90px' : '30px', minWidth: sentimentExpanded ? '90px' : '30px'}}>
+              {sentimentExpanded ? (
+                <div className="mx-auto" style={{width:'84px'}}>
+                  <SentimentChart data={selectedStock.sentimentTimeSeries} />
+                </div>
+              ) : (
+                <span className="text-xs">📊</span>
+              )}
             </td>
             {periods.map(period => {
               const basePerf = selectedStock.performance[period];
@@ -634,10 +649,14 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                   {stock.analystRating}
                 </span>
               </td>
-              <td className="px-2 py-3 text-center" style={{width:'90px', minWidth:'90px'}}>
-                <div className="mx-auto" style={{width:'84px'}}>
-                  <SentimentChart data={stock.sentimentTimeSeries} />
-                </div>
+              <td className="px-2 py-3 text-center" style={{width: sentimentExpanded ? '90px' : '30px', minWidth: sentimentExpanded ? '90px' : '30px'}}>
+                {sentimentExpanded ? (
+                  <div className="mx-auto" style={{width:'84px'}}>
+                    <SentimentChart data={stock.sentimentTimeSeries} />
+                  </div>
+                ) : (
+                  <span className="text-xs">📊</span>
+                )}
               </td>
               {periods.map(period => {
                 const value = stock.performance[period];
