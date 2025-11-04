@@ -225,6 +225,12 @@ export async function GET(request) {
 
           const dayChange = ((today.close - yesterday.close) / yesterday.close) * 100;
 
+          // Calculate before effect (yesterday's change from day before yesterday)
+          const dayBeforeYesterday = i < historicalData.length - 2 ? historicalData[i + 2] : null;
+          const before1Day = dayBeforeYesterday
+            ? ((yesterday.close - dayBeforeYesterday.close) / dayBeforeYesterday.close) * 100
+            : 0;
+
           // Calculate after effects
           const after1Day = i > 0 && i < historicalData.length - 1
             ? ((historicalData[i - 1].close - today.close) / today.close) * 100
@@ -240,6 +246,7 @@ export async function GET(request) {
 
           const moveData = {
             date: today.date,
+            before1Day,
             dayChange,
             after1Day,
             after2Days,
@@ -290,6 +297,12 @@ export async function GET(request) {
             (direction === "down" && dayChange < 0);
 
           if (matchesDirection) {
+            // Calculate before effect (yesterday's change from day before yesterday)
+            const dayBeforeYesterday = i < historicalData.length - 2 ? historicalData[i + 2] : null;
+            const before1Day = dayBeforeYesterday
+              ? ((yesterday.close - dayBeforeYesterday.close) / dayBeforeYesterday.close) * 100
+              : 0;
+
             // Calculate after effects
             const after1Day = i > 0 && i < historicalData.length - 1
               ? ((historicalData[i - 1].close - today.close) / today.close) * 100
@@ -305,6 +318,7 @@ export async function GET(request) {
 
             bigMoves.push({
               date: today.date,
+              before1Day,
               dayChange,
               after1Day,
               after2Days,

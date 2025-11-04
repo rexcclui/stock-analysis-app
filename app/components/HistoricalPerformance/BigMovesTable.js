@@ -3,11 +3,12 @@ export function BigMovesTable({ bigMoves }) {
 
   // Calculate min/max for conditional formatting
   const dayChanges = bigMoves.map(m => m.dayChange);
+  const before1Days = bigMoves.map(m => m.before1Day);
   const after1Days = bigMoves.map(m => m.after1Day);
   const after2Days = bigMoves.map(m => m.after2Days);
   const after3Days = bigMoves.map(m => m.after3Days);
 
-  const allChanges = [...dayChanges, ...after1Days, ...after2Days, ...after3Days];
+  const allChanges = [...dayChanges, ...before1Days, ...after1Days, ...after2Days, ...after3Days];
   const maxChange = Math.max(...allChanges);
   const minChange = Math.min(...allChanges);
 
@@ -80,6 +81,9 @@ export function BigMovesTable({ bigMoves }) {
               Date
             </th>
             <th className="px-4 py-3 text-gray-300 font-semibold border-b border-gray-600">
+              Before 1 Day
+            </th>
+            <th className="px-4 py-3 text-gray-300 font-semibold border-b border-gray-600">
               Day Change
             </th>
             <th className="px-4 py-3 text-gray-300 font-semibold border-b border-gray-600">
@@ -110,6 +114,13 @@ export function BigMovesTable({ bigMoves }) {
               </td>
               <td className="px-4 py-3 text-gray-300">
                 {move.date}
+              </td>
+              <td
+                className="px-4 py-3 font-bold text-white"
+                style={{ backgroundColor: getColorForChange(move.before1Day, minChange, maxChange) }}
+              >
+                {move.before1Day >= 0 ? "+" : ""}
+                {move.before1Day.toFixed(2)}%
               </td>
               <td
                 className="px-4 py-3 font-bold text-white"
