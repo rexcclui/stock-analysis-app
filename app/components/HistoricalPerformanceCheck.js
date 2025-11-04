@@ -397,7 +397,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
             Top 30 up/down consecutive daily change
           </option>
           <option value="bigmoves">
-            Big Drop/Rise - Single day movements
+            Big Single Day Up/Down
           </option>
           <option value="spycorr">
             Top 30 up/down daily SPY change
@@ -406,7 +406,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
             Up/Down Gap Open
           </option>
           <option value="gapopenstat">
-            Gap Open Statistic
+            Market Open Statistic
           </option>
           <option value="intradaystat">
             Intraday Statistic
@@ -557,7 +557,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {["gapopenstat", "intradaystat"].includes(selectedOption) && loading && (
         <div className="flex items-center gap-2 text-blue-400 mb-6">
           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-400"></div>
-          <span>Analyzing {selectedOption === "gapopenstat" ? "Gap Open Statistics" : "Intraday Statistics"}...</span>
+          <span>Analyzing {selectedOption === "gapopenstat" ? "Market Open Statistics" : "Intraday Statistics"}...</span>
         </div>
       )}
 
@@ -582,7 +582,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
 
       {/* Gap Open Statistics */}
       {gapOpenStats && selectedOption === "gapopenstat" && (
-        <StatisticsTable statistics={gapOpenStats} title="Gap Open %" />
+        <StatisticsTable statistics={gapOpenStats} title="Market Open %" />
       )}
 
       {/* Intraday Statistics */}
