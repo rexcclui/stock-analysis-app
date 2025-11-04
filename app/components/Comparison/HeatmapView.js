@@ -82,22 +82,40 @@ const getHeatmapColor = (value, min, max) => {
   return "#450a0a";
 };
 
-const getTextColor = (value, min, max) => {
-  // Calculate normalized position (0 = min, 1 = max)
-  if (min === max) return '#1f2937'; // dark text for neutral
+// Helper to calculate luminance from RGB
+const getLuminance = (r, g, b) => {
+  // Convert to 0-1 range
+  const [rs, gs, bs] = [r, g, b].map(c => {
+    c = c / 255;
+    return c <= 0.03928 ? c / 12.92 : Math.pow((c + 0.055) / 1.055, 2.4);
+  });
+  return 0.2126 * rs + 0.7152 * gs + 0.0722 * bs;
+};
 
-  const normalized = (value - min) / (max - min);
+// Helper to extract RGB from color string
+const parseRGB = (colorStr) => {
+  const match = colorStr.match(/rgb\((\d+),\s*(\d+),\s*(\d+)\)/);
+  if (match) {
+    return [parseInt(match[1]), parseInt(match[2]), parseInt(match[3])];
+  }
+  return [128, 128, 128]; // fallback
+};
 
-  // For neutral/light areas (middle of range), use dark text
-  if (normalized >= 0.45 && normalized <= 0.55) return '#111827'; // very dark gray
-  if (normalized >= 0.4 && normalized <= 0.6) return '#1f2937'; // dark gray
+const getTextColor = (backgroundColor) => {
+  // Calculate luminance of background
+  const [r, g, b] = parseRGB(backgroundColor);
+  const bgLuminance = getLuminance(r, g, b);
 
-  // For slightly positive/negative, use lighter text
-  if (normalized >= 0.6 && normalized <= 0.7) return '#e5e7eb'; // light gray
-  if (normalized >= 0.3 && normalized <= 0.4) return '#e5e7eb'; // light gray
-
-  // For more extreme values (dark backgrounds), use white
-  return '#ffffff';
+  // WCAG AA requires contrast ratio of at least 4.5:1 for normal text
+  // If background is light (luminance > 0.5), use dark text
+  // If background is dark (luminance < 0.5), use light text
+  if (bgLuminance > 0.5) {
+    return '#111827'; // Very dark gray/black for light backgrounds
+  } else if (bgLuminance > 0.3) {
+    return '#1f2937'; // Dark gray for medium backgrounds
+  } else {
+    return '#ffffff'; // White for dark backgrounds
+  }
 };
 
 // Helper function to calculate tile layout with grid-based sizing
@@ -341,7 +359,8 @@ export function HeatmapView({
       >
         {layout.map(({ stock, x, y, width, height }) => {
           const performance = stock.performance[heatmapColorBy];
-          const textColor = getTextColor(performance, minPerformance, maxPerformance);
+          const backgroundColor = getHeatmapColor(performance, minPerformance, maxPerformance);
+          const textColor = getTextColor(backgroundColor);
 
           // Determine what to display for SIZE metric (heatmapSizeBy)
           let sizeDisplayValue;
@@ -391,7 +410,7 @@ export function HeatmapView({
               key={stock.code}
               className="absolute cursor-pointer transition-all duration-200 hover:brightness-110 flex flex-col items-center justify-center group"
               style={{
-                backgroundColor: getHeatmapColor(performance, minPerformance, maxPerformance),
+                backgroundColor: backgroundColor,
                 left: `${x}px`,
                 top: `${y}px`,
                 width: `${width}px`,
