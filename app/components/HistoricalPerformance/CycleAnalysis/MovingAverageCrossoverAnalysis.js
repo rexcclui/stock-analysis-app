@@ -265,8 +265,75 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
           Recent Crossovers (Total: {cycleAnalysis.totalCrossovers})
         </h3>
 
+        <div className="overflow-x-auto">
+          <table className="w-full">
+            <thead>
+              <tr style={{ borderBottom: '1px solid #1d4ed8' }}>
+                <th className="text-left style={{ color: '#93c5fd' }} py-2 px-4">Date</th>
+                <th className="text-left style={{ color: '#93c5fd' }} py-2 px-4">Type</th>
+                <th className="text-right style={{ color: '#93c5fd' }} py-2 px-4">Price</th>
+                <th className="text-center style={{ color: '#93c5fd' }} py-2 px-4">Signal</th>
+                <th className="text-right style={{ color: '#93c5fd' }} py-2 px-4">3 Day %</th>
+                <th className="text-right style={{ color: '#93c5fd' }} py-2 px-4">7 Day %</th>
+                <th className="text-right style={{ color: '#93c5fd' }} py-2 px-4">14 Day %</th>
+                <th className="text-right style={{ color: '#93c5fd' }} py-2 px-4">30 Day %</th>
+              </tr>
+            </thead>
+            <tbody>
+              {cycleAnalysis.crossovers?.sort((a, b) => new Date(b.date) - new Date(a.date)).map((cross, idx) => (
+                <tr key={idx} style={{ borderBottom: '1px solid #1e3a8a' }}>
+                  <td className="style={{ color: '#bfdbfe' }} py-2 px-4">{cross.date}</td>
+                  <td className="style={{ color: '#dbeafe' }} py-2 px-4">{cross.type}</td>
+                  <td className="text-right style={{ color: '#bfdbfe' }} py-2 px-4">${cross.price}</td>
+                  <td className="text-center py-2 px-4">
+                    <span className={`px-2 py-1 rounded text-sm ${cross.signal === 'Bullish' ? 'bg-green-900/50 text-green-400' : 'bg-red-900/50 text-red-400'}`}>
+                      {cross.signal}
+                    </span>
+                  </td>
+                  <td className="text-right py-2 px-4">
+                    {cross.perf3day !== null ? (
+                      <span style={{ color: parseFloat(cross.perf3day) >= 0 ? '#22c55e' : '#ef4444' }}>
+                        {parseFloat(cross.perf3day) >= 0 ? '+' : ''}{cross.perf3day}%
+                      </span>
+                    ) : (
+                      <span style={{ color: '#9ca3af' }}>N/A</span>
+                    )}
+                  </td>
+                  <td className="text-right py-2 px-4">
+                    {cross.perf7day !== null ? (
+                      <span style={{ color: parseFloat(cross.perf7day) >= 0 ? '#22c55e' : '#ef4444' }}>
+                        {parseFloat(cross.perf7day) >= 0 ? '+' : ''}{cross.perf7day}%
+                      </span>
+                    ) : (
+                      <span style={{ color: '#9ca3af' }}>N/A</span>
+                    )}
+                  </td>
+                  <td className="text-right py-2 px-4">
+                    {cross.perf14day !== null ? (
+                      <span style={{ color: parseFloat(cross.perf14day) >= 0 ? '#22c55e' : '#ef4444' }}>
+                        {parseFloat(cross.perf14day) >= 0 ? '+' : ''}{cross.perf14day}%
+                      </span>
+                    ) : (
+                      <span style={{ color: '#9ca3af' }}>N/A</span>
+                    )}
+                  </td>
+                  <td className="text-right py-2 px-4">
+                    {cross.perf30day !== null ? (
+                      <span style={{ color: parseFloat(cross.perf30day) >= 0 ? '#22c55e' : '#ef4444' }}>
+                        {parseFloat(cross.perf30day) >= 0 ? '+' : ''}{cross.perf30day}%
+                      </span>
+                    ) : (
+                      <span style={{ color: '#9ca3af' }}>N/A</span>
+                    )}
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+
         {/* Simulation Button Section */}
-        <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: 'rgba(30, 58, 138, 0.3)', borderLeft: '3px solid #3b82f6' }}>
+        <div className="mt-8 p-4 rounded-lg" style={{ backgroundColor: 'rgba(30, 58, 138, 0.3)', borderLeft: '3px solid #3b82f6' }}>
           <p className="text-sm mb-3" style={{ color: '#bfdbfe' }}>
             <strong>Optimize MA Strategy:</strong> Find the best Short/Long MA combination for maximum performance
           </p>
@@ -300,7 +367,7 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
 
         {/* Simulation Results */}
         {simulationResults && (
-          <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', borderLeft: '3px solid #10b981' }}>
+          <div className="mt-6 p-4 rounded-lg" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', borderLeft: '3px solid #10b981' }}>
             <h4 className="text-base font-bold mb-3" style={{ color: '#86efac' }}>
               Top 20 MA Combinations (Ranked by Total {simulationResults.primaryMetric}-Day %)
             </h4>
@@ -399,74 +466,6 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
             </div>
           </div>
         )}
-
-
-        <div className="overflow-x-auto">
-          <table className="w-full">
-            <thead>
-              <tr style={{ borderBottom: '1px solid #1d4ed8' }}>
-                <th className="text-left style={{ color: '#93c5fd' }} py-2 px-4">Date</th>
-                <th className="text-left style={{ color: '#93c5fd' }} py-2 px-4">Type</th>
-                <th className="text-right style={{ color: '#93c5fd' }} py-2 px-4">Price</th>
-                <th className="text-center style={{ color: '#93c5fd' }} py-2 px-4">Signal</th>
-                <th className="text-right style={{ color: '#93c5fd' }} py-2 px-4">3 Day %</th>
-                <th className="text-right style={{ color: '#93c5fd' }} py-2 px-4">7 Day %</th>
-                <th className="text-right style={{ color: '#93c5fd' }} py-2 px-4">14 Day %</th>
-                <th className="text-right style={{ color: '#93c5fd' }} py-2 px-4">30 Day %</th>
-              </tr>
-            </thead>
-            <tbody>
-              {cycleAnalysis.crossovers?.sort((a, b) => new Date(b.date) - new Date(a.date)).map((cross, idx) => (
-                <tr key={idx} style={{ borderBottom: '1px solid #1e3a8a' }}>
-                  <td className="style={{ color: '#bfdbfe' }} py-2 px-4">{cross.date}</td>
-                  <td className="style={{ color: '#dbeafe' }} py-2 px-4">{cross.type}</td>
-                  <td className="text-right style={{ color: '#bfdbfe' }} py-2 px-4">${cross.price}</td>
-                  <td className="text-center py-2 px-4">
-                    <span className={`px-2 py-1 rounded text-sm ${cross.signal === 'Bullish' ? 'bg-green-900/50 text-green-400' : 'bg-red-900/50 text-red-400'}`}>
-                      {cross.signal}
-                    </span>
-                  </td>
-                  <td className="text-right py-2 px-4">
-                    {cross.perf3day !== null ? (
-                      <span style={{ color: parseFloat(cross.perf3day) >= 0 ? '#22c55e' : '#ef4444' }}>
-                        {parseFloat(cross.perf3day) >= 0 ? '+' : ''}{cross.perf3day}%
-                      </span>
-                    ) : (
-                      <span style={{ color: '#9ca3af' }}>N/A</span>
-                    )}
-                  </td>
-                  <td className="text-right py-2 px-4">
-                    {cross.perf7day !== null ? (
-                      <span style={{ color: parseFloat(cross.perf7day) >= 0 ? '#22c55e' : '#ef4444' }}>
-                        {parseFloat(cross.perf7day) >= 0 ? '+' : ''}{cross.perf7day}%
-                      </span>
-                    ) : (
-                      <span style={{ color: '#9ca3af' }}>N/A</span>
-                    )}
-                  </td>
-                  <td className="text-right py-2 px-4">
-                    {cross.perf14day !== null ? (
-                      <span style={{ color: parseFloat(cross.perf14day) >= 0 ? '#22c55e' : '#ef4444' }}>
-                        {parseFloat(cross.perf14day) >= 0 ? '+' : ''}{cross.perf14day}%
-                      </span>
-                    ) : (
-                      <span style={{ color: '#9ca3af' }}>N/A</span>
-                    )}
-                  </td>
-                  <td className="text-right py-2 px-4">
-                    {cross.perf30day !== null ? (
-                      <span style={{ color: parseFloat(cross.perf30day) >= 0 ? '#22c55e' : '#ef4444' }}>
-                        {parseFloat(cross.perf30day) >= 0 ? '+' : ''}{cross.perf30day}%
-                      </span>
-                    ) : (
-                      <span style={{ color: '#9ca3af' }}>N/A</span>
-                    )}
-                  </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
       </div>
     </div>
   );
