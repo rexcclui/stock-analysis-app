@@ -6,6 +6,8 @@ export async function GET(request) {
   const symbol = searchParams.get('symbol');
   const years = parseInt(searchParams.get('years') || '5');
   const mode = searchParams.get('mode'); // seasonal, peak-trough, ma-crossover, fourier, support-resistance
+  const maShort = parseInt(searchParams.get('maShort') || '50');
+  const maLong = parseInt(searchParams.get('maLong') || '200');
 
   if (!symbol) {
     return createNoCacheResponse({ error: 'Symbol required' }, 400);
@@ -69,7 +71,7 @@ export async function GET(request) {
         result = analyzePeakTrough(historicalData);
         break;
       case 'ma-crossover':
-        result = analyzeMovingAverageCrossovers(historicalData);
+        result = analyzeMovingAverageCrossovers(historicalData, maShort, maLong);
         break;
       case 'fourier':
         result = analyzeFourier(historicalData);
@@ -282,44 +284,44 @@ function analyzePeakTrough(data) {
 }
 
 // 3. Moving Average Crossover Analysis
-function analyzeMovingAverageCrossovers(data) {
-  const MA_50 = 50;
-  const MA_200 = 200;
+function analyzeMovingAverageCrossovers(data, maShort = 50, maLong = 200) {
+  const MA_SHORT = maShort;
+  const MA_LONG = maLong;
 
-  if (data.length < MA_200) {
+  if (data.length < MA_LONG) {
     return { error: 'Not enough data for MA analysis' };
   }
 
-  const ma50 = [];
-  const ma200 = [];
+  const maShortValues = [];
+  const maLongValues = [];
   const crossovers = [];
 
   // Calculate MAs
   for (let i = 0; i < data.length; i++) {
-    if (i >= MA_50 - 1) {
-      const sum50 = data.slice(i - MA_50 + 1, i + 1).reduce((sum, d) => sum + d.close, 0);
-      ma50.push(sum50 / MA_50);
+    if (i >= MA_SHORT - 1) {
+      const sumShort = data.slice(i - MA_SHORT + 1, i + 1).reduce((sum, d) => sum + d.close, 0);
+      maShortValues.push(sumShort / MA_SHORT);
     } else {
-      ma50.push(null);
+      maShortValues.push(null);
     }
 
-    if (i >= MA_200 - 1) {
-      const sum200 = data.slice(i - MA_200 + 1, i + 1).reduce((sum, d) => sum + d.close, 0);
-      ma200.push(sum200 / MA_200);
+    if (i >= MA_LONG - 1) {
+      const sumLong = data.slice(i - MA_LONG + 1, i + 1).reduce((sum, d) => sum + d.close, 0);
+      maLongValues.push(sumLong / MA_LONG);
     } else {
-      ma200.push(null);
+      maLongValues.push(null);
     }
   }
 
   // Find crossovers
-  for (let i = MA_200; i < data.length - 1; i++) {
-    const prev50 = ma50[i - 1];
-    const curr50 = ma50[i];
-    const prev200 = ma200[i - 1];
-    const curr200 = ma200[i];
+  for (let i = MA_LONG; i < data.length - 1; i++) {
+    const prevShort = maShortValues[i - 1];
+    const currShort = maShortValues[i];
+    const prevLong = maLongValues[i - 1];
+    const currLong = maLongValues[i];
 
     // Golden Cross (bullish)
-    if (prev50 < prev200 && curr50 > curr200) {
+    if (prevShort < prevLong && currShort > currLong) {
       const crossoverPrice = data[i].close;
       
       // Calculate performance at different time periods
@@ -341,9 +343,9 @@ function analyzeMovingAverageCrossovers(data) {
     }
 
     // Death Cross (bearish)
-    if (prev50 > prev200 && curr50 < curr200) {
+    if (prevShort > prevLong && currShort < currLong) {
       const crossoverPrice = data[i].close;
-      
+
       // Calculate performance at different time periods
       const perf3day = i + 3 < data.length ? ((data[i + 3].close - crossoverPrice) / crossoverPrice * 100) : null;
       const perf7day = i + 7 < data.length ? ((data[i + 7].close - crossoverPrice) / crossoverPrice * 100) : null;
@@ -363,17 +365,19 @@ function analyzeMovingAverageCrossovers(data) {
     }
   }
 
-  const currentMA50 = ma50[ma50.length - 1];
-  const currentMA200 = ma200[ma200.length - 1];
+  const currentMAShort = maShortValues[maShortValues.length - 1];
+  const currentMALong = maLongValues[maLongValues.length - 1];
   const currentPrice = data[data.length - 1].close;
 
   return {
     crossovers: crossovers.slice(-10),
-    currentMA50: currentMA50?.toFixed(2),
-    currentMA200: currentMA200?.toFixed(2),
+    currentMA50: currentMAShort?.toFixed(2),
+    currentMA200: currentMALong?.toFixed(2),
     currentPrice: currentPrice.toFixed(2),
-    currentSignal: currentMA50 > currentMA200 ? 'Bullish' : 'Bearish',
-    totalCrossovers: crossovers.length
+    currentSignal: currentMAShort > currentMALong ? 'Bullish' : 'Bearish',
+    totalCrossovers: crossovers.length,
+    maShort: MA_SHORT,
+    maLong: MA_LONG
   };
 }
 
