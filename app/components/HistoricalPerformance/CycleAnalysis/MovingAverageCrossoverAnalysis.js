@@ -1,62 +1,162 @@
 import React, { useState } from 'react';
+import {
+  ResponsiveContainer,
+  ScatterChart,
+  CartesianGrid,
+  XAxis,
+  YAxis,
+  Tooltip as RechartsTooltip,
+  Legend,
+  Scatter,
+  ZAxis
+} from 'recharts';
+
+const PERFORMANCE_METRICS = [3, 7, 14, 30];
+const CACHE_VERSION = 'v1';
+const METRIC_COLORS = {
+  3: '#22c55e',
+  7: '#38bdf8',
+  14: '#f97316',
+  30: '#f472b6'
+};
+
+const getSimulationCacheKey = (stockCode) => `ma-crossover-simulation:${CACHE_VERSION}:${stockCode}`;
 
 export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, maLong = 200, loading = false, onSimulate = null }) {
   const [simulationResults, setSimulationResults] = useState(null);
   const [simulating, setSimulating] = useState(false);
   const [progressMessage, setProgressMessage] = useState('');
 
-  const runSimulation = async (selectedMetric) => {
+  const formatPerformance = (value) => {
+    if (value === null || value === undefined || Number.isNaN(value)) {
+      return 'N/A';
+    }
+
+    const numericValue = Number.parseFloat(value);
+    if (Number.isNaN(numericValue)) {
+      return 'N/A';
+    }
+
+    const formatted = numericValue.toFixed(2);
+    return `${numericValue >= 0 ? '+' : ''}${formatted}%`;
+  };
+
+  const chartTooltipContent = ({ active, payload }) => {
+    if (!active || !payload || payload.length === 0) return null;
+
+    const { short, long, metric, total } = payload[0].payload;
+
+    return (
+      <div className="rounded bg-slate-900/90 p-3 border border-blue-700">
+        <div className="text-xs uppercase tracking-wide text-blue-200 mb-1">MA Combination</div>
+        <div className="text-sm font-semibold text-blue-100">Short {short} / Long {long}</div>
+        <div className="text-xs text-blue-200 mt-2">{metric}-Day Total Performance:</div>
+        <div className="text-sm font-semibold" style={{ color: total >= 0 ? '#22c55e' : '#ef4444' }}>{formatPerformance(total)}</div>
+      </div>
+    );
+  };
+
+  const runSimulation = async ({ forceReload = false } = {}) => {
+    const stockCode = onSimulate?.stockCode ?? cycleAnalysis?.symbol ?? 'unknown';
+
     setSimulating(true);
+    setProgressMessage(forceReload ? 'Running fresh simulation...' : 'Checking cache...');
+
+    if (forceReload && typeof window !== 'undefined' && stockCode) {
+      try {
+        window.localStorage.removeItem(getSimulationCacheKey(stockCode));
+      } catch (err) {
+        console.error('Error clearing MA simulation cache:', err);
+      }
+    }
+
+    if (!forceReload && typeof window !== 'undefined' && stockCode) {
+      try {
+        const cacheKey = getSimulationCacheKey(stockCode);
+        const cachedValue = window.localStorage.getItem(cacheKey);
+
+        if (cachedValue) {
+          const parsed = JSON.parse(cachedValue);
+          if (parsed?.data) {
+            setSimulationResults(parsed.data);
+            setProgressMessage('Loaded cached results.');
+            setSimulating(false);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error('Error loading cached MA simulation results:', err);
+      }
+    }
+
     setProgressMessage('Initializing simulation...');
-    
+
     // Simulate different MA combinations from 5 to 100 for short, 50 to 300 for long
     const shortMAs = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100];
     const longMAs = [50, 60, 70, 80, 100, 120, 150, 180, 200, 220, 250, 280, 300];
-    
+
     const results = [];
     let totalCombinations = 0;
     let currentCombination = 0;
-    
+
     // Calculate total combinations
     for (const short of shortMAs) {
       for (const long of longMAs) {
         if (short < long) totalCombinations++;
       }
     }
-    
+
     for (const short of shortMAs) {
       for (const long of longMAs) {
         if (short >= long) continue; // Short MA must be less than Long MA
-        
+
         currentCombination++;
         setProgressMessage(`Testing MA(${short}/${long})... ${currentCombination}/${totalCombinations}`);
-        
+
         // Fetch crossover data for this combination
         try {
           const response = await fetch(
-            `/api/cycle-analysis?symbol=${onSimulate?.stockCode}&years=5&mode=ma-crossover&maShort=${short}&maLong=${long}`
+            `/api/cycle-analysis?symbol=${stockCode}&years=5&mode=ma-crossover&maShort=${short}&maLong=${long}`
           );
-          
+
           if (!response.ok) continue;
-          
+
           const data = await response.json();
-          
+
           if (data.crossovers) {
-            let totalPerf = 0;
-            const perfKey = `perf${selectedMetric}day`;
-            
-            data.crossovers.forEach(cross => {
-              if (cross[perfKey] !== null) {
-                totalPerf += parseFloat(cross[perfKey]);
-              }
+            const totals = {};
+            const winRates = {};
+
+            PERFORMANCE_METRICS.forEach(metric => {
+              const perfKey = `perf${metric}day`;
+              let totalPerf = 0;
+              let wins = 0;
+              let validSignals = 0;
+
+              data.crossovers.forEach(cross => {
+                const value = cross[perfKey];
+                if (value !== null && value !== undefined) {
+                  const perfValue = Number.parseFloat(value);
+                  if (!Number.isNaN(perfValue)) {
+                    totalPerf += perfValue;
+                    validSignals++;
+                    if (perfValue > 0) {
+                      wins++;
+                    }
+                  }
+                }
+              });
+
+              totals[metric] = Number.parseFloat(totalPerf.toFixed(2));
+              winRates[metric] = validSignals > 0 ? Number.parseFloat(((wins / validSignals) * 100).toFixed(1)) : 0;
             });
-            
+
             results.push({
               short,
               long,
-              totalPerf: parseFloat(totalPerf.toFixed(2)),
-              crossoverCount: data.crossovers.length,
-              winRate: ((data.crossovers.filter(c => c[perfKey] !== null && parseFloat(c[perfKey]) > 0).length / data.crossovers.filter(c => c[perfKey] !== null).length) * 100).toFixed(1)
+              totals,
+              winRates,
+              crossoverCount: data.crossovers.length
             });
           }
         } catch (err) {
@@ -64,16 +164,48 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
         }
       }
     }
-    
-    // Sort by totalPerf descending
-    results.sort((a, b) => b.totalPerf - a.totalPerf);
-    
-    setSimulationResults({
-      metric: selectedMetric,
+
+    const primaryMetric = 7;
+    results.sort((a, b) => (b.totals?.[primaryMetric] ?? 0) - (a.totals?.[primaryMetric] ?? 0));
+
+    const chartData = PERFORMANCE_METRICS.reduce((acc, metric) => {
+      acc[metric] = results.map(result => ({
+        x: result.long,
+        y: result.short,
+        z: Math.max(Math.abs(result.totals?.[metric] ?? 0), 1),
+        total: result.totals?.[metric] ?? 0,
+        metric,
+        short: result.short,
+        long: result.long
+      }));
+      return acc;
+    }, {});
+
+    const computedResults = {
       topResults: results.slice(0, 20),
-      allResults: results
-    });
-    
+      allResults: results,
+      metrics: PERFORMANCE_METRICS,
+      primaryMetric,
+      chartData
+    };
+
+    setSimulationResults(computedResults);
+
+    if (typeof window !== 'undefined' && stockCode) {
+      try {
+        const cacheKey = getSimulationCacheKey(stockCode);
+        window.localStorage.setItem(
+          cacheKey,
+          JSON.stringify({
+            timestamp: Date.now(),
+            data: computedResults
+          })
+        );
+      } catch (err) {
+        console.error('Error caching MA simulation results:', err);
+      }
+    }
+
     setProgressMessage('');
     setSimulating(false);
   };
@@ -140,32 +272,18 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
           </p>
           <div className="flex gap-2 flex-wrap">
             <button
-              onClick={() => runSimulation(3)}
+              onClick={() => runSimulation()}
               disabled={simulating}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded transition-colors text-sm font-semibold"
             >
-              {simulating ? 'Simulating...' : 'Find Best 3-Day %'}
+              {simulating ? 'Simulating...' : 'Find Best MA Performance'}
             </button>
             <button
-              onClick={() => runSimulation(7)}
+              onClick={() => runSimulation({ forceReload: true })}
               disabled={simulating}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded transition-colors text-sm font-semibold"
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-gray-600 text-white rounded transition-colors text-sm font-semibold"
             >
-              {simulating ? 'Simulating...' : 'Find Best 7-Day %'}
-            </button>
-            <button
-              onClick={() => runSimulation(14)}
-              disabled={simulating}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded transition-colors text-sm font-semibold"
-            >
-              {simulating ? 'Simulating...' : 'Find Best 14-Day %'}
-            </button>
-            <button
-              onClick={() => runSimulation(30)}
-              disabled={simulating}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded transition-colors text-sm font-semibold"
-            >
-              {simulating ? 'Simulating...' : 'Find Best 30-Day %'}
+              {simulating ? 'Simulating...' : 'Force Reload (Ignore Cache)'}
             </button>
           </div>
 
@@ -184,7 +302,7 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
         {simulationResults && (
           <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', borderLeft: '3px solid #10b981' }}>
             <h4 className="text-base font-bold mb-3" style={{ color: '#86efac' }}>
-              Top 20 MA Combinations for {simulationResults.metric}-Day Performance
+              Top 20 MA Combinations (Ranked by Total {simulationResults.primaryMetric}-Day %)
             </h4>
             <div className="overflow-x-auto">
               <table className="w-full text-sm">
@@ -193,16 +311,20 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
                     <th className="text-left py-2 px-3" style={{ color: '#93c5fd' }}>Rank</th>
                     <th className="text-center py-2 px-3" style={{ color: '#93c5fd' }}>Short MA</th>
                     <th className="text-center py-2 px-3" style={{ color: '#93c5fd' }}>Long MA</th>
-                    <th className="text-right py-2 px-3" style={{ color: '#93c5fd' }}>Total {simulationResults.metric}-Day %</th>
+                    {simulationResults.metrics.map(metric => (
+                      <th key={metric} className="text-right py-2 px-3" style={{ color: '#93c5fd' }}>
+                        Total {metric}-Day %
+                      </th>
+                    ))}
                     <th className="text-center py-2 px-3" style={{ color: '#93c5fd' }}>Signals</th>
-                    <th className="text-right py-2 px-3" style={{ color: '#93c5fd' }}>Win Rate</th>
+                    <th className="text-right py-2 px-3" style={{ color: '#93c5fd' }}>Win Rate ({simulationResults.primaryMetric}-Day)</th>
                   </tr>
                 </thead>
                 <tbody>
                   {simulationResults.topResults.map((result, idx) => (
                     <tr key={idx} style={{ borderBottom: '1px solid #1e3a8a' }}>
-                      <td 
-                        className="py-2 px-3 cursor-pointer hover:underline font-semibold" 
+                      <td
+                        className="py-2 px-3 cursor-pointer hover:underline font-semibold"
                         style={{ color: '#60a5fa' }}
                         onClick={() => applyParameters(result.short, result.long)}
                         title="Click to apply these parameters"
@@ -211,11 +333,22 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
                       </td>
                       <td className="text-center py-2 px-3 font-semibold" style={{ color: '#60a5fa' }}>{result.short}d</td>
                       <td className="text-center py-2 px-3 font-semibold" style={{ color: '#a78bfa' }}>{result.long}d</td>
-                      <td className="text-right py-2 px-3 font-bold" style={{ color: result.totalPerf >= 0 ? '#22c55e' : '#ef4444' }}>
-                        {result.totalPerf >= 0 ? '+' : ''}{result.totalPerf}%
-                      </td>
+                      {simulationResults.metrics.map(metric => {
+                        const value = result.totals?.[metric] ?? 0;
+                        return (
+                          <td
+                            key={metric}
+                            className="text-right py-2 px-3 font-bold"
+                            style={{ color: value >= 0 ? '#22c55e' : '#ef4444' }}
+                          >
+                            {formatPerformance(value)}
+                          </td>
+                        );
+                      })}
                       <td className="text-center py-2 px-3" style={{ color: '#d1d5db' }}>{result.crossoverCount}</td>
-                      <td className="text-right py-2 px-3" style={{ color: '#fbbf24' }}>{result.winRate}%</td>
+                      <td className="text-right py-2 px-3" style={{ color: '#fbbf24' }}>
+                        {result.winRates?.[simulationResults.primaryMetric]?.toFixed(1) ?? '0.0'}%
+                      </td>
                     </tr>
                   ))}
                 </tbody>
@@ -227,8 +360,46 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
             >
               Close Results
             </button>
+            <div className="mt-6">
+              <h5 className="text-sm font-semibold mb-2" style={{ color: '#bfdbfe' }}>
+                Performance Distribution by Moving Average Combination
+              </h5>
+              <div className="h-96">
+                <ResponsiveContainer width="100%" height="100%">
+                  <ScatterChart margin={{ top: 20, right: 30, bottom: 40, left: 20 }}>
+                    <CartesianGrid strokeDasharray="3 3" stroke="#1e3a8a" />
+                    <XAxis
+                      type="number"
+                      dataKey="x"
+                      name="Long MA"
+                      tick={{ fill: '#bfdbfe', fontSize: 12 }}
+                      label={{ value: 'Long MA Length', position: 'insideBottom', offset: -10, fill: '#93c5fd' }}
+                    />
+                    <YAxis
+                      type="number"
+                      dataKey="y"
+                      name="Short MA"
+                      tick={{ fill: '#bfdbfe', fontSize: 12 }}
+                      label={{ value: 'Short MA Length', angle: -90, position: 'insideLeft', fill: '#93c5fd' }}
+                    />
+                    <ZAxis type="number" dataKey="z" range={[60, 200]} />
+                    <RechartsTooltip cursor={{ strokeDasharray: '3 3' }} content={chartTooltipContent} />
+                    <Legend wrapperStyle={{ color: '#bfdbfe' }} />
+                    {simulationResults.metrics.map(metric => (
+                      <Scatter
+                        key={metric}
+                        name={`${metric}-Day Total`}
+                        data={simulationResults.chartData?.[metric] ?? []}
+                        fill={METRIC_COLORS[metric]}
+                      />
+                    ))}
+                  </ScatterChart>
+                </ResponsiveContainer>
+              </div>
+            </div>
           </div>
         )}
+
 
         <div className="overflow-x-auto">
           <table className="w-full">
