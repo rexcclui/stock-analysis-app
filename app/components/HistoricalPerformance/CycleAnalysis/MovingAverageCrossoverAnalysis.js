@@ -12,12 +12,15 @@ import {
 } from 'recharts';
 
 const PERFORMANCE_METRICS = [3, 7, 14, 30];
+const CACHE_VERSION = 'v1';
 const METRIC_COLORS = {
   3: '#22c55e',
   7: '#38bdf8',
   14: '#f97316',
   30: '#f472b6'
 };
+
+const getSimulationCacheKey = (stockCode) => `ma-crossover-simulation:${CACHE_VERSION}:${stockCode}`;
 
 export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, maLong = 200, loading = false, onSimulate = null }) {
   const [simulationResults, setSimulationResults] = useState(null);
@@ -53,8 +56,39 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
     );
   };
 
-  const runSimulation = async () => {
+  const runSimulation = async ({ forceReload = false } = {}) => {
+    const stockCode = onSimulate?.stockCode ?? cycleAnalysis?.symbol ?? 'unknown';
+
     setSimulating(true);
+    setProgressMessage(forceReload ? 'Running fresh simulation...' : 'Checking cache...');
+
+    if (forceReload && typeof window !== 'undefined' && stockCode) {
+      try {
+        window.localStorage.removeItem(getSimulationCacheKey(stockCode));
+      } catch (err) {
+        console.error('Error clearing MA simulation cache:', err);
+      }
+    }
+
+    if (!forceReload && typeof window !== 'undefined' && stockCode) {
+      try {
+        const cacheKey = getSimulationCacheKey(stockCode);
+        const cachedValue = window.localStorage.getItem(cacheKey);
+
+        if (cachedValue) {
+          const parsed = JSON.parse(cachedValue);
+          if (parsed?.data) {
+            setSimulationResults(parsed.data);
+            setProgressMessage('Loaded cached results.');
+            setSimulating(false);
+            return;
+          }
+        }
+      } catch (err) {
+        console.error('Error loading cached MA simulation results:', err);
+      }
+    }
+
     setProgressMessage('Initializing simulation...');
 
     // Simulate different MA combinations from 5 to 100 for short, 50 to 300 for long
@@ -82,7 +116,7 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
         // Fetch crossover data for this combination
         try {
           const response = await fetch(
-            `/api/cycle-analysis?symbol=${onSimulate?.stockCode}&years=5&mode=ma-crossover&maShort=${short}&maLong=${long}`
+            `/api/cycle-analysis?symbol=${stockCode}&years=5&mode=ma-crossover&maShort=${short}&maLong=${long}`
           );
 
           if (!response.ok) continue;
@@ -147,13 +181,30 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
       return acc;
     }, {});
 
-    setSimulationResults({
+    const computedResults = {
       topResults: results.slice(0, 20),
       allResults: results,
       metrics: PERFORMANCE_METRICS,
       primaryMetric,
       chartData
-    });
+    };
+
+    setSimulationResults(computedResults);
+
+    if (typeof window !== 'undefined' && stockCode) {
+      try {
+        const cacheKey = getSimulationCacheKey(stockCode);
+        window.localStorage.setItem(
+          cacheKey,
+          JSON.stringify({
+            timestamp: Date.now(),
+            data: computedResults
+          })
+        );
+      } catch (err) {
+        console.error('Error caching MA simulation results:', err);
+      }
+    }
 
     setProgressMessage('');
     setSimulating(false);
@@ -221,11 +272,18 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
           </p>
           <div className="flex gap-2 flex-wrap">
             <button
-              onClick={runSimulation}
+              onClick={() => runSimulation()}
               disabled={simulating}
               className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded transition-colors text-sm font-semibold"
             >
               {simulating ? 'Simulating...' : 'Find Best MA Performance'}
+            </button>
+            <button
+              onClick={() => runSimulation({ forceReload: true })}
+              disabled={simulating}
+              className="px-4 py-2 bg-amber-600 hover:bg-amber-700 disabled:bg-gray-600 text-white rounded transition-colors text-sm font-semibold"
+            >
+              {simulating ? 'Simulating...' : 'Force Reload (Ignore Cache)'}
             </button>
           </div>
 
