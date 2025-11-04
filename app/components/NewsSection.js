@@ -1,5 +1,6 @@
 import React from 'react';
 import { TrendingUp, TrendingDown } from 'lucide-react';
+import { LoadingState } from './LoadingState';
 
 /**
  * NewsSection
@@ -7,11 +8,14 @@ import { TrendingUp, TrendingDown } from 'lucide-react';
  * - news: array of { title, date, sentiment }
  * - title: optional override title
  */
-export function NewsSection({ news = [], title = 'Latest News' }) {
+export function NewsSection({ news = [], title = 'Latest News', loading = false }) {
   console.log('[NewsSection] Received news:', { length: news?.length, isArray: Array.isArray(news), data: news });
-  
+
   if (!news || !Array.isArray(news) || news.length === 0) {
     console.log('[NewsSection] No news to display');
+    if (loading) {
+      return <LoadingState message="Loading latest news..." className="mb-6" />;
+    }
     return null;
   }
   

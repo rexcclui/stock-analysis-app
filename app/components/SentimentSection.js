@@ -1,4 +1,5 @@
 import React from 'react';
+import { LoadingState } from './LoadingState';
 
 const getSentimentColor = (score) => {
   if (score >= 0.6) return 'text-green-400';
@@ -11,8 +12,13 @@ const getSentimentColor = (score) => {
  * Props:
  * - sentiment: { score, positive, neutral, negative }
  */
-export function SentimentSection({ sentiment }) {
-  if (!sentiment) return null;
+export function SentimentSection({ sentiment, loading = false }) {
+  if (!sentiment) {
+    if (loading) {
+      return <LoadingState message="Loading sentiment insights..." className="mb-6" />;
+    }
+    return null;
+  }
   return (
     <div className="bg-gray-800 rounded-xl shadow-xl p-6 border border-gray-700" style={{ marginTop: '1rem' }}>
       <h3 className="text-xl font-bold text-white mb-4">Social Media Sentiment</h3>

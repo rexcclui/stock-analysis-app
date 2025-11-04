@@ -1,5 +1,6 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { LoadingState } from './LoadingState';
 
 /**
  * PricePerformanceChart
@@ -28,11 +29,19 @@ export function PricePerformanceChart({
   chartCompareInput,
   setChartCompareInput,
   buildNormalizedSeries,
-  buildMultiStockDataset
+  buildMultiStockDataset,
+  loading = false
 }) {
   const chartData = selectedStock?.chartData?.[chartPeriod] || [];
   const fullHistoricalData = selectedStock?.chartData?.fullHistorical || [];
   const [dataOffset, setDataOffset] = useState(0); // Offset in days from most recent
+
+  if (!selectedStock) {
+    if (loading) {
+      return <LoadingState message="Loading price performance chart..." className="mb-6" />;
+    }
+    return null;
+  }
 
   // Debug: Log fullHistoricalData availability
   useEffect(() => {

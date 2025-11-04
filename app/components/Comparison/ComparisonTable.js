@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { X, ArrowUp, ArrowDown, LineChart } from 'lucide-react';
 import SentimentChart from '../SentimentChart';
 import { HeatmapView } from './HeatmapView';
+import { LoadingState } from '../LoadingState';
 
 const getColorForPerformance = (value) => {
   const numValue = parseFloat(value);
@@ -68,10 +69,22 @@ export function ComparisonTable({
   onHeatmapSizeByChange,
   onStockCodeClick,
   onAddToChart,
-  chartCompareStocks
+  chartCompareStocks,
+  loading = false
 }) {
   const [colorMode, setColorMode] = useState('historical'); // 'historical' | 'relative'
   const [sentimentExpanded, setSentimentExpanded] = useState(false); // Start collapsed
+
+  if (!comparisonStocks || comparisonStocks.length === 0) {
+    if (loading) {
+      return <LoadingState message="Loading comparison data..." className="mb-6" />;
+    }
+    return (
+      <div className="bg-gray-800 rounded-xl p-6 border border-gray-700 text-center text-gray-300" style={{ marginTop: '1rem' }}>
+        No comparison data available.
+      </div>
+    );
+  }
 
   // Filter comparison stocks based on relationship type
   let filteredComparisonStocks = comparisonStocks.filter(stock => {

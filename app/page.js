@@ -10,6 +10,7 @@ import { SentimentSection } from './components/SentimentSection';
 import { SentimentTimeSeriesChart } from './components/SentimentTimeSeriesChart';
 import { StockResultCard } from './components/StockResultCard';
 import { HistoricalPerformanceCheck } from './components/HistoricalPerformanceCheck';
+import { LoadingState } from './components/LoadingState';
 
 // Helper function to fetch with timeout
 const fetchWithTimeout = (url, timeout = 10000) => {
@@ -639,9 +640,16 @@ export default function StockAnalysisDashboard() {
             </div>
           )}
 
+          {!selectedStock && loading && (
+            <LoadingState message="Fetching latest stock data..." className="mb-6" />
+          )}
+
           {selectedStock && (
             <>
-              <StockResultCard stock={selectedStock} />
+              {loading && (
+                <LoadingState message="Fetching latest stock data..." className="mb-6" />
+              )}
+              <StockResultCard stock={selectedStock} loading={loading} />
 
               <HistoricalPerformanceCheck stockCode={selectedStock.code} />
 
@@ -657,10 +665,12 @@ export default function StockAnalysisDashboard() {
                 setChartCompareInput={setChartCompareInput}
                 buildNormalizedSeries={buildNormalizedSeries}
                 buildMultiStockDataset={buildMultiStockDataset}
+                loading={loading}
               />
 
               <SentimentTimeSeriesChart
                 sentimentTimeSeries={selectedStock.sentimentTimeSeries}
+                loading={loading}
               />
 
               <ComparisonSection
@@ -690,9 +700,9 @@ export default function StockAnalysisDashboard() {
                 chartCompareStocks={chartCompareStocks}
               />
 
-              <SentimentSection sentiment={selectedStock.sentiment} />
+              <SentimentSection sentiment={selectedStock.sentiment} loading={loading} />
 
-              <NewsSection news={news} />
+              <NewsSection news={news} loading={loading} />
             </>
           )}
         </div>

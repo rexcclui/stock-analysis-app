@@ -1,6 +1,7 @@
 'use client';
 
 import React from 'react';
+import { LoadingState } from './LoadingState';
 
 // Color helper for sentiment score
 const getSentimentColor = (score) => {
@@ -15,8 +16,13 @@ const getSentimentColor = (score) => {
  * Props:
  *  - stock: full stock object (selectedStock) or null
  */
-export function StockResultCard({ stock }) {
-  if (!stock) return null;
+export function StockResultCard({ stock, loading = false }) {
+  if (!stock) {
+    if (loading) {
+      return <LoadingState message="Loading stock summary..." className="mb-6" />;
+    }
+    return null;
+  }
 
   return (
     <div className="bg-gradient-to-r from-blue-900/40 to-indigo-900/40 rounded-xl p-6 mb-6 border border-blue-800/30" style={{ marginTop: '1rem' }}>

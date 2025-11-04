@@ -2,6 +2,7 @@ import React from 'react';
 import { AddCustomComparison } from './AddCustomComparison';
 import { ComparisonTable } from './ComparisonTable';
 import { SearchHistoryTable } from '../SearchHistoryTable';
+import { LoadingState } from '../LoadingState';
 
 export function ComparisonSection({
   selectedStock,
@@ -29,7 +30,13 @@ export function ComparisonSection({
   onAddToChart,
   chartCompareStocks
 }) {
-  //console.log('TEMP_LOG[7] ComparisonSection> comparisonStocks :', comparisonStocks );
+  const hasComparisonData = comparisonStocks && comparisonStocks.length > 0;
+  const showLoading = loading && !hasComparisonData;
+
+  if (showLoading) {
+    return <LoadingState message="Loading comparison data..." className="mb-6" />;
+  }
+
   return (
     <>
       <SearchHistoryTable
@@ -66,6 +73,7 @@ export function ComparisonSection({
         onStockCodeClick={onSearchHistoryCodeClick}
         onAddToChart={onAddToChart}
         chartCompareStocks={chartCompareStocks}
+        loading={loading}
       />
     </>
   );

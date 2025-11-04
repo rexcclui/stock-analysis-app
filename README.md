@@ -13,6 +13,10 @@ For detailed documentation, see [IP_TRACKING.md](./IP_TRACKING.md)
 
 ## Getting Started
 
+### Repository branches
+
+The active development branch in this repository is now `main`. If you previously looked for a branch named `work`, use `git checkout main` to access the latest changes.
+
 First, run the development server:
 
 ```bash

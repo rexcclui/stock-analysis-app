@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { ChevronDown, ChevronUp } from 'lucide-react';
+import { LoadingState } from './LoadingState';
 
 /**
  * SentimentTimeSeriesChart
@@ -10,7 +11,7 @@ import { ChevronDown, ChevronUp } from 'lucide-react';
  * Props:
  * - sentimentTimeSeries: array of { date, score } objects
  */
-export function SentimentTimeSeriesChart({ sentimentTimeSeries }) {
+export function SentimentTimeSeriesChart({ sentimentTimeSeries, loading = false }) {
   const [isExpanded, setIsExpanded] = useState(true);
   // Calculate the actual period from the data
   let periodLabel = "No Data";
@@ -35,6 +36,9 @@ export function SentimentTimeSeriesChart({ sentimentTimeSeries }) {
   }
 
   if (!sentimentTimeSeries || sentimentTimeSeries.length === 0) {
+    if (loading) {
+      return <LoadingState message="Loading sentiment trend..." className="mb-6" />;
+    }
     return (
       <div className="mb-6" style={{ marginTop: '1rem' }}>
         <h3

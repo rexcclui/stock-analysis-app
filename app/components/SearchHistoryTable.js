@@ -1,12 +1,18 @@
 import React from 'react';
 import { RefreshCw } from 'lucide-react';
+import { LoadingState } from './LoadingState';
 
 // props: historyStocks: array of { code, dayChange }
 // onClickCode(code): optional callback to trigger a search again
 // onReload: optional callback to reload all stocks
 // loading: boolean to show loading state
 export function SearchHistoryTable({ historyStocks, onClickCode, onReload, loading }) {
-  if (!historyStocks || historyStocks.length === 0) return null;
+  if (!historyStocks || historyStocks.length === 0) {
+    if (loading) {
+      return <LoadingState message="Loading previous searches..." className="mb-6" />;
+    }
+    return null;
+  }
 
   return (
     <div className="bg-gray-800 rounded-xl p-4 mb-6 border border-gray-700 shadow-md" style={{ marginTop: '1rem' }}>
