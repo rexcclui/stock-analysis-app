@@ -212,7 +212,7 @@ export function HeatmapView({
                     tabIndex={0}
                     className="font-bold text-xs underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 rounded block mb-1"
                     style={{
-                      color: textColor,
+                      color: stock.code === selectedStock.code ? '#fbbf24' : textColor,
                     }}
                   >
                     {stock.code}
