@@ -41,10 +41,23 @@ const getMarketCapValue = (marketCap) => {
   return value;
 };
 
+// Helper function to convert relationshipType to abbreviation
+const getRelationshipTypeAbbr = (relationshipType) => {
+  if (!relationshipType) return '-';
+  const type = relationshipType.toLowerCase();
+  if (type.includes('industry')) return 'I';
+  if (type.includes('sector')) return 'S';
+  if (type.includes('competitor')) return 'C';
+  if (type.includes('co-held') || type.includes('etf')) return 'E';
+  return '-';
+};
+
 export function ComparisonTable({
   selectedStock,
   comparisonStocks,
   comparisonType = 'industry',
+  relationshipTypeFilter = 'all',
+  comparisonRowSize = 30,
   periods,
   onRemoveComparison,
   viewMode,
@@ -59,10 +72,39 @@ export function ComparisonTable({
 }) {
   const [colorMode, setColorMode] = useState('historical'); // 'historical' | 'relative'
 
+  // Filter comparison stocks based on relationship type
+  let filteredComparisonStocks = comparisonStocks.filter(stock => {
+    // SPY and QQQ are always shown (benchmarks)
+    if (stock.code === 'SPY' || stock.code === 'QQQ') return true;
+
+    // Filter based on relationshipTypeFilter
+    if (relationshipTypeFilter === 'all') return true;
+
+    if (!stock.relationshipType) return false;
+
+    const type = stock.relationshipType.toLowerCase();
+    if (relationshipTypeFilter === 'industry' && type.includes('industry')) return true;
+    if (relationshipTypeFilter === 'sector' && type.includes('sector')) return true;
+    if (relationshipTypeFilter === 'competitor' && type.includes('competitor')) return true;
+    if (relationshipTypeFilter === 'etf' && (type.includes('co-held') || type.includes('etf'))) return true;
+
+    return false;
+  });
+
+  // Separate benchmarks from other stocks for row size limiting
+  const benchmarks = filteredComparisonStocks.filter(s => s.code === 'SPY' || s.code === 'QQQ');
+  const nonBenchmarks = filteredComparisonStocks.filter(s => s.code !== 'SPY' && s.code !== 'QQQ');
+
+  // Sort non-benchmarks by market cap (descending) and limit to comparisonRowSize
+  const sortedLimitedNonBenchmarks = nonBenchmarks
+    .sort((a, b) => getMarketCapValue(b.marketCap) - getMarketCapValue(a.marketCap))
+    .slice(0, comparisonRowSize);
+
+  // Combine benchmarks + limited sorted stocks
+  filteredComparisonStocks = [...benchmarks, ...sortedLimitedNonBenchmarks];
+
   // Generate heading based on comparison type
-  const comparisonHeading = comparisonType === 'sector'
-    ? `Sector Comparison - ${selectedStock?.sector || ''}`
-    : `Industry Comparison - ${selectedStock?.industry || ''}`;
+  const comparisonHeading = 'Related Stocks Comparison';
 
   return (
     <div className="bg-gray-800 rounded-xl shadow-xl overflow-hidden border border-gray-700">
@@ -135,17 +177,24 @@ export function ComparisonTable({
         </div>
       </div>
       {viewMode === 'table' ? (
-        <TableView
-          selectedStock={selectedStock}
-          comparisonStocks={comparisonStocks}
-          periods={periods}
-          onRemoveComparison={onRemoveComparison}
-          onStockCodeClick={onStockCodeClick}
-          onAddToChart={onAddToChart}
-          chartCompareStocks={chartCompareStocks}
-          colorMode={colorMode}
-          setColorMode={setColorMode}
-        />
+        <>
+          <div className="px-6 py-3 bg-gray-800/50 border-b border-gray-700">
+            <p style={{ fontSize: '11px', fontStyle: 'italic', color: '#9CA3AF' }}>
+              <strong style={{ fontStyle: 'normal' }}>Type:</strong> I = Industry, S = Sector, C = Competitor, E = ETF (Co-held)
+            </p>
+          </div>
+          <TableView
+            selectedStock={selectedStock}
+            comparisonStocks={filteredComparisonStocks}
+            periods={periods}
+            onRemoveComparison={onRemoveComparison}
+            onStockCodeClick={onStockCodeClick}
+            onAddToChart={onAddToChart}
+            chartCompareStocks={chartCompareStocks}
+            colorMode={colorMode}
+            setColorMode={setColorMode}
+          />
+        </>
       ) : (
         <HeatmapView
           selectedStock={selectedStock}
@@ -356,6 +405,9 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
             >
               <span className="inline-block truncate max-w-[140px] align-middle">Name</span> <SortIcon active={isActive('name')} direction={sortDirection} />
             </th>
+            <th className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
+              Type
+            </th>
             <th
               className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
               onClick={() => handleSort('marketCap')}
@@ -445,6 +497,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 >{selectedStock.name}</span>
               )}
             </td>
+            <td className="px-2 py-3 text-center text-gray-400" style={{width:'50px', minWidth:'50px'}}>-</td>
             <td className="px-4 py-3">
               <div style={getMarketCapCellStyle(selectedStock.marketCap)}>
                 ${selectedStock.marketCap}
@@ -558,6 +611,9 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                     title={stock.name}
                   >{stock.name}</span>
                 )}
+              </td>
+              <td className="px-2 py-3 text-center text-gray-200" style={{width:'50px', minWidth:'50px'}}>
+                {getRelationshipTypeAbbr(stock.relationshipType)}
               </td>
               <td className="px-4 py-3">
                 <div style={getMarketCapCellStyle(stock.marketCap)}>

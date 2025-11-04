@@ -7,6 +7,10 @@ export function ComparisonSection({
   selectedStock,
   comparisonStocks,
   comparisonType,
+  relationshipTypeFilter,
+  onRelationshipTypeFilterChange,
+  comparisonRowSize,
+  onComparisonRowSizeChange,
   manualStock,
   onManualStockChange,
   onAddComparison,
@@ -39,12 +43,18 @@ export function ComparisonSection({
         onManualStockChange={onManualStockChange}
         onAddComparison={onAddComparison}
         loading={loading}
+        relationshipTypeFilter={relationshipTypeFilter}
+        onRelationshipTypeFilterChange={onRelationshipTypeFilterChange}
+        comparisonRowSize={comparisonRowSize}
+        onComparisonRowSizeChange={onComparisonRowSizeChange}
       />
 
       <ComparisonTable
         selectedStock={selectedStock}
         comparisonStocks={comparisonStocks}
         comparisonType={comparisonType}
+        relationshipTypeFilter={relationshipTypeFilter}
+        comparisonRowSize={comparisonRowSize}
         periods={periods}
         onRemoveComparison={onRemoveComparison}
         viewMode={viewMode}

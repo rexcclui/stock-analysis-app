@@ -49,25 +49,20 @@ const fetchCompleteStockData = async (symbol, apiCounts = null) => {
       console.warn('Sentiment fetch failed, using defaults:', err.message);
     }
 
-    // Fetch competitors (optional)
-    let competitors = [];
-    let fetchedComparisonType = 'industry';
+    // Fetch related stocks (optional)
+    let relatedStocksData = [];
+    let fetchedComparisonType = 'related';
     try {
       if (apiCounts) apiCounts.competitors++;
-      const competitorsRes = await fetchWithTimeout(`/api/competitors?industry=${stock.industry}&sector=${stock.sector}&exclude=${symbol}`, 10000);
-      if (competitorsRes.ok) {
-        const competitorsData = await competitorsRes.json();
-        // Handle both old array format and new object format
-        if (Array.isArray(competitorsData)) {
-          competitors = competitorsData;
-        } else if (competitorsData.competitors) {
-          competitors = competitorsData.competitors;
-          fetchedComparisonType = competitorsData.type || 'industry';
+      const relatedRes = await fetchWithTimeout(`/api/related-stocks?symbol=${symbol}`, 10000);
+      if (relatedRes.ok) {
+        const relatedData = await relatedRes.json();
+        if (relatedData && relatedData.relatedStocks) {
+          relatedStocksData = relatedData.relatedStocks; // Array of { symbol, name, relationshipType }
         }
-        if (!Array.isArray(competitors)) competitors = [];
       }
     } catch (err) {
-      console.warn('Competitors fetch failed:', err.message);
+      console.warn('Related stocks fetch failed:', err.message);
     }
 
     // Fetch news (optional)
@@ -90,7 +85,7 @@ const fetchCompleteStockData = async (symbol, apiCounts = null) => {
       sentiment,
       sentimentHistory: sentiment.sentimentHistory, // Ensure this is passed
       sentimentTimeSeries: sentiment.sentimentTimeSeries,
-      competitors: Array.isArray(competitors) ? competitors : [],
+      relatedStocks: Array.isArray(relatedStocksData) ? relatedStocksData : [],
       news: Array.isArray(news) ? news : [],
       comparisonType: fetchedComparisonType
     };
@@ -108,6 +103,8 @@ export default function StockAnalysisDashboard() {
   const [chartPeriod, setChartPeriod] = useState('1M');
   const [comparisonStocks, setComparisonStocks] = useState([]);
   const [comparisonType, setComparisonType] = useState('industry'); // 'industry' or 'sector'
+  const [relationshipTypeFilter, setRelationshipTypeFilter] = useState('all'); // 'all', 'industry', 'sector', 'competitor', 'etf'
+  const [comparisonRowSize, setComparisonRowSize] = useState(30); // 10, 30, 50, 100
   const [manualStock, setManualStock] = useState('');
   const [savedComparisons, setSavedComparisons] = useState({});
   const [loading, setLoading] = useState(false);
@@ -351,12 +348,16 @@ export default function StockAnalysisDashboard() {
       const benchmarkData = await Promise.all(benchmarkPromises);
       const validBenchmarks = benchmarkData.filter(b => b !== null);
 
-      // Filter out SPY and QQQ from competitors to avoid duplicates
-      const competitorPromises = stockData.competitors
-        .filter(code => code !== 'SPY' && code !== 'QQQ')
-        .map(code => fetchCompleteStockData(code, apiCounts));
-      const competitorData = await Promise.all(competitorPromises);
-      const validCompetitors = competitorData.filter(c => c !== null);
+      // Filter out SPY and QQQ from related stocks to avoid duplicates
+      const relatedPromises = (stockData.relatedStocks || [])
+        .filter(item => item.symbol !== 'SPY' && item.symbol !== 'QQQ')
+        .map(item =>
+          fetchCompleteStockData(item.symbol, apiCounts).then(stock =>
+            stock ? { ...stock, relationshipType: item.relationshipType } : null
+          )
+        );
+      const relatedData = await Promise.all(relatedPromises);
+      const validRelated = relatedData.filter(c => c !== null);
 
       const saved = savedComparisons[stockCode] || [];
       // Filter out SPY and QQQ from saved comparisons to avoid duplicates
@@ -366,9 +367,9 @@ export default function StockAnalysisDashboard() {
       const savedData = await Promise.all(savedPromises);
       const validSaved = savedData.filter(s => s !== null);
 
-      // SPY and QQQ first, then competitors and saved stocks
+      // SPY and QQQ first, then related stocks and saved stocks
       // Deduplicate based on stock code to prevent duplicates
-      const allStocks = [...validBenchmarks, ...validCompetitors, ...validSaved];
+      const allStocks = [...validBenchmarks, ...validRelated, ...validSaved];
       const uniqueStocks = allStocks.reduce((acc, stock) => {
         if (!acc.find(s => s.code === stock.code)) {
           acc.push(stock);
@@ -666,6 +667,10 @@ export default function StockAnalysisDashboard() {
                 selectedStock={selectedStock}
                 comparisonStocks={comparisonStocks}
                 comparisonType={comparisonType}
+                relationshipTypeFilter={relationshipTypeFilter}
+                onRelationshipTypeFilterChange={setRelationshipTypeFilter}
+                comparisonRowSize={comparisonRowSize}
+                onComparisonRowSizeChange={setComparisonRowSize}
                 manualStock={manualStock}
                 onManualStockChange={setManualStock}
                 onAddComparison={addManualComparison}

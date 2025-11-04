@@ -1,30 +1,38 @@
 import React from 'react';
 
-export function MovingAverageCrossoverAnalysis({ cycleAnalysis }) {
+export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, maLong = 200, loading = false }) {
   return (
     <div className="space-y-6">
       <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-4 mb-6">
         <p className="italic" style={{ fontSize: '11px', color: '#fef08a' }}>
-          <strong style={{ fontStyle: 'normal', color: '#fefce8' }}>Moving Average Crossover Analysis:</strong> This tracks the relationship between 50-day and 200-day moving averages.
-          A <strong style={{ fontStyle: 'normal', color: '#22c55e' }}>Golden Cross</strong> (bullish signal) occurs when the 50-day MA crosses above the 200-day MA.
-          A <strong style={{ fontStyle: 'normal', color: '#ef4444' }}>Death Cross</strong> (bearish signal) occurs when the 50-day MA crosses below the 200-day MA.
+          <strong style={{ fontStyle: 'normal', color: '#fefce8' }}>Moving Average Crossover Analysis:</strong> This tracks the relationship between {maShort}-day and {maLong}-day moving averages.
+          A <strong style={{ fontStyle: 'normal', color: '#22c55e' }}>Golden Cross</strong> (bullish signal) occurs when the {maShort}-day MA crosses above the {maLong}-day MA.
+          A <strong style={{ fontStyle: 'normal', color: '#ef4444' }}>Death Cross</strong> (bearish signal) occurs when the {maShort}-day MA crosses below the {maLong}-day MA.
           These crossovers are widely used technical indicators for identifying potential trend changes in the market.
         </p>
       </div>
 
       <div className="rounded-lg p-6 border" style={{ backgroundColor: 'rgba(23, 37, 84, 0.5)', borderColor: '#1e3a8a' }}>
-        <h3 className="text-lg font-bold mb-4" style={{ color: '#dbeafe' }}>Current Moving Average Status</h3>
+        <div className="flex items-center justify-between mb-4">
+          <h3 className="text-lg font-bold" style={{ color: '#dbeafe' }}>Current Moving Average Status</h3>
+          {loading && (
+            <div className="flex items-center gap-2 text-blue-400">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
+              <span className="text-sm">Analyzing...</span>
+            </div>
+          )}
+        </div>
         <div className="grid grid-cols-4 gap-4">
           <div className="text-center">
             <div className="text-sm" style={{ color: '#93c5fd' }}>Current Price</div>
             <div className="text-xl font-bold style={{ color: '#dbeafe' }}">${cycleAnalysis.currentPrice}</div>
           </div>
           <div className="text-center">
-            <div className="text-sm" style={{ color: '#93c5fd' }}>50-Day MA</div>
+            <div className="text-sm" style={{ color: '#93c5fd' }}>{maShort}-Day MA</div>
             <div className="text-xl font-bold text-blue-400">${cycleAnalysis.currentMA50}</div>
           </div>
           <div className="text-center">
-            <div className="text-sm" style={{ color: '#93c5fd' }}>200-Day MA</div>
+            <div className="text-sm" style={{ color: '#93c5fd' }}>{maLong}-Day MA</div>
             <div className="text-xl font-bold text-purple-400">${cycleAnalysis.currentMA200}</div>
           </div>
           <div className="text-center">

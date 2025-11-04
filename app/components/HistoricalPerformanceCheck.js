@@ -26,8 +26,13 @@ export function HistoricalPerformanceCheck({ stockCode }) {
   const [spyDirection, setSpyDirection] = useState("up");
   const [bigMovesDirection, setBigMovesDirection] = useState("up");
   const [gapOpenDirection, setGapOpenDirection] = useState("up");
+  const [maShort, setMaShort] = useState(50);
+  const [maLong, setMaLong] = useState(200);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  const [relatedStocks, setRelatedStocks] = useState([]);
+  const [relatedStocksExpanded, setRelatedStocksExpanded] = useState(false);
+  const [loadingRelatedStocks, setLoadingRelatedStocks] = useState(false);
 
   const analyzeTrends = async () => {
     if (!stockCode) {
@@ -279,9 +284,14 @@ export function HistoricalPerformanceCheck({ stockCode }) {
     setError(null);
 
     try {
-      const response = await fetch(
-        `/api/cycle-analysis?symbol=${stockCode}&years=5&mode=${mode}`
-      );
+      let url = `/api/cycle-analysis?symbol=${stockCode}&years=5&mode=${mode}`;
+
+      // Add MA parameters for ma-crossover mode
+      if (mode === 'ma-crossover') {
+        url += `&maShort=${maShort}&maLong=${maLong}`;
+      }
+
+      const response = await fetch(url);
 
       if (!response.ok) {
         throw new Error("Failed to fetch cycle analysis data");
@@ -305,6 +315,39 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       setLoading(false);
     }
   };
+
+  const fetchRelatedStocks = async () => {
+    if (!stockCode) {
+      return;
+    }
+
+    setLoadingRelatedStocks(true);
+
+    try {
+      const response = await fetch(`/api/related-stocks?symbol=${stockCode}`);
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch related stocks");
+      }
+
+      const data = await response.json();
+      setRelatedStocks(data.relatedStocks || []);
+
+    } catch (err) {
+      console.error("Error fetching related stocks:", err);
+      setRelatedStocks([]);
+    } finally {
+      setLoadingRelatedStocks(false);
+    }
+  };
+
+  // Auto-fetch related stocks when stock changes
+  useEffect(() => {
+    if (stockCode && relatedStocksExpanded) {
+      fetchRelatedStocks();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stockCode, relatedStocksExpanded]);
 
   // Auto-trigger analysis when mode is selected
   useEffect(() => {
@@ -342,7 +385,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       analyzeCycles(selectedOption);
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedOption, stockCode]);
+  }, [selectedOption, stockCode, maShort, maLong]);
 
   // Auto-trigger statistics analysis when a statistics mode is selected
   useEffect(() => {
@@ -355,20 +398,99 @@ export function HistoricalPerformanceCheck({ stockCode }) {
   }, [selectedOption, stockCode]);
 
   return (
-    <div className="bg-gray-800 rounded-lg border border-gray-700" style={{ marginTop: '1rem' }}>
-      {/* Collapsible Header */}
-      <button
-        onClick={() => setIsExpanded(!isExpanded)}
-        className="w-full flex items-center justify-between p-4 hover:bg-gray-750 transition-colors"
-      >
-        <h2 className="text-xl font-bold text-white flex items-center gap-2">
-          <BarChart3 className="text-blue-400" size={24} />
-          Historical Data Analysis
-        </h2>
-        <div className="style={{ color: '#93c5fd' }}">
-          {isExpanded ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
-        </div>
-      </button>
+    <>
+      {/* Related Stocks Section */}
+      <div className="bg-gray-800 rounded-lg border border-gray-700" style={{ marginTop: '1rem' }}>
+        {/* Collapsible Header */}
+        <button
+          onClick={() => setRelatedStocksExpanded(!relatedStocksExpanded)}
+          className="w-full flex items-center justify-between p-4 hover:bg-gray-750 transition-colors"
+        >
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <BarChart3 className="text-green-400" size={24} />
+            Related Stocks
+          </h2>
+          <div className="style={{ color: '#93c5fd' }}">
+            {relatedStocksExpanded ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+          </div>
+        </button>
+
+        {/* Collapsible Content */}
+        {relatedStocksExpanded && (
+          <div className="p-6 pt-0">
+            {loadingRelatedStocks ? (
+              <div className="flex items-center justify-center py-8 text-blue-400">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-400 mr-3"></div>
+                <span>Loading related stocks...</span>
+              </div>
+            ) : relatedStocks.length > 0 ? (
+              <div className="overflow-x-auto">
+                <table className="w-full text-left border-collapse">
+                  <thead>
+                    <tr>
+                      <th className="px-3 py-2 text-gray-300 font-semibold border-b border-gray-600 text-sm" style={{ backgroundColor: 'rgba(30, 58, 138, 0.3)' }}>Stock Code</th>
+                      <th className="px-3 py-2 text-gray-300 font-semibold border-b border-gray-600 text-sm" style={{ backgroundColor: 'rgba(30, 58, 138, 0.3)' }}>Stock Name</th>
+                      <th className="px-3 py-2 text-gray-300 font-semibold border-b border-gray-600 text-sm" style={{ backgroundColor: 'rgba(30, 58, 138, 0.3)' }}>Relationship</th>
+                      <th className="px-3 py-2 text-gray-300 font-semibold border-b border-gray-600 text-sm" style={{ backgroundColor: 'rgba(20, 83, 45, 0.3)' }}>Stock Code</th>
+                      <th className="px-3 py-2 text-gray-300 font-semibold border-b border-gray-600 text-sm" style={{ backgroundColor: 'rgba(20, 83, 45, 0.3)' }}>Stock Name</th>
+                      <th className="px-3 py-2 text-gray-300 font-semibold border-b border-gray-600 text-sm" style={{ backgroundColor: 'rgba(20, 83, 45, 0.3)' }}>Relationship</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {relatedStocks.reduce((rows, stock, index) => {
+                      if (index % 2 === 0) {
+                        rows.push([stock]);
+                      } else {
+                        rows[rows.length - 1].push(stock);
+                      }
+                      return rows;
+                    }, []).map((row, rowIndex) => (
+                      <tr key={rowIndex} className="border-b border-gray-700 hover:bg-gray-700/30 transition-colors">
+                        <td className="px-3 py-2 font-medium text-sm" style={{ backgroundColor: 'rgba(30, 58, 138, 0.15)', color: '#60a5fa' }}>{row[0].symbol}</td>
+                        <td className="px-3 py-2 text-sm" style={{ backgroundColor: 'rgba(30, 58, 138, 0.15)', color: '#d1d5db' }}>{row[0].name}</td>
+                        <td className="px-3 py-2 text-sm" style={{ backgroundColor: 'rgba(30, 58, 138, 0.15)', color: '#9ca3af' }}>{row[0].relationshipType}</td>
+                        {row[1] ? (
+                          <>
+                            <td className="px-3 py-2 font-medium text-sm" style={{ backgroundColor: 'rgba(20, 83, 45, 0.15)', color: '#4ade80' }}>{row[1].symbol}</td>
+                            <td className="px-3 py-2 text-sm" style={{ backgroundColor: 'rgba(20, 83, 45, 0.15)', color: '#d1d5db' }}>{row[1].name}</td>
+                            <td className="px-3 py-2 text-sm" style={{ backgroundColor: 'rgba(20, 83, 45, 0.15)', color: '#9ca3af' }}>{row[1].relationshipType}</td>
+                          </>
+                        ) : (
+                          <>
+                            <td className="px-3 py-2 text-sm" style={{ backgroundColor: 'rgba(20, 83, 45, 0.15)' }}></td>
+                            <td className="px-3 py-2 text-sm" style={{ backgroundColor: 'rgba(20, 83, 45, 0.15)' }}></td>
+                            <td className="px-3 py-2 text-sm" style={{ backgroundColor: 'rgba(20, 83, 45, 0.15)' }}></td>
+                          </>
+                        )}
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            ) : (
+              <div className="text-center py-8 text-gray-400">
+                {stockCode ? "No related stocks found" : "Search for a stock to see related companies"}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Historical Data Analysis Section */}
+      <div className="bg-gray-800 rounded-lg border border-gray-700" style={{ marginTop: '1rem' }}>
+        {/* Collapsible Header */}
+        <button
+          onClick={() => setIsExpanded(!isExpanded)}
+          className="w-full flex items-center justify-between p-4 hover:bg-gray-750 transition-colors"
+        >
+          <h2 className="text-xl font-bold text-white flex items-center gap-2">
+            <BarChart3 className="text-blue-400" size={24} />
+            Historical Data Analysis
+          </h2>
+          <div className="style={{ color: '#93c5fd' }}">
+            {isExpanded ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
+          </div>
+        </button>
 
       {/* Collapsible Content */}
       {isExpanded && (
@@ -593,8 +715,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
         </div>
       )}
 
-      {/* Loading indicator for cycle analysis modes */}
-      {["seasonal", "peak-trough", "ma-crossover", "fourier", "support-resistance"].includes(selectedOption) && loading && (
+      {/* Loading indicator for cycle analysis modes (except ma-crossover) */}
+      {["seasonal", "peak-trough", "fourier", "support-resistance"].includes(selectedOption) && loading && (
         <div className="flex items-center gap-2 text-blue-400 mb-6">
           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-400"></div>
           <span>Analyzing {selectedOption.replace('-', ' ')}...</span>
@@ -638,6 +760,52 @@ export function HistoricalPerformanceCheck({ stockCode }) {
         <StatisticsTable statistics={intradayStats} title="Intraday Change %" />
       )}
 
+      {/* Moving Average Controls - Only for ma-crossover */}
+      {selectedOption === "ma-crossover" && (
+        <div className="mb-6 p-4 bg-gray-700/50 rounded-lg border border-gray-600">
+          <div className="flex items-center">
+            <div className="flex-1" style={{ marginRight: '0.3rem' }}>
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-sm font-medium text-gray-300">Short MA</label>
+                <span className="text-base font-bold text-blue-400">{maShort}d</span>
+              </div>
+              <input
+                type="range"
+                min="5"
+                max="100"
+                step="5"
+                value={maShort}
+                onChange={(e) => setMaShort(parseInt(e.target.value))}
+                className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500"
+              />
+              <div className="flex justify-between text-xs text-gray-400 mt-1">
+                <span>5</span>
+                <span>100</span>
+              </div>
+            </div>
+            <div className="flex-1" style={{ marginLeft: '0.3rem' }}>
+              <div className="flex justify-between items-center mb-2">
+                <label className="text-sm font-medium text-gray-300">Long MA</label>
+                <span className="text-base font-bold text-purple-400">{maLong}d</span>
+              </div>
+              <input
+                type="range"
+                min="50"
+                max="300"
+                step="10"
+                value={maLong}
+                onChange={(e) => setMaLong(parseInt(e.target.value))}
+                className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-purple-500"
+              />
+              <div className="flex justify-between text-xs text-gray-400 mt-1">
+                <span>50</span>
+                <span>300</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Cycle Analysis Results */}
       {cycleAnalysis && selectedOption === "seasonal" && (
         <SeasonalAnalysis cycleAnalysis={cycleAnalysis} stockCode={stockCode} />
@@ -648,7 +816,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       )}
 
       {cycleAnalysis && selectedOption === "ma-crossover" && (
-        <MovingAverageCrossoverAnalysis cycleAnalysis={cycleAnalysis} />
+        <MovingAverageCrossoverAnalysis cycleAnalysis={cycleAnalysis} maShort={maShort} maLong={maLong} loading={loading} />
       )}
 
       {cycleAnalysis && selectedOption === "fourier" && (
@@ -682,5 +850,6 @@ export function HistoricalPerformanceCheck({ stockCode }) {
         </div>
       )}
     </div>
+    </>
   );
 }
