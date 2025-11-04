@@ -81,25 +81,63 @@ export async function GET(request) {
     });
 
     // Find SPY's biggest moves
-    const spyMoves = [];
-    for (let i = 0; i < spyHistorical.length - 1; i++) {
-      const today = spyHistorical[i];
-      const yesterday = spyHistorical[i + 1];
+    let top10SpyMoves;
 
-      const spyChange = ((today.close - yesterday.close) / yesterday.close) * 100;
+    if (direction === "mixed") {
+      // Get both up and down SPY moves separately
+      const upMoves = [];
+      const downMoves = [];
 
-      if ((direction === "up" && spyChange > 0) || (direction === "down" && spyChange < 0)) {
-        spyMoves.push({
+      for (let i = 0; i < spyHistorical.length - 1; i++) {
+        const today = spyHistorical[i];
+        const yesterday = spyHistorical[i + 1];
+
+        const spyChange = ((today.close - yesterday.close) / yesterday.close) * 100;
+
+        const moveData = {
           date: today.date,
           spyChange,
           index: i,
-        });
-      }
-    }
+        };
 
-    // Sort by absolute magnitude and take top 30
-    spyMoves.sort((a, b) => Math.abs(b.spyChange) - Math.abs(a.spyChange));
-    const top10SpyMoves = spyMoves.slice(0, 30);
+        if (spyChange > 0) {
+          upMoves.push(moveData);
+        } else if (spyChange < 0) {
+          downMoves.push(moveData);
+        }
+      }
+
+      // Sort each by magnitude and take top 30
+      upMoves.sort((a, b) => Math.abs(b.spyChange) - Math.abs(a.spyChange));
+      downMoves.sort((a, b) => Math.abs(b.spyChange) - Math.abs(a.spyChange));
+
+      const topUpMoves = upMoves.slice(0, 30);
+      const topDownMoves = downMoves.slice(0, 30);
+
+      // Combine and sort by date (newest first)
+      top10SpyMoves = [...topUpMoves, ...topDownMoves];
+      top10SpyMoves.sort((a, b) => new Date(b.date) - new Date(a.date));
+    } else {
+      const spyMoves = [];
+      for (let i = 0; i < spyHistorical.length - 1; i++) {
+        const today = spyHistorical[i];
+        const yesterday = spyHistorical[i + 1];
+
+        const spyChange = ((today.close - yesterday.close) / yesterday.close) * 100;
+
+        if ((direction === "up" && spyChange > 0) || (direction === "down" && spyChange < 0)) {
+          spyMoves.push({
+            date: today.date,
+            spyChange,
+            index: i,
+          });
+        }
+      }
+
+      // Sort by absolute magnitude and take top 30
+      spyMoves.sort((a, b) => Math.abs(b.spyChange) - Math.abs(a.spyChange));
+      top10SpyMoves = spyMoves.slice(0, 30);
+    }
 
     // For each SPY move, find the stock's performance
     const correlations = [];

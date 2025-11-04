@@ -212,23 +212,19 @@ export async function GET(request) {
         dataPoints: historicalData.length,
       };
     } else if (type === "bigmoves") {
-      // Find all single-day moves
-      const bigMoves = [];
+      if (direction === "mixed") {
+        // Get both up and down big moves (30 each) and mix them sorted by date
+        const upMoves = [];
+        const downMoves = [];
 
-      for (let i = 0; i < historicalData.length - 3; i++) {
-        const today = historicalData[i];
-        const yesterday = i < historicalData.length - 1 ? historicalData[i + 1] : null;
+        for (let i = 0; i < historicalData.length - 3; i++) {
+          const today = historicalData[i];
+          const yesterday = i < historicalData.length - 1 ? historicalData[i + 1] : null;
 
-        if (!yesterday) continue;
+          if (!yesterday) continue;
 
-        const dayChange = ((today.close - yesterday.close) / yesterday.close) * 100;
+          const dayChange = ((today.close - yesterday.close) / yesterday.close) * 100;
 
-        // Filter by direction
-        const matchesDirection =
-          (direction === "up" && dayChange > 0) ||
-          (direction === "down" && dayChange < 0);
-
-        if (matchesDirection) {
           // Calculate after effects
           const after1Day = i > 0 && i < historicalData.length - 1
             ? ((historicalData[i - 1].close - today.close) / today.close) * 100
@@ -242,71 +238,191 @@ export async function GET(request) {
             ? ((historicalData[i - 3].close - today.close) / today.close) * 100
             : 0;
 
-          bigMoves.push({
+          const moveData = {
             date: today.date,
             dayChange,
             after1Day,
             after2Days,
             after3Days,
             price: today.close,
-          });
+          };
+
+          if (dayChange > 0) {
+            upMoves.push(moveData);
+          } else if (dayChange < 0) {
+            downMoves.push(moveData);
+          }
         }
+
+        // Sort each by magnitude and take top 30
+        upMoves.sort((a, b) => Math.abs(b.dayChange) - Math.abs(a.dayChange));
+        downMoves.sort((a, b) => Math.abs(b.dayChange) - Math.abs(a.dayChange));
+
+        const topUpMoves = upMoves.slice(0, 30);
+        const topDownMoves = downMoves.slice(0, 30);
+
+        // Combine and sort by date (newest first)
+        const mixedMoves = [...topUpMoves, ...topDownMoves];
+        mixedMoves.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        result = {
+          symbol,
+          type,
+          direction,
+          bigMoves: mixedMoves,
+          dataPoints: historicalData.length,
+        };
+      } else {
+        // Find all single-day moves
+        const bigMoves = [];
+
+        for (let i = 0; i < historicalData.length - 3; i++) {
+          const today = historicalData[i];
+          const yesterday = i < historicalData.length - 1 ? historicalData[i + 1] : null;
+
+          if (!yesterday) continue;
+
+          const dayChange = ((today.close - yesterday.close) / yesterday.close) * 100;
+
+          // Filter by direction
+          const matchesDirection =
+            (direction === "up" && dayChange > 0) ||
+            (direction === "down" && dayChange < 0);
+
+          if (matchesDirection) {
+            // Calculate after effects
+            const after1Day = i > 0 && i < historicalData.length - 1
+              ? ((historicalData[i - 1].close - today.close) / today.close) * 100
+              : 0;
+
+            const after2Days = i > 1 && i < historicalData.length - 2
+              ? ((historicalData[i - 2].close - today.close) / today.close) * 100
+              : 0;
+
+            const after3Days = i > 2 && i < historicalData.length - 3
+              ? ((historicalData[i - 3].close - today.close) / today.close) * 100
+              : 0;
+
+            bigMoves.push({
+              date: today.date,
+              dayChange,
+              after1Day,
+              after2Days,
+              after3Days,
+              price: today.close,
+            });
+          }
+        }
+
+        // Sort by absolute day change magnitude and take top 30
+        bigMoves.sort((a, b) => Math.abs(b.dayChange) - Math.abs(a.dayChange));
+
+        result = {
+          symbol,
+          type,
+          direction,
+          bigMoves: bigMoves.slice(0, 30),
+          dataPoints: historicalData.length,
+        };
       }
-
-      // Sort by absolute day change magnitude and take top 30
-      bigMoves.sort((a, b) => Math.abs(b.dayChange) - Math.abs(a.dayChange));
-
-      result = {
-        symbol,
-        type,
-        direction,
-        bigMoves: bigMoves.slice(0, 30),
-        dataPoints: historicalData.length,
-      };
     } else if (type === "gapopen") {
-      // Find all gap opens (open price different from previous day's close)
-      const gapOpens = [];
+      if (direction === "mixed") {
+        // Get both up and down gap opens (30 each) and mix them sorted by date
+        const upGapOpens = [];
+        const downGapOpens = [];
 
-      for (let i = 0; i < historicalData.length - 1; i++) {
-        const today = historicalData[i];
-        const yesterday = i < historicalData.length - 1 ? historicalData[i + 1] : null;
+        for (let i = 0; i < historicalData.length - 1; i++) {
+          const today = historicalData[i];
+          const yesterday = i < historicalData.length - 1 ? historicalData[i + 1] : null;
 
-        if (!yesterday) continue;
+          if (!yesterday) continue;
 
-        // Gap Open % = (today's open - yesterday's close) / yesterday's close * 100
-        const gapOpenPercent = ((today.open - yesterday.close) / yesterday.close) * 100;
+          // Gap Open % = (today's open - yesterday's close) / yesterday's close * 100
+          const gapOpenPercent = ((today.open - yesterday.close) / yesterday.close) * 100;
 
-        // Intraday change % = (today's close - today's open) / today's open * 100
-        const intradayChange = ((today.close - today.open) / today.open) * 100;
+          // Intraday change % = (today's close - today's open) / today's open * 100
+          const intradayChange = ((today.close - today.open) / today.open) * 100;
 
-        // Day change % = (today's close - yesterday's close) / yesterday's close * 100
-        const dayChange = ((today.close - yesterday.close) / yesterday.close) * 100;
+          // Day change % = (today's close - yesterday's close) / yesterday's close * 100
+          const dayChange = ((today.close - yesterday.close) / yesterday.close) * 100;
 
-        // Filter by direction
-        const matchesDirection =
-          (direction === "up" && gapOpenPercent > 0) ||
-          (direction === "down" && gapOpenPercent < 0);
-
-        if (matchesDirection) {
-          gapOpens.push({
+          const gapData = {
             date: today.date,
             gapOpenPercent,
             intradayChange,
             dayChange,
-          });
+          };
+
+          if (gapOpenPercent > 0) {
+            upGapOpens.push(gapData);
+          } else if (gapOpenPercent < 0) {
+            downGapOpens.push(gapData);
+          }
         }
+
+        // Sort each by magnitude and take top 30
+        upGapOpens.sort((a, b) => Math.abs(b.gapOpenPercent) - Math.abs(a.gapOpenPercent));
+        downGapOpens.sort((a, b) => Math.abs(b.gapOpenPercent) - Math.abs(a.gapOpenPercent));
+
+        const topUpGapOpens = upGapOpens.slice(0, 30);
+        const topDownGapOpens = downGapOpens.slice(0, 30);
+
+        // Combine and sort by date (newest first)
+        const mixedGapOpens = [...topUpGapOpens, ...topDownGapOpens];
+        mixedGapOpens.sort((a, b) => new Date(b.date) - new Date(a.date));
+
+        result = {
+          symbol,
+          type,
+          direction,
+          gapOpens: mixedGapOpens,
+          dataPoints: historicalData.length,
+        };
+      } else {
+        // Find all gap opens (open price different from previous day's close)
+        const gapOpens = [];
+
+        for (let i = 0; i < historicalData.length - 1; i++) {
+          const today = historicalData[i];
+          const yesterday = i < historicalData.length - 1 ? historicalData[i + 1] : null;
+
+          if (!yesterday) continue;
+
+          // Gap Open % = (today's open - yesterday's close) / yesterday's close * 100
+          const gapOpenPercent = ((today.open - yesterday.close) / yesterday.close) * 100;
+
+          // Intraday change % = (today's close - today's open) / today's open * 100
+          const intradayChange = ((today.close - today.open) / today.open) * 100;
+
+          // Day change % = (today's close - yesterday's close) / yesterday's close * 100
+          const dayChange = ((today.close - yesterday.close) / yesterday.close) * 100;
+
+          // Filter by direction
+          const matchesDirection =
+            (direction === "up" && gapOpenPercent > 0) ||
+            (direction === "down" && gapOpenPercent < 0);
+
+          if (matchesDirection) {
+            gapOpens.push({
+              date: today.date,
+              gapOpenPercent,
+              intradayChange,
+              dayChange,
+            });
+          }
+        }
+
+        // Sort by absolute gap open magnitude and take top 30
+        gapOpens.sort((a, b) => Math.abs(b.gapOpenPercent) - Math.abs(a.gapOpenPercent));
+
+        result = {
+          symbol,
+          type,
+          direction,
+          gapOpens: gapOpens.slice(0, 30),
+          dataPoints: historicalData.length,
+        };
       }
-
-      // Sort by absolute gap open magnitude and take top 30
-      gapOpens.sort((a, b) => Math.abs(b.gapOpenPercent) - Math.abs(a.gapOpenPercent));
-
-      result = {
-        symbol,
-        type,
-        direction,
-        gapOpens: gapOpens.slice(0, 30),
-        dataPoints: historicalData.length,
-      };
     } else if (type === "gapopenstat" || type === "intradaystat") {
       // Calculate statistics grouped by time periods
       const stats = {

@@ -454,6 +454,18 @@ export function HistoricalPerformanceCheck({ stockCode }) {
             <TrendingDown size={20} />
             Downward Trends
           </button>
+          <button
+            onClick={() => setTrendType("mixed")}
+            className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all"
+            style={{
+              backgroundColor: trendType === "mixed" ? "#10b981" : "#374151",
+              color: trendType === "mixed" ? "#ffffff" : "#d1d5db",
+            }}
+          >
+            <TrendingUp size={20} />
+            <TrendingDown size={20} />
+            Mixed (60 records)
+          </button>
         </div>
       )}
       {selectedOption === "bigmoves" && (
@@ -480,6 +492,18 @@ export function HistoricalPerformanceCheck({ stockCode }) {
             >
               <TrendingDown size={20} />
               Top 30 Downward Days
+            </button>
+            <button
+              onClick={() => setBigMovesDirection("mixed")}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all"
+              style={{
+                backgroundColor: bigMovesDirection === "mixed" ? "#10b981" : "#374151",
+                color: bigMovesDirection === "mixed" ? "#ffffff" : "#d1d5db",
+              }}
+            >
+              <TrendingUp size={20} />
+              <TrendingDown size={20} />
+              Mixed (60 records)
             </button>
           </div>
         </div>
@@ -511,6 +535,18 @@ export function HistoricalPerformanceCheck({ stockCode }) {
               <TrendingDown size={20} />
               SPY Downward Days
             </button>
+            <button
+              onClick={() => setSpyDirection("mixed")}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all"
+              style={{
+                backgroundColor: spyDirection === "mixed" ? "#10b981" : "#374151",
+                color: spyDirection === "mixed" ? "#ffffff" : "#d1d5db",
+              }}
+            >
+              <TrendingUp size={20} />
+              <TrendingDown size={20} />
+              Mixed (60 records)
+            </button>
           </div>
         </div>
       )}
@@ -540,6 +576,18 @@ export function HistoricalPerformanceCheck({ stockCode }) {
             >
               <TrendingDown size={20} />
               {loading && gapOpenDirection === "down" ? "Analyzing..." : "Top 30 Gap Down"}
+            </button>
+            <button
+              onClick={() => setGapOpenDirection("mixed")}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all"
+              style={{
+                backgroundColor: gapOpenDirection === "mixed" ? "#10b981" : "#374151",
+                color: gapOpenDirection === "mixed" ? "#ffffff" : "#d1d5db",
+              }}
+            >
+              <TrendingUp size={20} />
+              <TrendingDown size={20} />
+              {loading && gapOpenDirection === "mixed" ? "Analyzing..." : "Mixed (60 records)"}
             </button>
           </div>
         </div>
