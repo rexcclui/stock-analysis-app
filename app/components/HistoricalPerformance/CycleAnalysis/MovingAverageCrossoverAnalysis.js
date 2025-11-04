@@ -1,89 +1,7 @@
-import React, { useState } from 'react';
+import React from 'react';
+import { MASimulation } from './MASimulation';
 
 export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, maLong = 200, loading = false, onSimulate = null }) {
-  const [simulationResults, setSimulationResults] = useState(null);
-  const [simulating, setSimulating] = useState(false);
-  const [progressMessage, setProgressMessage] = useState('');
-
-  const runSimulation = async (selectedMetric) => {
-    setSimulating(true);
-    setProgressMessage('Initializing simulation...');
-    
-    // Simulate different MA combinations from 5 to 100 for short, 50 to 300 for long
-    const shortMAs = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100];
-    const longMAs = [50, 60, 70, 80, 100, 120, 150, 180, 200, 220, 250, 280, 300];
-    
-    const results = [];
-    let totalCombinations = 0;
-    let currentCombination = 0;
-    
-    // Calculate total combinations
-    for (const short of shortMAs) {
-      for (const long of longMAs) {
-        if (short < long) totalCombinations++;
-      }
-    }
-    
-    for (const short of shortMAs) {
-      for (const long of longMAs) {
-        if (short >= long) continue; // Short MA must be less than Long MA
-        
-        currentCombination++;
-        setProgressMessage(`Testing MA(${short}/${long})... ${currentCombination}/${totalCombinations}`);
-        
-        // Fetch crossover data for this combination
-        try {
-          const response = await fetch(
-            `/api/cycle-analysis?symbol=${onSimulate?.stockCode}&years=5&mode=ma-crossover&maShort=${short}&maLong=${long}`
-          );
-          
-          if (!response.ok) continue;
-          
-          const data = await response.json();
-          
-          if (data.crossovers) {
-            let totalPerf = 0;
-            const perfKey = `perf${selectedMetric}day`;
-            
-            data.crossovers.forEach(cross => {
-              if (cross[perfKey] !== null) {
-                totalPerf += parseFloat(cross[perfKey]);
-              }
-            });
-            
-            results.push({
-              short,
-              long,
-              totalPerf: parseFloat(totalPerf.toFixed(2)),
-              crossoverCount: data.crossovers.length,
-              winRate: ((data.crossovers.filter(c => c[perfKey] !== null && parseFloat(c[perfKey]) > 0).length / data.crossovers.filter(c => c[perfKey] !== null).length) * 100).toFixed(1)
-            });
-          }
-        } catch (err) {
-          console.error(`Error fetching MA crossover for ${short}/${long}:`, err);
-        }
-      }
-    }
-    
-    // Sort by totalPerf descending
-    results.sort((a, b) => b.totalPerf - a.totalPerf);
-    
-    setSimulationResults({
-      metric: selectedMetric,
-      topResults: results.slice(0, 20),
-      allResults: results
-    });
-    
-    setProgressMessage('');
-    setSimulating(false);
-  };
-
-  const applyParameters = (short, long) => {
-    // This will be called when user clicks on a result
-    if (onSimulate?.onParametersSelect) {
-      onSimulate.onParametersSelect(short, long);
-    }
-  };
 
   return (
     <div className="space-y-6">
@@ -132,103 +50,6 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
         <h3 className="text-lg font-bold mb-4" style={{ color: '#dbeafe' }}>
           Recent Crossovers (Total: {cycleAnalysis.totalCrossovers})
         </h3>
-
-        {/* Simulation Button Section */}
-        <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: 'rgba(30, 58, 138, 0.3)', borderLeft: '3px solid #3b82f6' }}>
-          <p className="text-sm mb-3" style={{ color: '#bfdbfe' }}>
-            <strong>Optimize MA Strategy:</strong> Find the best Short/Long MA combination for maximum performance
-          </p>
-          <div className="flex gap-2 flex-wrap">
-            <button
-              onClick={() => runSimulation(3)}
-              disabled={simulating}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded transition-colors text-sm font-semibold"
-            >
-              {simulating ? 'Simulating...' : 'Find Best 3-Day %'}
-            </button>
-            <button
-              onClick={() => runSimulation(7)}
-              disabled={simulating}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded transition-colors text-sm font-semibold"
-            >
-              {simulating ? 'Simulating...' : 'Find Best 7-Day %'}
-            </button>
-            <button
-              onClick={() => runSimulation(14)}
-              disabled={simulating}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded transition-colors text-sm font-semibold"
-            >
-              {simulating ? 'Simulating...' : 'Find Best 14-Day %'}
-            </button>
-            <button
-              onClick={() => runSimulation(30)}
-              disabled={simulating}
-              className="px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded transition-colors text-sm font-semibold"
-            >
-              {simulating ? 'Simulating...' : 'Find Best 30-Day %'}
-            </button>
-          </div>
-
-          {/* Progress Message */}
-          {simulating && progressMessage && (
-            <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: 'rgba(59, 130, 246, 0.2)', borderLeft: '2px solid #60a5fa' }}>
-              <div className="flex items-center gap-2">
-                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
-                <span style={{ color: '#bfdbfe' }} className="text-sm font-medium">{progressMessage}</span>
-              </div>
-            </div>
-          )}
-        </div>
-
-        {/* Simulation Results */}
-        {simulationResults && (
-          <div className="mb-6 p-4 rounded-lg" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', borderLeft: '3px solid #10b981' }}>
-            <h4 className="text-base font-bold mb-3" style={{ color: '#86efac' }}>
-              Top 20 MA Combinations for {simulationResults.metric}-Day Performance
-            </h4>
-            <div className="overflow-x-auto">
-              <table className="w-full text-sm">
-                <thead>
-                  <tr style={{ borderBottom: '1px solid #1d4ed8' }}>
-                    <th className="text-left py-2 px-3" style={{ color: '#93c5fd' }}>Rank</th>
-                    <th className="text-center py-2 px-3" style={{ color: '#93c5fd' }}>Short MA</th>
-                    <th className="text-center py-2 px-3" style={{ color: '#93c5fd' }}>Long MA</th>
-                    <th className="text-right py-2 px-3" style={{ color: '#93c5fd' }}>Total {simulationResults.metric}-Day %</th>
-                    <th className="text-center py-2 px-3" style={{ color: '#93c5fd' }}>Signals</th>
-                    <th className="text-right py-2 px-3" style={{ color: '#93c5fd' }}>Win Rate</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {simulationResults.topResults.map((result, idx) => (
-                    <tr key={idx} style={{ borderBottom: '1px solid #1e3a8a' }}>
-                      <td 
-                        className="py-2 px-3 cursor-pointer hover:underline font-semibold" 
-                        style={{ color: '#60a5fa' }}
-                        onClick={() => applyParameters(result.short, result.long)}
-                        title="Click to apply these parameters"
-                      >
-                        {idx + 1}
-                      </td>
-                      <td className="text-center py-2 px-3 font-semibold" style={{ color: '#60a5fa' }}>{result.short}d</td>
-                      <td className="text-center py-2 px-3 font-semibold" style={{ color: '#a78bfa' }}>{result.long}d</td>
-                      <td className="text-right py-2 px-3 font-bold" style={{ color: result.totalPerf >= 0 ? '#22c55e' : '#ef4444' }}>
-                        {result.totalPerf >= 0 ? '+' : ''}{result.totalPerf}%
-                      </td>
-                      <td className="text-center py-2 px-3" style={{ color: '#d1d5db' }}>{result.crossoverCount}</td>
-                      <td className="text-right py-2 px-3" style={{ color: '#fbbf24' }}>{result.winRate}%</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <button
-              onClick={() => setSimulationResults(null)}
-              className="mt-3 px-3 py-1 text-sm bg-gray-600 hover:bg-gray-700 text-gray-200 rounded transition-colors"
-            >
-              Close Results
-            </button>
-          </div>
-        )}
 
         <div className="overflow-x-auto">
           <table className="w-full">
@@ -297,6 +118,14 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
           </table>
         </div>
       </div>
+
+      {/* MA Simulation Component at the bottom */}
+      {onSimulate?.stockCode && (
+        <MASimulation
+          stockCode={onSimulate.stockCode}
+          onParametersSelect={onSimulate.onParametersSelect}
+        />
+      )}
     </div>
   );
 }
