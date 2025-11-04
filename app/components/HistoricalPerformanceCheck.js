@@ -394,13 +394,13 @@ export function HistoricalPerformanceCheck({ stockCode }) {
           className="w-full md:w-auto px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
           <option value="top10">
-            Show me the top 30 up or down trends
+            Top 30 up/down consecutive daily change
           </option>
           <option value="bigmoves">
             Big Drop/Rise - Single day movements
           </option>
           <option value="spycorr">
-            Show me top 30 up or down day change on SPY
+            Top 30 up/down daily SPY change
           </option>
           <option value="gapopen">
             Up/Down Gap Open
