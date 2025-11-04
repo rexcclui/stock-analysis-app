@@ -55,7 +55,7 @@ function findTrends(historicalData, type = "up") {
       }
     } else if (isOppositeDirection) {
       // Opposite direction - end current trend and start counting opposite
-      if (currentTrend && currentTrend.days >= 2) {
+      if (currentTrend && currentTrend.days >= 1) {
         const totalChange =
           ((currentTrend.endPrice - currentTrend.startPrice) /
             currentTrend.startPrice) *
@@ -71,7 +71,7 @@ function findTrends(historicalData, type = "up") {
   }
 
   // Add the last trend if it exists
-  if (currentTrend && currentTrend.days >= 2) {
+  if (currentTrend && currentTrend.days >= 1) {
     const totalChange =
       ((currentTrend.endPrice - currentTrend.startPrice) /
         currentTrend.startPrice) *

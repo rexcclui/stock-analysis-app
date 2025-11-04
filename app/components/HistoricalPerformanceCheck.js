@@ -328,6 +328,13 @@ export function HistoricalPerformanceCheck({ stockCode }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedOption, spyDirection, stockCode]);
 
+  useEffect(() => {
+    if (selectedOption === "gapopen" && stockCode) {
+      analyzeGapOpens();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedOption, gapOpenDirection, stockCode]);
+
   // Auto-trigger cycle analysis when a cycle mode is selected
   useEffect(() => {
     const cycleAnalysisModes = ["seasonal", "peak-trough", "ma-crossover", "fourier", "support-resistance"];
@@ -513,32 +520,26 @@ export function HistoricalPerformanceCheck({ stockCode }) {
         <div className="mb-6">
           <div className="flex gap-4 mb-4">
             <button
-              onClick={() => {
-                setGapOpenDirection("down");
-                analyzeGapOpens();
-              }}
-              className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all"
-              style={{
-                backgroundColor: gapOpenDirection === "down" ? "#10b981" : "#374151",
-                color: gapOpenDirection === "down" ? "#ffffff" : "#d1d5db",
-              }}
-            >
-              <TrendingUp size={20} />
-              {loading && gapOpenDirection === "down" ? "Analyzing..." : "Top 30 Gap Up"}
-            </button>
-            <button
-              onClick={() => {
-                setGapOpenDirection("up");
-                analyzeGapOpens();
-              }}
+              onClick={() => setGapOpenDirection("up")}
               className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all"
               style={{
                 backgroundColor: gapOpenDirection === "up" ? "#10b981" : "#374151",
                 color: gapOpenDirection === "up" ? "#ffffff" : "#d1d5db",
               }}
             >
+              <TrendingUp size={20} />
+              {loading && gapOpenDirection === "up" ? "Analyzing..." : "Top 30 Gap Up"}
+            </button>
+            <button
+              onClick={() => setGapOpenDirection("down")}
+              className="flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all"
+              style={{
+                backgroundColor: gapOpenDirection === "down" ? "#10b981" : "#374151",
+                color: gapOpenDirection === "down" ? "#ffffff" : "#d1d5db",
+              }}
+            >
               <TrendingDown size={20} />
-              {loading && gapOpenDirection === "up" ? "Analyzing..." : "Top 30 Gap Down"}
+              {loading && gapOpenDirection === "down" ? "Analyzing..." : "Top 30 Gap Down"}
             </button>
           </div>
         </div>

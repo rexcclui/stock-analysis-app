@@ -97,9 +97,9 @@ export async function GET(request) {
       }
     }
 
-    // Sort by absolute magnitude and take top 20
+    // Sort by absolute magnitude and take top 30
     spyMoves.sort((a, b) => Math.abs(b.spyChange) - Math.abs(a.spyChange));
-    const top10SpyMoves = spyMoves.slice(0, 20);
+    const top10SpyMoves = spyMoves.slice(0, 30);
 
     // For each SPY move, find the stock's performance
     const correlations = [];
