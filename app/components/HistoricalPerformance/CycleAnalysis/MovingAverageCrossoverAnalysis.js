@@ -245,7 +245,7 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
               </tr>
             </thead>
             <tbody>
-              {cycleAnalysis.crossovers?.map((cross, idx) => (
+              {cycleAnalysis.crossovers?.sort((a, b) => new Date(b.date) - new Date(a.date)).map((cross, idx) => (
                 <tr key={idx} style={{ borderBottom: '1px solid #1e3a8a' }}>
                   <td className="style={{ color: '#bfdbfe' }} py-2 px-4">{cross.date}</td>
                   <td className="style={{ color: '#dbeafe' }} py-2 px-4">{cross.type}</td>
