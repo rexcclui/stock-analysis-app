@@ -63,7 +63,7 @@ export function AddCustomComparison({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 ml-4">
+        <div className="flex items-center gap-2 ml-8">
           <span className="text-sm text-gray-300">Show Top:</span>
           <select
             value={comparisonRowSize}
