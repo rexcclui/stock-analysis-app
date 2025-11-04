@@ -3,19 +3,33 @@ import React, { useState } from 'react';
 export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, maLong = 200, loading = false, onSimulate = null }) {
   const [simulationResults, setSimulationResults] = useState(null);
   const [simulating, setSimulating] = useState(false);
+  const [progressMessage, setProgressMessage] = useState('');
 
   const runSimulation = async (selectedMetric) => {
     setSimulating(true);
+    setProgressMessage('Initializing simulation...');
     
     // Simulate different MA combinations from 5 to 100 for short, 50 to 300 for long
     const shortMAs = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100];
     const longMAs = [50, 60, 70, 80, 100, 120, 150, 180, 200, 220, 250, 280, 300];
     
     const results = [];
+    let totalCombinations = 0;
+    let currentCombination = 0;
+    
+    // Calculate total combinations
+    for (const short of shortMAs) {
+      for (const long of longMAs) {
+        if (short < long) totalCombinations++;
+      }
+    }
     
     for (const short of shortMAs) {
       for (const long of longMAs) {
         if (short >= long) continue; // Short MA must be less than Long MA
+        
+        currentCombination++;
+        setProgressMessage(`Testing MA(${short}/${long})... ${currentCombination}/${totalCombinations}`);
         
         // Fetch crossover data for this combination
         try {
@@ -60,7 +74,15 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
       allResults: results
     });
     
+    setProgressMessage('');
     setSimulating(false);
+  };
+
+  const applyParameters = (short, long) => {
+    // This will be called when user clicks on a result
+    if (onSimulate?.onParametersSelect) {
+      onSimulate.onParametersSelect(short, long);
+    }
   };
 
   return (
@@ -146,6 +168,16 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
               {simulating ? 'Simulating...' : 'Find Best 30-Day %'}
             </button>
           </div>
+
+          {/* Progress Message */}
+          {simulating && progressMessage && (
+            <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: 'rgba(59, 130, 246, 0.2)', borderLeft: '2px solid #60a5fa' }}>
+              <div className="flex items-center gap-2">
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
+                <span style={{ color: '#bfdbfe' }} className="text-sm font-medium">{progressMessage}</span>
+              </div>
+            </div>
+          )}
         </div>
 
         {/* Simulation Results */}
@@ -169,7 +201,14 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
                 <tbody>
                   {simulationResults.topResults.map((result, idx) => (
                     <tr key={idx} style={{ borderBottom: '1px solid #1e3a8a' }}>
-                      <td className="py-2 px-3" style={{ color: '#bfdbfe' }}>{idx + 1}</td>
+                      <td 
+                        className="py-2 px-3 cursor-pointer hover:underline font-semibold" 
+                        style={{ color: '#60a5fa' }}
+                        onClick={() => applyParameters(result.short, result.long)}
+                        title="Click to apply these parameters"
+                      >
+                        {idx + 1}
+                      </td>
                       <td className="text-center py-2 px-3 font-semibold" style={{ color: '#60a5fa' }}>{result.short}d</td>
                       <td className="text-center py-2 px-3 font-semibold" style={{ color: '#a78bfa' }}>{result.long}d</td>
                       <td className="text-right py-2 px-3 font-bold" style={{ color: result.totalPerf >= 0 ? '#22c55e' : '#ef4444' }}>

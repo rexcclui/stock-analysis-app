@@ -316,6 +316,12 @@ export function HistoricalPerformanceCheck({ stockCode }) {
     }
   };
 
+  const applySimulationParameters = (short, long) => {
+    setMaShort(short);
+    setMaLong(long);
+    // The useEffect will automatically trigger analyzeCycles when maShort/maLong change
+  };
+
   const fetchRelatedStocks = async () => {
     if (!stockCode) {
       return;
@@ -816,7 +822,16 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       )}
 
       {cycleAnalysis && selectedOption === "ma-crossover" && (
-        <MovingAverageCrossoverAnalysis cycleAnalysis={cycleAnalysis} maShort={maShort} maLong={maLong} loading={loading} onSimulate={{ stockCode }} />
+        <MovingAverageCrossoverAnalysis 
+          cycleAnalysis={cycleAnalysis} 
+          maShort={maShort} 
+          maLong={maLong} 
+          loading={loading} 
+          onSimulate={{ 
+            stockCode,
+            onParametersSelect: applySimulationParameters
+          }} 
+        />
       )}
 
       {cycleAnalysis && selectedOption === "fourier" && (
