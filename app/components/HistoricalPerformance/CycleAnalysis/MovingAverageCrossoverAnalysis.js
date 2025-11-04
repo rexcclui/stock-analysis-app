@@ -307,7 +307,7 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
                 Performance Distribution by Moving Average Combination
               </h5>
               <div className="h-96">
-                <ResponsiveContainer>
+                <ResponsiveContainer width="100%" height="100%">
                   <ScatterChart margin={{ top: 20, right: 30, bottom: 40, left: 20 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e3a8a" />
                     <XAxis
