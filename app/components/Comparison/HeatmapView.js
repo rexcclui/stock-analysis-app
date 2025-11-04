@@ -35,6 +35,23 @@ const needsDarkText = (value) => {
   return value >= -2 && value <= 10;
 };
 
+const getTextColor = (value) => {
+  // For very light backgrounds, use dark gray/black
+  if (value >= 2 && value <= 10) return '#1f2937'; // dark gray
+  if (value >= 0 && value <= 2) return '#111827'; // darker gray
+  if (value >= -2 && value <= 0) return '#111827'; // darker gray
+  
+  // For medium light colors, use darker shades
+  if (value >= 20 && value <= 30) return '#f3f4f6'; // very light
+  if (value >= 10 && value <= 20) return '#e5e7eb'; // light
+  
+  // For medium dark colors, use light text
+  if (value >= 30 && value <= 50) return '#f9fafb'; // almost white
+  
+  // For dark colors, use white
+  return '#ffffff';
+};
+
 export function HeatmapView({
   selectedStock,
   comparisonStocks,
@@ -96,6 +113,7 @@ export function HeatmapView({
         {stocksWithFlex.map(({ stock, flexGrow, gridSpan, sizeValue }) => {
           const performance = stock.performance[heatmapColorBy];
           const isDarkText = needsDarkText(performance);
+          const textColor = getTextColor(performance);
 
           // Determine what to display for SIZE metric (heatmapSizeBy)
           let sizeDisplayValue;
@@ -192,21 +210,20 @@ export function HeatmapView({
                     }
                     role="link"
                     tabIndex={0}
-                    className={`font-bold text-xs underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 rounded block mb-1 ${
-                      isDarkText
-                        ? 'text-gray-800 hover:text-gray-900 focus:ring-gray-400'
-                        : 'text-white hover:text-yellow-400 focus:ring-yellow-500'
-                    }`}
+                    className="font-bold text-xs underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 rounded block mb-1"
+                    style={{
+                      color: textColor,
+                    }}
                   >
                     {stock.code}
                   </span>
-                  <div className={`font-bold text-xs mb-1 ${isDarkText ? 'text-gray-800' : 'text-white'}`}>
-                    <span className={`text-xs ${isDarkText ? 'text-gray-600' : 'opacity-80'}`}>{sizeDisplayLabel}: </span>
+                  <div className="font-bold text-xs mb-1" style={{ color: textColor }}>
+                    <span className="text-xs" style={{ color: textColor, opacity: 0.9 }}>{sizeDisplayLabel}: </span>
                     {sizeDisplayValue}
                   </div>
                   {showBothMetrics && (
-                    <div className={`font-bold text-xs ${isDarkText ? 'text-gray-800' : 'text-white'}`}>
-                      <span className={`text-xs ${isDarkText ? 'text-gray-600' : 'opacity-80'}`}>{colorDisplayLabel}: </span>
+                    <div className="font-bold text-xs" style={{ color: textColor }}>
+                      <span className="text-xs" style={{ color: textColor, opacity: 0.9 }}>{colorDisplayLabel}: </span>
                       {colorDisplayValue}
                     </div>
                   )}
