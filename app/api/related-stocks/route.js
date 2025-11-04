@@ -40,7 +40,6 @@ export async function GET(request) {
 
         // 2. Get stock screener results for same industry first
         let sameIndustryCount = 0;
-        let sameSectorCount = 0;
 
         if (sector && industry) {
           const industryScreenerUrl = `https://financialmodelingprep.com/api/v3/stock-screener?sector=${encodeURIComponent(sector)}&industry=${encodeURIComponent(industry)}&limit=100&apikey=${FMP_KEY}`;
@@ -60,13 +59,14 @@ export async function GET(request) {
             });
           }
 
-          // If we have fewer than 50 stocks from same industry, get more from same sector
-          if (sameIndustryCount < 50 && sector) {
+          // If no matches were found in the same industry, fall back to sector-level matches
+          if (sameIndustryCount === 0 && sector) {
             const sectorScreenerUrl = `https://financialmodelingprep.com/api/v3/stock-screener?sector=${encodeURIComponent(sector)}&limit=100&apikey=${FMP_KEY}`;
             const sectorScreenerResponse = await fetch(sectorScreenerUrl);
 
             if (sectorScreenerResponse.ok) {
               const sectorScreenerData = await sectorScreenerResponse.json();
+              let sameSectorCount = 0;
               sectorScreenerData.forEach(stock => {
                 if (stock.symbol !== symbol && !relatedStocks.find(s => s.symbol === stock.symbol) && sameSectorCount < 50) {
                   relatedStocks.push({
