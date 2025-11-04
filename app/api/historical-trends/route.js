@@ -157,7 +157,9 @@ export async function GET(request) {
     // Check cache first
     const cacheKey = (type === "bigmoves" || type === "gapopen")
       ? getCacheKey(`${type}-${direction}-${years}y`, symbol)
-      : getCacheKey(`trends-${type}-${years}y`, symbol);
+      : (type === "mixed")
+        ? getCacheKey(`trends-mixed-${years}y`, symbol)
+        : getCacheKey(`trends-${type}-${years}y`, symbol);
     const cachedData = getCache(cacheKey);
     if (cachedData) {
       console.log(`[CACHE HIT] Historical trends for ${symbol} (${type}, ${years}y)`);
@@ -192,7 +194,24 @@ export async function GET(request) {
 
     let result;
 
-    if (type === "bigmoves") {
+    if (type === "mixed") {
+      // Get both up and down trends (30 each) and mix them sorted by start date
+      const upTrends = findTrends(historicalData, "up");
+      const downTrends = findTrends(historicalData, "down");
+
+      // Combine both trend types
+      const mixedTrends = [...upTrends, ...downTrends];
+
+      // Sort by start date (newest first)
+      mixedTrends.sort((a, b) => new Date(b.startDate) - new Date(a.startDate));
+
+      result = {
+        symbol,
+        type,
+        trends: mixedTrends,
+        dataPoints: historicalData.length,
+      };
+    } else if (type === "bigmoves") {
       // Find all single-day moves
       const bigMoves = [];
 
