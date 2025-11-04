@@ -816,7 +816,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       )}
 
       {cycleAnalysis && selectedOption === "ma-crossover" && (
-        <MovingAverageCrossoverAnalysis cycleAnalysis={cycleAnalysis} maShort={maShort} maLong={maLong} loading={loading} />
+        <MovingAverageCrossoverAnalysis cycleAnalysis={cycleAnalysis} maShort={maShort} maLong={maLong} loading={loading} onSimulate={{ stockCode }} />
       )}
 
       {cycleAnalysis && selectedOption === "fourier" && (
