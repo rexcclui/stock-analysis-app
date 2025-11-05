@@ -127,20 +127,22 @@ export function ComparisonTable({
         <div className="flex items-center gap-6 flex-wrap">
           <div className="flex items-center gap-2">
             <span className="text-gray-300 text-sm">View:</span>
-            <div className="flex bg-gray-700 rounded-lg p-1">
-              <button
-                onClick={() => onViewModeChange('table')}
-                className={`px-3 py-1 rounded-md text-sm font-semibold transition ${
-                  viewMode === 'table' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-300 hover:text-white hover:bg-gray-600'
-                }`}
-              >Table</button>
-              <button
-                onClick={() => onViewModeChange('heatmap')}
-                className={`px-3 py-1 rounded-md text-sm font-semibold transition ${
-                  viewMode === 'heatmap' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-300 hover:text-white hover:bg-gray-600'
-                }`}
-              >Heatmap</button>
-            </div>
+              <div className="flex bg-gray-700 rounded-lg p-1">
+                <button
+                  onClick={() => onViewModeChange('table')}
+                  className={`px-3 py-1 rounded-md text-sm font-semibold transition ${
+                    viewMode === 'table' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-300 hover:text-white hover:bg-gray-600'
+                  }`}
+                  style={viewMode === 'table' ? { backgroundColor: '#FBBF24', color: '#0ea5ff', boxShadow: '0 6px 12px rgba(0,0,0,0.06)' } : undefined}
+                >Table</button>
+                <button
+                  onClick={() => onViewModeChange('heatmap')}
+                  className={`px-3 py-1 rounded-md text-sm font-semibold transition ${
+                    viewMode === 'heatmap' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-300 hover:text-white hover:bg-gray-600'
+                  }`}
+                  style={viewMode === 'heatmap' ? { backgroundColor: '#FBBF24', color: '#0ea5ff', boxShadow: '0 6px 12px rgba(0,0,0,0.06)' } : undefined}
+                >Heatmap</button>
+              </div>
           </div>
           {viewMode === 'table' && (
             <div className="flex items-center gap-2">
@@ -149,11 +151,13 @@ export function ComparisonTable({
                 <button
                   onClick={() => setColorMode('historical')}
                   className={`px-3 py-1 rounded-md text-sm font-semibold transition ${colorMode === 'historical' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-300 hover:text-white hover:bg-gray-600'}`}
+                  style={colorMode === 'historical' ? { backgroundColor: '#FBBF24', color: '#0ea5ff', boxShadow: '0 6px 12px rgba(0,0,0,0.06)' } : undefined}
                   title="Historical: Colors based on absolute performance thresholds (green for gains, red for losses)"
                 >Historical</button>
                 <button
                   onClick={() => setColorMode('relative')}
                   className={`px-3 py-1 rounded-md text-sm font-semibold transition ${colorMode === 'relative' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-300 hover:text-white hover:bg-gray-600'}`}
+                  style={colorMode === 'relative' ? { backgroundColor: '#FBBF24', color: '#0ea5ff', boxShadow: '0 6px 12px rgba(0,0,0,0.06)' } : undefined}
                   title="Relative: Colors based on relative performance within the comparison group (green for best, red for worst)"
                 >Relative</button>
               </div>
