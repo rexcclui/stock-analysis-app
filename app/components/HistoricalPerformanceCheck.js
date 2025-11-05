@@ -13,7 +13,8 @@ import { FourierAnalysis } from "./HistoricalPerformance/CycleAnalysis/FourierAn
 import { SupportResistanceAnalysis } from "./HistoricalPerformance/CycleAnalysis/SupportResistanceAnalysis";
 
 export function HistoricalPerformanceCheck({ stockCode }) {
-  const [isExpanded, setIsExpanded] = useState(false);
+  // Default expanded so the Historical Data Analysis section is open on initial render
+  const [isExpanded, setIsExpanded] = useState(true);
   const [selectedOption, setSelectedOption] = useState("top10");
   const [trendType, setTrendType] = useState("up");
   const [trends, setTrends] = useState([]);
@@ -503,59 +504,51 @@ export function HistoricalPerformanceCheck({ stockCode }) {
         <div className="p-6 pt-0">
           {/* Option Selection */}
           <div className="mb-6">
-        <label className="block text-sm font-medium mb-2" style={{ color: '#bfdbfe' }}>
-          Analysis Type
-        </label>
-        <select
-          value={selectedOption}
-          onChange={(e) => {
-            setSelectedOption(e.target.value);
-            setTrends([]);
-            setBigMoves([]);
-            setSpyCorrelations([]);
-            setGapOpens([]);
-            setGapOpenStats(null);
-            setIntradayStats(null);
-            setCycleAnalysis(null);
-            setError(null);
-          }}
-          className="w-full md:w-auto px-4 py-2 bg-gray-700 text-white rounded-lg border border-gray-600 focus:outline-none focus:ring-2 focus:ring-blue-500"
-        >
-          <option value="top10">
-            Top 30 up/down consecutive daily change
-          </option>
-          <option value="bigmoves">
-            Big Single Day Up/Down
-          </option>
-          <option value="spycorr">
-            Top 30 up/down daily SPY change
-          </option>
-          <option value="gapopen">
-            Up/Down Gap Open
-          </option>
-          <option value="gapopenstat">
-            Market Open Statistic
-          </option>
-          <option value="intradaystat">
-            Intraday Statistic
-          </option>
-          <option value="seasonal">
-            Seasonal/Calendar Patterns
-          </option>
-          <option value="peak-trough">
-            Peak-to-Trough Cycles
-          </option>
-          <option value="ma-crossover">
-            Moving Average Crossovers
-          </option>
-          <option value="fourier">
-            Fourier/Spectral Analysis
-          </option>
-          <option value="support-resistance">
-            Support/Resistance Levels
-          </option>
-        </select>
-      </div>
+            <label className="block text-sm font-medium mb-2" style={{ color: '#bfdbfe' }}>
+              Analysis Type
+            </label>
+            <div className="grid grid-cols-3 gap-4">
+              {[
+                { value: "top10", label: "Top 30 up/down consecutive daily change" },
+                { value: "bigmoves", label: "Big Single Day Up/Down" },
+                { value: "spycorr", label: "Top 30 up/down daily SPY change" },
+                { value: "gapopen", label: "Up/Down Gap Open" },
+                { value: "gapopenstat", label: "Market Open Statistic" },
+                { value: "intradaystat", label: "Intraday Statistic" },
+                { value: "seasonal", label: "Seasonal/Calendar Patterns" },
+                { value: "peak-trough", label: "Peak-to-Trough Cycles" },
+                { value: "ma-crossover", label: "Moving Average Crossovers" },
+                { value: "fourier", label: "Fourier/Spectral Analysis" },
+                { value: "support-resistance", label: "Support/Resistance Levels" }
+              ].map(option => (
+                <label
+                  key={option.value}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer border transition-all ${selectedOption === option.value ? 'bg-blue-700 border-blue-400 text-white' : 'bg-gray-700 border-gray-600 text-gray-300'}`}
+                  style={{ width: '100%' }}
+                >
+                  <input
+                    type="radio"
+                    name="analysisType"
+                    value={option.value}
+                    checked={selectedOption === option.value}
+                    onChange={() => {
+                      setSelectedOption(option.value);
+                      setTrends([]);
+                      setBigMoves([]);
+                      setSpyCorrelations([]);
+                      setGapOpens([]);
+                      setGapOpenStats(null);
+                      setIntradayStats(null);
+                      setCycleAnalysis(null);
+                      setError(null);
+                    }}
+                    className="form-radio accent-blue-500 mr-2"
+                  />
+                  {option.label}
+                </label>
+              ))}
+            </div>
+          </div>
 
       {/* Trend Direction Selection - Only for top10 */}
       {selectedOption === "top10" && (
