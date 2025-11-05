@@ -69,6 +69,7 @@ export function MASimulation({ stockCode, onParametersSelect }) {
     const results = [];
     let totalCombinations = 0;
     let currentCombination = 0;
+    let marketReturn = null;
 
     // Calculate total combinations
     for (const short of shortMAs) {
@@ -93,6 +94,17 @@ export function MASimulation({ stockCode, onParametersSelect }) {
           if (!response.ok) continue;
 
           const data = await response.json();
+
+          // Calculate market return on first successful response
+          if (marketReturn === null && data.currentPrice && data.crossovers && data.crossovers.length > 0) {
+            // Calculate buy-and-hold return from earliest to latest crossover in the dataset
+            const sortedCrossovers = [...data.crossovers].sort((a, b) =>
+              new Date(a.date) - new Date(b.date)
+            );
+            const firstPrice = parseFloat(sortedCrossovers[0].price);
+            const currentPrice = parseFloat(data.currentPrice);
+            marketReturn = parseFloat(((currentPrice - firstPrice) / firstPrice * 100).toFixed(2));
+          }
 
           if (data.crossovers) {
             // Calculate performance for all 4 day types
@@ -166,7 +178,8 @@ export function MASimulation({ stockCode, onParametersSelect }) {
 
     const resultData = {
       topResults: results.slice(0, 20),
-      allResults: results
+      allResults: results,
+      marketReturn: marketReturn || 0
     };
 
     setSimulationResults(resultData);
@@ -241,6 +254,12 @@ export function MASimulation({ stockCode, onParametersSelect }) {
           <h4 className="text-base font-bold mb-3" style={{ color: '#86efac' }}>
             Top 20 MA Combinations - All Time Periods
           </h4>
+          <p className="text-xs mb-3" style={{ color: '#bfdbfe' }}>
+            <strong>Market Benchmark:</strong> Buy-and-hold return for the simulation period:
+            <span className="ml-2 font-bold" style={{ color: simulationResults.marketReturn >= 0 ? '#22c55e' : '#ef4444' }}>
+              {simulationResults.marketReturn >= 0 ? '+' : ''}{simulationResults.marketReturn}%
+            </span>
+          </p>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -295,6 +314,9 @@ export function MASimulation({ stockCode, onParametersSelect }) {
                   >
                     Signals {sortBy === 'crossoverCount' && (sortOrder === 'desc' ? '↓' : '↑')}
                   </th>
+                  <th className="text-right py-2 px-3" style={{ color: '#fbbf24' }}>
+                    Market %
+                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -323,6 +345,9 @@ export function MASimulation({ stockCode, onParametersSelect }) {
                       {result.totalPerf30day >= 0 ? '+' : ''}{result.totalPerf30day}%
                     </td>
                     <td className="text-center py-2 px-3" style={{ color: '#d1d5db' }}>{result.crossoverCount}</td>
+                    <td className="text-right py-2 px-3 font-bold" style={{ color: simulationResults.marketReturn >= 0 ? '#22c55e' : '#ef4444' }}>
+                      {simulationResults.marketReturn >= 0 ? '+' : ''}{simulationResults.marketReturn}%
+                    </td>
                   </tr>
                 ))}
               </tbody>
