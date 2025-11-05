@@ -369,6 +369,18 @@ function analyzeMovingAverageCrossovers(data, maShort = 50, maLong = 200) {
   const currentMALong = maLongValues[maLongValues.length - 1];
   const currentPrice = data[data.length - 1].close;
 
+  // Prepare chart data (last 250 days for performance)
+  const chartDataLength = Math.min(250, data.length);
+  const chartData = [];
+  for (let i = data.length - chartDataLength; i < data.length; i++) {
+    chartData.push({
+      date: data[i].date,
+      price: parseFloat(data[i].close.toFixed(2)),
+      maShort: maShortValues[i] ? parseFloat(maShortValues[i].toFixed(2)) : null,
+      maLong: maLongValues[i] ? parseFloat(maLongValues[i].toFixed(2)) : null
+    });
+  }
+
   return {
     crossovers: crossovers.slice(-10),
     currentMA50: currentMAShort?.toFixed(2),
@@ -377,7 +389,8 @@ function analyzeMovingAverageCrossovers(data, maShort = 50, maLong = 200) {
     currentSignal: currentMAShort > currentMALong ? 'Bullish' : 'Bearish',
     totalCrossovers: crossovers.length,
     maShort: MA_SHORT,
-    maLong: MA_LONG
+    maLong: MA_LONG,
+    chartData: chartData
   };
 }
 

@@ -62,9 +62,9 @@ export function MASimulation({ stockCode, onParametersSelect }) {
     setSimulating(true);
     setProgressMessage('Initializing simulation...');
 
-    // Simulate different MA combinations from 5 to 100 for short, 50 to 300 for long
-    const shortMAs = [5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100];
-    const longMAs = [50, 60, 70, 80, 100, 120, 150, 180, 200, 220, 250, 280, 300];
+    // Simulate different MA combinations from 3 to 100 for short, 20 to 300 for long
+    const shortMAs = [3, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 70, 80, 90, 100];
+    const longMAs = [20, 25, 30, 50, 60, 70, 80, 100, 120, 150, 180, 200, 220, 250, 280, 300];
 
     const results = [];
     let totalCombinations = 0;
@@ -74,6 +74,8 @@ export function MASimulation({ stockCode, onParametersSelect }) {
     // Calculate total combinations
     for (const short of shortMAs) {
       for (const long of longMAs) {
+        // For 3-day short MA, only test with long MA under 30
+        if (short === 3 && long >= 30) continue;
         if (short < long) totalCombinations++;
       }
     }
@@ -81,6 +83,9 @@ export function MASimulation({ stockCode, onParametersSelect }) {
     for (const short of shortMAs) {
       for (const long of longMAs) {
         if (short >= long) continue; // Short MA must be less than Long MA
+
+        // For 3-day short MA, only test with long MA under 30
+        if (short === 3 && long >= 30) continue;
 
         currentCombination++;
         setProgressMessage(`Testing MA(${short}/${long})... ${currentCombination}/${totalCombinations}`);
