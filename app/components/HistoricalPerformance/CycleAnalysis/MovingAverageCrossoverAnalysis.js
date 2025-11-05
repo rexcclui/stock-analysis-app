@@ -45,7 +45,7 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
       e.stopPropagation();
 
       const delta = e.deltaY;
-      const zoomFactor = 0.1;
+      const zoomFactor = 0.1; // fraction of current range to zoom per wheel event
       const dataLength = cycleAnalysis.chartData.length;
 
       let { startIndex, endIndex } = zoomState;
@@ -54,18 +54,52 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
         endIndex = dataLength - 1;
       }
 
-      const currentRange = endIndex - startIndex;
-      const zoomAmount = Math.floor(currentRange * zoomFactor);
+      const currentRange = endIndex - startIndex; // number of indices spanned
+      const zoomAmount = Math.max(1, Math.floor(currentRange * zoomFactor));
+      const minRange = 10; // minimum number of indices to show
+
+      // Determine cursor relative position inside chart container
+      const rect = container.getBoundingClientRect();
+      let cursorRatio = (e.clientX - rect.left) / rect.width;
+      if (Number.isNaN(cursorRatio) || !isFinite(cursorRatio)) cursorRatio = 0.5;
+      cursorRatio = Math.min(1, Math.max(0, cursorRatio));
+
+      // Current data index under cursor (approx)
+      const cursorDataIndex = startIndex + Math.round(cursorRatio * currentRange);
 
       if (delta < 0) {
-        // Zoom in (scroll up)
-        const newStartIndex = Math.min(startIndex + zoomAmount, endIndex - 10);
-        const newEndIndex = Math.max(endIndex - zoomAmount, startIndex + 10);
+        // Zoom in (scroll up): shrink range around cursorDataIndex
+        const newRange = Math.max(minRange, currentRange - zoomAmount);
+        let newStartIndex = cursorDataIndex - Math.round(cursorRatio * newRange);
+        let newEndIndex = newStartIndex + newRange;
+
+        // Clamp to bounds
+        if (newStartIndex < 0) {
+          newStartIndex = 0;
+          newEndIndex = Math.min(newStartIndex + newRange, dataLength - 1);
+        }
+        if (newEndIndex >= dataLength) {
+          newEndIndex = dataLength - 1;
+          newStartIndex = Math.max(0, newEndIndex - newRange);
+        }
+
         setZoomState({ startIndex: newStartIndex, endIndex: newEndIndex });
       } else {
-        // Zoom out (scroll down)
-        const newStartIndex = Math.max(startIndex - zoomAmount, 0);
-        const newEndIndex = Math.min(endIndex + zoomAmount, dataLength - 1);
+        // Zoom out (scroll down): expand range while keeping cursorDataIndex at same relative spot
+        const newRange = Math.min(dataLength - 1, currentRange + zoomAmount);
+        let newStartIndex = cursorDataIndex - Math.round(cursorRatio * newRange);
+        let newEndIndex = newStartIndex + newRange;
+
+        // Clamp to bounds
+        if (newStartIndex < 0) {
+          newStartIndex = 0;
+          newEndIndex = Math.min(newStartIndex + newRange, dataLength - 1);
+        }
+        if (newEndIndex >= dataLength) {
+          newEndIndex = dataLength - 1;
+          newStartIndex = Math.max(0, newEndIndex - newRange);
+        }
+
         setZoomState({ startIndex: newStartIndex, endIndex: newEndIndex });
       }
     };
