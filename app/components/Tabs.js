@@ -11,7 +11,7 @@ export const Tabs = ({ activeTab, onTabChange, tabs }) => {
           onClick={() => onTabChange(tab.id)}
           className={`flex-1 px-6 py-3 rounded-lg text-sm font-semibold transition-all duration-300 ${
             activeTab === tab.id
-              ? 'bg-gradient-to-r from-blue-500 to-blue-600 text-white shadow-lg shadow-blue-500/50 scale-105'
+              ? 'bg-white text-blue-600 shadow-lg shadow-blue-500/50 scale-105'
               : 'text-gray-300 hover:text-white hover:bg-gray-600 hover:scale-102'
           }`}
         >
