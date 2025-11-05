@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect, useCallback } from 'react';
+import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
 import { LoadingState } from './LoadingState';
 
@@ -32,16 +32,12 @@ export function PricePerformanceChart({
   buildMultiStockDataset,
   loading = false
 }) {
-  const chartData = selectedStock?.chartData?.[chartPeriod] || [];
-  const fullHistoricalData = selectedStock?.chartData?.fullHistorical || [];
+  const chartData = useMemo(() => selectedStock?.chartData?.[chartPeriod] || [], [selectedStock, chartPeriod]);
+  const fullHistoricalData = useMemo(() => selectedStock?.chartData?.fullHistorical || [], [selectedStock]);
   const [dataOffset, setDataOffset] = useState(0); // Offset in days from most recent
 
-  if (!selectedStock) {
-    if (loading) {
-      return <LoadingState message="Loading price performance chart..." className="mb-6" />;
-    }
-    return null;
-  }
+  // Don't return early here; render decisions happen after hooks are declared to keep hooks order stable.
+  const shouldShowLoading = !selectedStock && loading;
 
   // Debug: Log fullHistoricalData availability
   useEffect(() => {
@@ -173,7 +169,8 @@ export function PricePerformanceChart({
 
       return { start: newStart, end: newEnd };
     });
-  }, [chartPeriod, periods]);
+  }, [chartPeriod, periods, setChartPeriod]);
+  // Note: setChartPeriod is a prop that may change; include it to satisfy exhaustive-deps
 
   const resetZoom = () => {
     setZoomDomain({ start: 0, end: 100 });
@@ -268,6 +265,10 @@ export function PricePerformanceChart({
       };
     }
   }, [isDragging, handleMouseMove, handleMouseUp]);
+
+  if (shouldShowLoading) {
+    return <LoadingState message="Loading price performance chart..." className="mb-6" />;
+  }
 
   return (
     <div className="mb-6" style={{ marginTop: '1rem', marginRight: '2rem' }}>

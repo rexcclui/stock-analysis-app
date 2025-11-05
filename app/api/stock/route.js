@@ -25,11 +25,22 @@ export async function GET(request) {
     );
     const profileData = await profileResponse.json();
 
-    if (!profileData || profileData.length === 0) {
+    // Normalize profile data: FMP may return either an array or an object.
+    if (!profileData) {
       return createNoCacheResponse({ error: 'Stock not found' }, 404);
     }
 
-    const profile = profileData[0];
+    let profile = null;
+    if (Array.isArray(profileData)) {
+      if (profileData.length === 0) {
+        return createNoCacheResponse({ error: 'Stock not found' }, 404);
+      }
+      profile = profileData[0];
+    } else if (typeof profileData === 'object') {
+      profile = profileData;
+    } else {
+      return createNoCacheResponse({ error: 'Stock not found' }, 404);
+    }
 
     // Fetch quote for current price and day change
     const quoteResponse = await fetch(
@@ -153,21 +164,24 @@ export async function GET(request) {
 
     const stockData = {
       code: symbol,
-      name: profile.companyName,
-      website: profile.website,
-      exchange: profile.exchangeShortName || profile.exchange || 'N/A',
+      name: profile?.companyName || profile?.company || 'N/A',
+      website: profile?.website || null,
+      exchange: profile?.exchangeShortName || profile?.exchange || 'N/A',
       currentPrice: price,
-      dayChange: quote.changesPercentage || 0,
-      marketCap: profile.mktCap
+      dayChange: quote?.changesPercentage || 0,
+      marketCap: (typeof profile?.mktCap === 'number')
         ? (profile.mktCap / 1e9).toFixed(1) + 'B'
+        : (profile?.mktCap ? String(profile.mktCap) : 'N/A'),
+      pe: peValue,
+      beta: betaValue,
+      dividendYield: dividendYield,
+      fiftyTwoWeekRange: profile?.range || 'N/A',
+      // Compute analyst rating defensively: dcf and price must be numbers
+      analystRating: (typeof profile?.dcf === 'number' && typeof profile?.price === 'number')
+        ? (profile.dcf > profile.price ? 'Buy' : 'Hold')
         : 'N/A',
-  pe: peValue,
-  beta: betaValue,
-  dividendYield: dividendYield,
-      fiftyTwoWeekRange: profile.range,
-      analystRating: profile.dcf > profile.price ? 'Buy' : 'Hold',
-      industry: profile.industry || 'N/A',
-      sector: profile.sector || 'N/A',
+      industry: profile?.industry || 'N/A',
+      sector: profile?.sector || 'N/A',
       resistance,
       support,
       performance,

@@ -6,7 +6,7 @@ export function PeakTroughAnalysis({ cycleAnalysis }) {
       <div className="bg-blue-900/20 border border-blue-700 rounded-lg p-4 mb-6">
         <p className="italic" style={{ fontSize: '11px', color: '#fef08a' }}>
           <strong style={{ fontStyle: 'normal', color: '#fefce8' }}>Peak-to-Trough Cycle Analysis:</strong> This analysis identifies local peaks (highs) and troughs (lows) in the price history.
-          A peak occurs when the price is higher than surrounding days, and a trough occurs when it's lower.
+          A peak occurs when the price is higher than surrounding days, and a trough occurs when it is lower.
           <strong style={{ fontStyle: 'normal', color: '#fde047' }}> Avg Cycle Length</strong> shows the average number of days between consecutive peaks, helping identify recurring price patterns.
           The cycles table shows the duration and price change between each pair of peaks.
         </p>
@@ -38,18 +38,18 @@ export function PeakTroughAnalysis({ cycleAnalysis }) {
           <table className="w-full">
             <thead>
               <tr style={{ borderBottom: '1px solid #1d4ed8' }}>
-                <th className="text-left style={{ color: '#93c5fd' }} py-2 px-4">From</th>
-                <th className="text-left style={{ color: '#93c5fd' }} py-2 px-4">To</th>
-                <th className="text-right style={{ color: '#93c5fd' }} py-2 px-4">Days</th>
-                <th className="text-right style={{ color: '#93c5fd' }} py-2 px-4">Price Change</th>
+                <th className="text-left py-2 px-4" style={{ color: '#93c5fd' }}>From</th>
+                <th className="text-left py-2 px-4" style={{ color: '#93c5fd' }}>To</th>
+                <th className="text-right py-2 px-4" style={{ color: '#93c5fd' }}>Days</th>
+                <th className="text-right py-2 px-4" style={{ color: '#93c5fd' }}>Price Change</th>
               </tr>
             </thead>
             <tbody>
               {cycleAnalysis.cycles?.map((cycle, idx) => (
                 <tr key={idx} style={{ borderBottom: '1px solid #1e3a8a' }}>
-                  <td className="style={{ color: '#bfdbfe' }} py-2 px-4">{cycle.from}</td>
-                  <td className="style={{ color: '#bfdbfe' }} py-2 px-4">{cycle.to}</td>
-                  <td className="text-right style={{ color: '#dbeafe' }} py-2 px-4">{cycle.days}</td>
+                  <td className="py-2 px-4" style={{ color: '#bfdbfe' }}>{cycle.from}</td>
+                  <td className="py-2 px-4" style={{ color: '#bfdbfe' }}>{cycle.to}</td>
+                  <td className="text-right py-2 px-4" style={{ color: '#dbeafe' }}>{cycle.days}</td>
                   <td className={`text-right py-2 px-4 ${parseFloat(cycle.priceChange) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
                     {cycle.priceChange}%
                   </td>
