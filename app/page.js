@@ -11,6 +11,7 @@ import { SentimentTimeSeriesChart } from './components/SentimentTimeSeriesChart'
 import { StockResultCard } from './components/StockResultCard';
 import { HistoricalPerformanceCheck } from './components/HistoricalPerformanceCheck';
 import { LoadingState } from './components/LoadingState';
+import { Tabs, TabPanel } from './components/Tabs';
 
 // Helper function to fetch with timeout
 const fetchWithTimeout = (url, timeout = 10000) => {
@@ -117,6 +118,7 @@ export default function StockAnalysisDashboard() {
   // Detailed search history entries with day change for table (bounded by 3 rows dynamic columns)
   const [searchHistoryStocks, setSearchHistoryStocks] = useState([]); // array of { code, dayChange }
   const HISTORY_COL_WIDTH = 140; // approximate width for each cell
+  const [activeTab, setActiveTab] = useState('main'); // 'main' or 'historical-data-analysis'
 
   // Normalize possible percentage string or numeric into clean number
   const normalizeDayChange = (val) => {
@@ -657,9 +659,17 @@ export default function StockAnalysisDashboard() {
               )}
               <StockResultCard stock={selectedStock} loading={loading} />
 
-              <HistoricalPerformanceCheck stockCode={selectedStock.code} />
+              <Tabs
+                activeTab={activeTab}
+                onTabChange={setActiveTab}
+                tabs={[
+                  { id: 'main', label: 'Main' },
+                  { id: 'historical-data-analysis', label: 'Historical Data Analysis' }
+                ]}
+              />
 
-              <PricePerformanceChart
+              <TabPanel activeTab={activeTab} tabId="main">
+                <PricePerformanceChart
                 selectedStock={selectedStock}
                 chartPeriod={chartPeriod}
                 setChartPeriod={setChartPeriod}
@@ -709,6 +719,11 @@ export default function StockAnalysisDashboard() {
               <SentimentSection sentiment={selectedStock.sentiment} loading={loading} />
 
               <NewsSection news={news} loading={loading} />
+              </TabPanel>
+
+              <TabPanel activeTab={activeTab} tabId="historical-data-analysis">
+                <HistoricalPerformanceCheck stockCode={selectedStock.code} />
+              </TabPanel>
             </>
           )}
         </div>
