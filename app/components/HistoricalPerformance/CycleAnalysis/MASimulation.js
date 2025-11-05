@@ -152,31 +152,47 @@ export function MASimulation({ stockCode, onParametersSelect }) {
 
             data.crossovers.forEach(cross => {
               // 3-day
-              if (cross.perf3day !== null) {
-                totalPerf3day += parseFloat(cross.perf3day);
+              let perf3 = cross.perf3day;
+              if (perf3 === null && cross.perfAvailableDay && cross.perfAvailableDay >= 1) {
+                perf3 = cross[`perf${cross.perfAvailableDay}day`];
+              }
+              if (perf3 !== null && perf3 !== undefined) {
+                totalPerf3day += parseFloat(perf3);
                 count3day++;
-                if (parseFloat(cross.perf3day) > 0) wins3day++;
+                if (parseFloat(perf3) > 0) wins3day++;
               }
 
               // 7-day
-              if (cross.perf7day !== null) {
-                totalPerf7day += parseFloat(cross.perf7day);
+              let perf7 = cross.perf7day;
+              if (perf7 === null && cross.perfAvailableDay && cross.perfAvailableDay >= 1) {
+                perf7 = cross[`perf${cross.perfAvailableDay}day`];
+              }
+              if (perf7 !== null && perf7 !== undefined) {
+                totalPerf7day += parseFloat(perf7);
                 count7day++;
-                if (parseFloat(cross.perf7day) > 0) wins7day++;
+                if (parseFloat(perf7) > 0) wins7day++;
               }
 
               // 14-day
-              if (cross.perf14day !== null) {
-                totalPerf14day += parseFloat(cross.perf14day);
+              let perf14 = cross.perf14day;
+              if (perf14 === null && cross.perfAvailableDay && cross.perfAvailableDay >= 1) {
+                perf14 = cross[`perf${cross.perfAvailableDay}day`];
+              }
+              if (perf14 !== null && perf14 !== undefined) {
+                totalPerf14day += parseFloat(perf14);
                 count14day++;
-                if (parseFloat(cross.perf14day) > 0) wins14day++;
+                if (parseFloat(perf14) > 0) wins14day++;
               }
 
               // 30-day
-              if (cross.perf30day !== null) {
-                totalPerf30day += parseFloat(cross.perf30day);
+              let perf30 = cross.perf30day;
+              if (perf30 === null && cross.perfAvailableDay && cross.perfAvailableDay >= 1) {
+                perf30 = cross[`perf${cross.perfAvailableDay}day`];
+              }
+              if (perf30 !== null && perf30 !== undefined) {
+                totalPerf30day += parseFloat(perf30);
                 count30day++;
-                if (parseFloat(cross.perf30day) > 0) wins30day++;
+                if (parseFloat(perf30) > 0) wins30day++;
               }
             });
 
