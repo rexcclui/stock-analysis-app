@@ -548,6 +548,25 @@ export function HistoricalPerformanceCheck({ stockCode }) {
                 </label>
               ))}
             </div>
+            {/* Subject Heading for selected analysis type */}
+        <div>
+          <div style={{ height: '1rem' }}></div>
+          <h3 className="text-lg font-bold" style={{ color: '#fde047' }}>
+            {[
+              { value: "top10", label: "Top 30 up/down consecutive daily change" },
+              { value: "bigmoves", label: "Big Single Day Up/Down" },
+              { value: "spycorr", label: "Top 30 up/down daily SPY change" },
+              { value: "gapopen", label: "Up/Down Gap Open" },
+              { value: "gapopenstat", label: "Market Open Statistic" },
+              { value: "intradaystat", label: "Intraday Statistic" },
+              { value: "seasonal", label: "Seasonal/Calendar Patterns" },
+              { value: "peak-trough", label: "Peak-to-Trough Cycles" },
+              { value: "ma-crossover", label: "Moving Average Crossovers" },
+              { value: "fourier", label: "Fourier/Spectral Analysis" },
+              { value: "support-resistance", label: "Support/Resistance Levels" }
+            ].find(option => option.value === selectedOption)?.label}
+          </h3>
+        </div>
           </div>
 
       {/* Trend Direction Selection - Only for top10 */}
