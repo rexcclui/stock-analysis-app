@@ -768,7 +768,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
 
       {/* Moving Average Controls - Only for ma-crossover */}
       {selectedOption === "ma-crossover" && (
-        <div className="mb-6 p-4 bg-gray-700/50 rounded-lg border border-gray-600">
+        <div className="mb-6 p-4 rounded-lg border" style={{ backgroundColor: 'rgba(250, 204, 21, 0.2)', borderColor: '#facc15' }}>
           <div className="flex items-center">
             <div className="flex-1" style={{ marginRight: '0.3rem' }}>
               <div className="flex justify-between items-center mb-2">
@@ -782,7 +782,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
                 step="5"
                 value={maShort}
                 onChange={(e) => setMaShort(parseInt(e.target.value))}
-                className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                className="w-full h-2 rounded-lg appearance-none cursor-pointer"
+                style={{ backgroundColor: '#facc15', accentColor: '#facc15' }}
               />
               <div className="flex justify-between text-xs text-gray-400 mt-1">
                 <span>5</span>
@@ -801,7 +802,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
                 step="10"
                 value={maLong}
                 onChange={(e) => setMaLong(parseInt(e.target.value))}
-                className="w-full h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-purple-500"
+                className="w-full h-2 rounded-lg appearance-none cursor-pointer"
+                style={{ backgroundColor: '#facc15', accentColor: '#facc15' }}
               />
               <div className="flex justify-between text-xs text-gray-400 mt-1">
                 <span>50</span>

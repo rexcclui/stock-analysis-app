@@ -51,12 +51,14 @@ export function MASimulation({ stockCode, onParametersSelect }) {
     }
   }, [stockCode]);
 
-  const runSimulation = async () => {
-    // Check cache first
-    const cached = loadFromCache(stockCode);
-    if (cached) {
-      setSimulationResults(cached);
-      return;
+  const runSimulation = async (forceRefresh = false) => {
+    // Check cache first (unless forcing refresh)
+    if (!forceRefresh) {
+      const cached = loadFromCache(stockCode);
+      if (cached) {
+        setSimulationResults(cached);
+        return;
+      }
     }
 
     setSimulating(true);
@@ -161,10 +163,10 @@ export function MASimulation({ stockCode, onParametersSelect }) {
             results.push({
               short,
               long,
-              totalPerf3day: parseFloat(totalPerf3day.toFixed(2)),
-              totalPerf7day: parseFloat(totalPerf7day.toFixed(2)),
-              totalPerf14day: parseFloat(totalPerf14day.toFixed(2)),
-              totalPerf30day: parseFloat(totalPerf30day.toFixed(2)),
+              totalPerf3day: parseFloat((count3day > 0 ? (totalPerf3day / count3day) : 0).toFixed(2)),
+              totalPerf7day: parseFloat((count7day > 0 ? (totalPerf7day / count7day) : 0).toFixed(2)),
+              totalPerf14day: parseFloat((count14day > 0 ? (totalPerf14day / count14day) : 0).toFixed(2)),
+              totalPerf30day: parseFloat((count30day > 0 ? (totalPerf30day / count30day) : 0).toFixed(2)),
               crossoverCount: data.crossovers.length,
               winRate3day: count3day > 0 ? ((wins3day / count3day) * 100).toFixed(1) : '0.0',
               winRate7day: count7day > 0 ? ((wins7day / count7day) * 100).toFixed(1) : '0.0',
@@ -178,12 +180,23 @@ export function MASimulation({ stockCode, onParametersSelect }) {
       }
     }
 
-    // Sort by totalPerf7day descending (default sorting)
+    // Sort by totalPerf7day descending (default sorting) - now using averages
     results.sort((a, b) => b.totalPerf7day - a.totalPerf7day);
 
+    // Filter results: buy count should be more than long MA / short MA ratio, or if count >= 5 is fine
+    const filteredResults = results.filter(result => {
+      // Always include if B count >= 5
+      if (result.crossoverCount >= 5) return true;
+      
+      // Otherwise, check the MA ratio requirement
+      const minimumCrossovers = Math.ceil(result.long / result.short);
+      return result.crossoverCount > minimumCrossovers;
+    });
+
     const resultData = {
-      topResults: results.slice(0, 20),
-      allResults: results,
+      topResults: filteredResults.slice(0, 20),
+      allResults: filteredResults,
+      allResultsUnfiltered: results, // Include all results (both filtered and unfiltered)
       marketReturn: marketReturn || 0
     };
 
@@ -229,13 +242,13 @@ export function MASimulation({ stockCode, onParametersSelect }) {
   return (
     <div className="space-y-6">
       {/* Simulation Button */}
-      <div className="p-4 rounded-lg" style={{ backgroundColor: 'rgba(30, 58, 138, 0.3)', borderLeft: '3px solid #3b82f6' }}>
+      <div className="p-4 rounded-lg mt-8" style={{ backgroundColor: 'rgba(250, 204, 21, 0.2)', borderLeft: '3px solid #facc15' }}>
         <p className="text-sm mb-3" style={{ color: '#bfdbfe' }}>
           <strong>Optimize MA Strategy:</strong> Find the best Short/Long MA combination across all time periods (3, 7, 14, 30 days)
           {simulationResults && <span className="ml-2 text-green-400">(Using cached results)</span>}
         </p>
         <button
-          onClick={runSimulation}
+          onClick={() => runSimulation(simulationResults ? true : false)}
           disabled={simulating}
           className="px-6 py-2 bg-blue-600 hover:bg-blue-700 disabled:bg-gray-600 text-white rounded transition-colors font-semibold"
         >
@@ -255,7 +268,7 @@ export function MASimulation({ stockCode, onParametersSelect }) {
 
       {/* Simulation Results Table */}
       {simulationResults && (
-        <div className="p-4 rounded-lg" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', borderLeft: '3px solid #10b981' }}>
+        <div className="p-4 rounded-lg mt-8" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', borderLeft: '3px solid #10b981' }}>
           <div className="flex items-center gap-3 mb-3">
             <h4 className="text-base font-bold" style={{ color: '#86efac' }}>
               Top 20 MA Combinations - All Time Periods
@@ -291,28 +304,28 @@ export function MASimulation({ stockCode, onParametersSelect }) {
                     style={{ color: '#93c5fd' }}
                     onClick={() => handleSort('totalPerf3day')}
                   >
-                    Total 3-Day % {sortBy === 'totalPerf3day' && (sortOrder === 'desc' ? '↓' : '↑')}
+                    Avg 3-Day % {sortBy === 'totalPerf3day' && (sortOrder === 'desc' ? '↓' : '↑')}
                   </th>
                   <th
                     className="text-right py-2 px-3 cursor-pointer hover:bg-blue-900/30"
                     style={{ color: '#93c5fd' }}
                     onClick={() => handleSort('totalPerf7day')}
                   >
-                    Total 7-Day % {sortBy === 'totalPerf7day' && (sortOrder === 'desc' ? '↓' : '↑')}
+                    Avg 7-Day % {sortBy === 'totalPerf7day' && (sortOrder === 'desc' ? '↓' : '↑')}
                   </th>
                   <th
                     className="text-right py-2 px-3 cursor-pointer hover:bg-blue-900/30"
                     style={{ color: '#93c5fd' }}
                     onClick={() => handleSort('totalPerf14day')}
                   >
-                    Total 14-Day % {sortBy === 'totalPerf14day' && (sortOrder === 'desc' ? '↓' : '↑')}
+                    Avg 14-Day % {sortBy === 'totalPerf14day' && (sortOrder === 'desc' ? '↓' : '↑')}
                   </th>
                   <th
                     className="text-right py-2 px-3 cursor-pointer hover:bg-blue-900/30"
                     style={{ color: '#93c5fd' }}
                     onClick={() => handleSort('totalPerf30day')}
                   >
-                    Total 30-Day % {sortBy === 'totalPerf30day' && (sortOrder === 'desc' ? '↓' : '↑')}
+                    Avg 30-Day % {sortBy === 'totalPerf30day' && (sortOrder === 'desc' ? '↓' : '↑')}
                   </th>
                   <th
                     className="text-center py-2 px-3 cursor-pointer hover:bg-blue-900/30"

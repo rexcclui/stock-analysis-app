@@ -323,6 +323,12 @@ export default function StockAnalysisDashboard() {
     const stockCode = (overrideCode || searchInput).toUpperCase();
     if (!stockCode) { setLoading(false); return; }
 
+    // Clear previous data immediately to avoid confusion
+    setSelectedStock(null);
+    setNews([]);
+    setComparisonStocks([]);
+    setChartCompareStocks([]);
+    
     // Always reflect clicked/typed code in the input
     setSearchInput(stockCode);
     
