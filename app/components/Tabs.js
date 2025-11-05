@@ -11,9 +11,10 @@ export const Tabs = ({ activeTab, onTabChange, tabs }) => {
           onClick={() => onTabChange(tab.id)}
           className={`flex-1 px-6 py-3 rounded-lg text-sm font-semibold transition-all duration-300 ${
             activeTab === tab.id
-              ? 'bg-white text-blue-600 shadow-lg shadow-blue-500/50 scale-105'
+              ? ''
               : 'text-gray-300 hover:text-white hover:bg-gray-600 hover:scale-102'
           }`}
+          style={activeTab === tab.id ? { backgroundColor: '#FBBF24', color: '#0ea5ff', boxShadow: '0 6px 18px rgba(0,0,0,0.08)', transform: 'scale(1.03)' } : undefined}
         >
           {tab.label}
         </button>
