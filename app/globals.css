@@ -23,3 +23,87 @@ a {
 a:visited {
   color: inherit;
 }
+
+/* Make range inputs (sliders) visible on yellow backgrounds
+   - Yellow track for brand color
+   - Dark thumb for good contrast on both light/dark backgrounds
+   - Works for WebKit (Chrome, Safari) and Firefox
+*/
+input[type="range"] {
+  -webkit-appearance: none;
+  appearance: none;
+  height: 24px;
+  margin: 0.35rem 0;
+}
+
+/* Track */
+input[type="range"]::-webkit-slider-runnable-track {
+  height: 8px;
+  background: #facc15; /* yellow */
+  border-radius: 9999px;
+}
+input[type="range"]::-moz-range-track {
+  height: 8px;
+  background: #facc15;
+  border-radius: 9999px;
+}
+
+/* Thumb */
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -6px; /* center the 20px thumb on 8px track */
+  width: 20px;
+  height: 20px;
+  background: #111827; /* dark thumb for contrast */
+  border: 2px solid rgba(255,255,255,0.08);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+input[type="range"]::-moz-range-thumb {
+  width: 20px;
+  height: 20px;
+  background: #111827;
+  border: 2px solid rgba(255,255,255,0.08);
+  border-radius: 50%;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.5);
+}
+
+/* Focus outline for accessibility */
+input[type="range"]:focus {
+  outline: none;
+}
+input[type="range"]:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.18);
+}
+input[type="range"]:focus::-moz-range-thumb {
+  box-shadow: 0 0 0 4px rgba(250, 204, 21, 0.18);
+}
+
+/* MA-specific slider: vertical blue bar thumb */
+.ma-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  margin-top: -10px; /* center taller bar */
+  width: 6px; /* narrow vertical bar */
+  height: 28px; /* taller than the track */
+  background: #3b82f6; /* blue */
+  border-radius: 3px;
+  border: none;
+  box-shadow: 0 1px 6px rgba(59,130,246,0.35);
+}
+.ma-range::-moz-range-thumb {
+  width: 6px;
+  height: 28px;
+  background: #3b82f6;
+  border-radius: 3px;
+  border: none;
+  box-shadow: 0 1px 6px rgba(59,130,246,0.35);
+}
+
+.ma-range:focus::-webkit-slider-thumb {
+  box-shadow: 0 0 0 6px rgba(59,130,246,0.14);
+}
+.ma-range:focus::-moz-range-thumb {
+  box-shadow: 0 0 0 6px rgba(59,130,246,0.14);
+}

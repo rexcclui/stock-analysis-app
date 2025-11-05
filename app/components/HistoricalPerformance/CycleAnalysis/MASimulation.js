@@ -269,7 +269,7 @@ export function MASimulation({ stockCode, onParametersSelect }) {
   return (
     <div className="space-y-6">
       {/* Simulation Button */}
-      <div className="p-4 rounded-lg mt-8" style={{ backgroundColor: 'rgba(250, 204, 21, 0.2)', borderLeft: '3px solid #facc15' }}>
+      <div className="p-4 rounded-lg mt-12" style={{ backgroundColor: 'rgba(250, 204, 21, 0.2)', borderLeft: '3px solid #facc15' }}>
         <p className="text-sm mb-3" style={{ color: '#bfdbfe' }}>
           <strong>Optimize MA Strategy:</strong> Find the best Short/Long MA combination across all time periods (3, 7, 14, 30 days)
           {simulationResults && <span className="ml-2 text-green-400">(Using cached results)</span>}

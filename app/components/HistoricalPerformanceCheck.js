@@ -782,7 +782,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
                 step="5"
                 value={maShort}
                 onChange={(e) => setMaShort(parseInt(e.target.value))}
-                className="w-full h-2 rounded-lg appearance-none cursor-pointer"
+                className="w-full h-2 rounded-lg appearance-none cursor-pointer ma-range"
                 style={{ backgroundColor: '#facc15', accentColor: '#facc15' }}
               />
               <div className="flex justify-between text-xs text-gray-400 mt-1">
@@ -802,7 +802,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
                 step="10"
                 value={maLong}
                 onChange={(e) => setMaLong(parseInt(e.target.value))}
-                className="w-full h-2 rounded-lg appearance-none cursor-pointer"
+                className="w-full h-2 rounded-lg appearance-none cursor-pointer ma-range"
                 style={{ backgroundColor: '#facc15', accentColor: '#facc15' }}
               />
               <div className="flex justify-between text-xs text-gray-400 mt-1">

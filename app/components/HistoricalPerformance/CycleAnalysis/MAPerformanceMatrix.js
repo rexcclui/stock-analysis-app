@@ -176,7 +176,7 @@ export function MAPerformanceMatrix({ simulationResults, onParametersSelect }) {
 
   return (
     <div className="p-4 rounded-lg mt-8" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', borderLeft: '3px solid #8b5cf6' }}>
-      <h4 className="text-base font-bold mb-3 mt-8" style={{ color: '#c4b5fd' }}>
+      <h4 className="text-base font-bold mb-3 mt-12" style={{ color: '#c4b5fd' }}>
         Performance Matrix: Short MA vs Long MA (Average %)
       </h4>
       <div className="text-xs mb-4 flex items-center gap-0" style={{ color: '#bfdbfe' }}>
