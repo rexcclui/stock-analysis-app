@@ -773,7 +773,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
             <div className="flex-1" style={{ marginRight: '0.3rem' }}>
               <div className="flex justify-between items-center mb-2">
                 <label className="text-sm font-medium text-gray-300">Short MA</label>
-                <span className="text-base font-bold text-blue-400">{maShort}d</span>
+                <span className="text-base font-bold" style={{ color: '#22c55e' }}>{maShort}D</span>
               </div>
               <input
                 type="range"
@@ -793,7 +793,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
             <div className="flex-1" style={{ marginLeft: '0.3rem' }}>
               <div className="flex justify-between items-center mb-2">
                 <label className="text-sm font-medium text-gray-300">Long MA</label>
-                <span className="text-base font-bold text-purple-400">{maLong}d</span>
+                <span className="text-base font-bold" style={{ color: '#22c55e' }}>{maLong}D</span>
               </div>
               <input
                 type="range"
