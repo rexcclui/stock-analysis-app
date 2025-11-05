@@ -191,7 +191,7 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
       <div className="rounded-lg p-6 border" style={{ backgroundColor: 'rgba(23, 37, 84, 0.5)', borderColor: '#1e3a8a' }}>
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center gap-3">
-            <h3 className="text-lg font-bold" style={{ color: '#dbeafe' }}>Current Moving Average Status - MA {maShort} Days vs {maLong} Days</h3>
+            <h3 className="text-lg font-bold" style={{ color: '#dbeafe' }}>Current Moving Average Status - MA {maShort} Days vs {maLong} Days (Total: {cycleAnalysis.totalCrossovers} Crossovers)</h3>
             <button
               onClick={() => setShowChart(!showChart)}
               className="p-1.5 rounded hover:bg-blue-900/50 transition-colors"
@@ -376,7 +376,7 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
       </div>
 
       {!showChart && (
-        <div className="rounded-lg p-6 border" style={{ backgroundColor: 'rgba(23, 37, 84, 0.5)', borderColor: '#1e3a8a' }}>
+        <div className="rounded-lg p-6 border mt-8" style={{ backgroundColor: 'rgba(23, 37, 84, 0.5)', borderColor: '#1e3a8a' }}>
           <h3 className="text-lg font-bold mb-4" style={{ color: '#dbeafe' }}>
             Recent Crossovers (Total: {cycleAnalysis.totalCrossovers})
           </h3>

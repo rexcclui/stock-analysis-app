@@ -12,7 +12,7 @@ import { LoadingState } from './LoadingState';
  * - sentimentTimeSeries: array of { date, score } objects
  */
 export function SentimentTimeSeriesChart({ sentimentTimeSeries, loading = false }) {
-  const [isExpanded, setIsExpanded] = useState(true);
+  const [isExpanded, setIsExpanded] = useState(false);
   // Calculate the actual period from the data
   let periodLabel = "No Data";
   let dayCount = 0;
