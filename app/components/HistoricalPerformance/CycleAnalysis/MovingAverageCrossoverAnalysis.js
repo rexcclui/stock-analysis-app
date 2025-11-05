@@ -107,10 +107,13 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
     const dataLength = cycleAnalysis.chartData.length;
     const currentRange = dragStart.endIndex - dragStart.startIndex;
 
-    // Calculate how many data points to shift based on pixel movement
-    // Drag right (positive deltaX) should move forward in time (increase indices)
-    // Drag left (negative deltaX) should move backward in time (decrease indices)
-    const shiftAmount = Math.round((deltaX / containerWidth) * currentRange);
+    // Calculate cursor position as percentage of container width (0 to 1)
+    const cursorPercentage = (e.clientX - container.getBoundingClientRect().left) / containerWidth;
+    
+    // Calculate how many data points correspond to the current range
+    // Map the cursor percentage to data indices
+    const pixelsPerDataPoint = containerWidth / currentRange;
+    const shiftAmount = Math.round((deltaX / pixelsPerDataPoint));
 
     let newStartIndex = dragStart.startIndex + shiftAmount;
     let newEndIndex = dragStart.endIndex + shiftAmount;
@@ -118,11 +121,11 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
     // Constrain to data bounds
     if (newStartIndex < 0) {
       newStartIndex = 0;
-      newEndIndex = currentRange;
+      newEndIndex = Math.min(currentRange, dataLength - 1);
     }
     if (newEndIndex >= dataLength) {
       newEndIndex = dataLength - 1;
-      newStartIndex = newEndIndex - currentRange;
+      newStartIndex = Math.max(0, newEndIndex - currentRange);
     }
 
     setZoomState({ startIndex: newStartIndex, endIndex: newEndIndex });
@@ -227,19 +230,32 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
             </div>
           </div>
         ) : (
-          <div
-            ref={chartContainerRef}
-            style={{
-              width: '100%',
-              height: '500px',
-              cursor: isDragging ? 'grabbing' : 'grab',
-              userSelect: 'none'
-            }}
-            onMouseDown={handleMouseDown}
-            onMouseMove={handleMouseMove}
-            onMouseUp={handleMouseUp}
-            onMouseLeave={handleMouseLeave}
-          >
+          <>
+            <div className="mb-3 text-sm" style={{ color: '#93c5fd' }}>
+              {(() => {
+                if (!cycleAnalysis.chartData || cycleAnalysis.chartData.length === 0) return null;
+                const { startIndex, endIndex } = zoomState;
+                const start = startIndex !== null ? startIndex : 0;
+                const end = endIndex !== null ? endIndex : cycleAnalysis.chartData.length - 1;
+                const startDate = new Date(cycleAnalysis.chartData[start].date);
+                const endDate = new Date(cycleAnalysis.chartData[end].date);
+                const daysShowing = end - start + 1;
+                return `Showing ${daysShowing} trading days (${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })})`;
+              })()}
+            </div>
+            <div
+              ref={chartContainerRef}
+              style={{
+                width: '100%',
+                height: '500px',
+                cursor: isDragging ? 'grabbing' : 'grab',
+                userSelect: 'none'
+              }}
+              onMouseDown={handleMouseDown}
+              onMouseMove={handleMouseMove}
+              onMouseUp={handleMouseUp}
+              onMouseLeave={handleMouseLeave}
+            >
             {(() => {
               if (!cycleAnalysis.chartData || cycleAnalysis.chartData.length === 0) {
                 return (
@@ -354,7 +370,8 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
                 </>
               );
             })()}
-          </div>
+            </div>
+          </>
         )}
       </div>
 
