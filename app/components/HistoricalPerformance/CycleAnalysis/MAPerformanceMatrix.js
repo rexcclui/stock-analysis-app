@@ -41,7 +41,25 @@ export function MAPerformanceMatrix({ simulationResults, onParametersSelect }) {
       // Store null for filtered-out results, actual value for included results
       const isIncluded = filteredResults.find(r => r.short === result.short && r.long === result.long);
       if (isIncluded) {
-        const value = result[perfKey];
+        let value = null;
+
+        // Support a combined average mode that averages the four perf fields
+        if (perfKey === 'avgAll') {
+          const keys = ['totalPerf3day', 'totalPerf7day', 'totalPerf14day', 'totalPerf30day'];
+          const nums = keys.map(k => {
+            const v = result[k];
+            return (v === null || v === undefined || isNaN(v)) ? null : Number(v);
+          }).filter(v => v !== null);
+          if (nums.length > 0) {
+            const sum = nums.reduce((s, n) => s + n, 0);
+            value = sum / nums.length;
+          } else {
+            value = null;
+          }
+        } else {
+          value = result[perfKey];
+        }
+
         matrix[result.long][result.short] = value;
 
         if (value !== null && value !== undefined) {
@@ -260,6 +278,23 @@ export function MAPerformanceMatrix({ simulationResults, onParametersSelect }) {
           >
             30-Day
           </button>
+          <button
+            onClick={() => setActiveTab('avgAll')}
+            style={{
+              padding: '4px 12px',
+              fontSize: '0.75rem',
+              fontWeight: '600',
+              borderRadius: '4px 4px 0 0',
+              cursor: 'pointer',
+              border: activeTab === 'avgAll' ? '2px solid #f97316' : 'none',
+              borderBottom: activeTab === 'avgAll' ? '2px solid #f97316' : 'none',
+              color: activeTab === 'avgAll' ? '#f97316' : '#9ca3af',
+              backgroundColor: activeTab === 'avgAll' ? 'rgba(249, 115, 22, 0.12)' : 'transparent',
+              transition: 'all 0.3s ease'
+            }}
+          >
+            Avg (All)
+          </button>
         </div>
       </div>
 
@@ -268,6 +303,7 @@ export function MAPerformanceMatrix({ simulationResults, onParametersSelect }) {
       {activeTab === '7day' && renderMatrix('totalPerf7day')}
       {activeTab === '14day' && renderMatrix('totalPerf14day')}
       {activeTab === '30day' && renderMatrix('totalPerf30day')}
+      {activeTab === 'avgAll' && renderMatrix('avgAll')}
     </div>
   );
 }
