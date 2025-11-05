@@ -73,21 +73,41 @@ export function MASimulation({ stockCode, onParametersSelect }) {
     let currentCombination = 0;
     let marketReturn = null;
 
-    // Calculate total combinations
+    // Calculate total combinations (rough estimate, will be adjusted by filters)
     for (const short of shortMAs) {
       for (const long of longMAs) {
-        // For 3-day short MA, only test with long MA under 30
-        if (short === 3 && long >= 30) continue;
+        // Skip if ratio of short MA / long MA > 0.6
+        if (short / long > 0.6) continue;
         if (short < long) totalCombinations++;
       }
     }
 
-    for (const short of shortMAs) {
-      for (const long of longMAs) {
+    // Reorganized: iterate by long MA (outer) and short MA (inner) for efficient pruning
+    for (const long of longMAs) {
+      let lastCrossoverCountValid = true; // Track if last short MA met criteria
+      
+      for (const short of shortMAs) {
         if (short >= long) continue; // Short MA must be less than Long MA
 
-        // For 3-day short MA, only test with long MA under 30
-        if (short === 3 && long >= 30) continue;
+        // Skip if ratio of short MA / long MA > 0.6
+        if (short / long > 0.6) continue;
+
+        // Skip remaining short MAs if previous one didn't meet minimum crossover criteria
+        const minimumCrossovers = Math.ceil(long / short);
+        if (!lastCrossoverCountValid && short > 3) {
+          // Mark as skipped (skip further testing for this long MA with larger short MAs)
+          results.push({
+            short,
+            long,
+            skipped: true, // Mark as skipped during pruning
+            totalPerf3day: 0,
+            totalPerf7day: 0,
+            totalPerf14day: 0,
+            totalPerf30day: 0,
+            crossoverCount: 0,
+          });
+          continue;
+        }
 
         currentCombination++;
         setProgressMessage(`Testing MA(${short}/${long})... ${currentCombination}/${totalCombinations}`);
@@ -173,6 +193,13 @@ export function MASimulation({ stockCode, onParametersSelect }) {
               winRate14day: count14day > 0 ? ((wins14day / count14day) * 100).toFixed(1) : '0.0',
               winRate30day: count30day > 0 ? ((wins30day / count30day) * 100).toFixed(1) : '0.0',
             });
+
+            // Check if this result meets minimum crossover criteria for future pruning
+            if (data.crossovers.length >= 3) {
+              lastCrossoverCountValid = true;
+            } else {
+              lastCrossoverCountValid = false;
+            }
           }
         } catch (err) {
           console.error(`Error fetching MA crossover for ${short}/${long}:`, err);
@@ -185,8 +212,8 @@ export function MASimulation({ stockCode, onParametersSelect }) {
 
     // Filter results: buy count should be more than long MA / short MA ratio, or if count >= 5 is fine
     const filteredResults = results.filter(result => {
-      // Always include if B count >= 5
-      if (result.crossoverCount >= 5) return true;
+      // Always include if B count >= 3 (lowered threshold for combinations like 3/30 and 3/50)
+      if (result.crossoverCount >= 3) return true;
       
       // Otherwise, check the MA ratio requirement
       const minimumCrossovers = Math.ceil(result.long / result.short);

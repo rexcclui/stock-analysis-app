@@ -9,6 +9,7 @@ export function MAPerformanceMatrix({ simulationResults, onParametersSelect }) {
 
     const matrix = {};
     const crossoverCounts = {}; // Track crossover counts for all combinations
+    const skippedCombos = {}; // Track skipped combinations
     const shortMAsSet = new Set();
     const longMAsSet = new Set();
     let minValue = Infinity;
@@ -29,6 +30,14 @@ export function MAPerformanceMatrix({ simulationResults, onParametersSelect }) {
       if (!matrix[result.long]) {
         matrix[result.long] = {};
       }
+      
+      // Track skipped combinations
+      if (result.skipped) {
+        skippedCombos[key] = true;
+        matrix[result.long][result.short] = 'skip';
+        return;
+      }
+      
       // Store null for filtered-out results, actual value for included results
       const isIncluded = filteredResults.find(r => r.short === result.short && r.long === result.long);
       if (isIncluded) {
@@ -52,7 +61,7 @@ export function MAPerformanceMatrix({ simulationResults, onParametersSelect }) {
     const shortMAs = Array.from(shortMAsSet).sort((a, b) => a - b);
     const longMAs = Array.from(longMAsSet).sort((a, b) => a - b);
 
-    return { matrix, crossoverCounts, shortMAs, longMAs, minValue, maxValue, minNegative, maxPositive };
+    return { matrix, crossoverCounts, shortMAs, longMAs, minValue, maxValue, minNegative, maxPositive, skippedCombos };
   };
 
   // Get background color for cell based on value
@@ -131,23 +140,27 @@ export function MAPerformanceMatrix({ simulationResults, onParametersSelect }) {
                 {shortMAs.map(shortMA => {
                   const value = matrix[longMA]?.[shortMA];
                   const bCount = crossoverCounts[`${longMA}-${shortMA}`];
+                  
+                  // Check if skipped
+                  const isSkipped = value === 'skip';
+                  
                   // Handle NaN values - treat as no data
-                  const displayValue = value !== null && value !== undefined && !isNaN(value) ? value : null;
-                  const isFiltered = displayValue === null && bCount !== undefined;
+                  const displayValue = value !== null && value !== undefined && value !== 'skip' && !isNaN(value) ? value : null;
+                  const isFiltered = displayValue === null && bCount !== undefined && !isSkipped;
                   
                   return (
                     <td
                       key={`${longMA}-${shortMA}`}
                       className="border border-blue-700 px-2 py-1 text-center font-semibold cursor-pointer hover:opacity-80 relative"
                       style={{
-                        backgroundColor: getCellColor(displayValue, minNegative, maxPositive),
-                        color: getTextColor(displayValue),
+                        backgroundColor: isSkipped ? 'rgba(156, 163, 175, 0.2)' : getCellColor(displayValue, minNegative, maxPositive),
+                        color: isSkipped ? '#6b7280' : getTextColor(displayValue),
                         minHeight: '24px'
                       }}
                       onClick={() => displayValue !== null && displayValue !== undefined && applyParameters(shortMA, longMA)}
-                      title={displayValue !== null && displayValue !== undefined ? `Short: ${shortMA}, Long: ${longMA}, Perf: ${displayValue >= 0 ? '+' : ''}${displayValue}%` : isFiltered ? `Filtered: B count = ${bCount}` : 'N/A'}
+                      title={isSkipped ? 'Skipped (pruned for efficiency)' : displayValue !== null && displayValue !== undefined ? `Short: ${shortMA}, Long: ${longMA}, Perf: ${displayValue >= 0 ? '+' : ''}${displayValue}%` : isFiltered ? `Filtered: B count = ${bCount}` : 'N/A'}
                     >
-                      {displayValue !== null && displayValue !== undefined ? `${displayValue >= 0 ? '+' : ''}${displayValue.toFixed(1)}` : isFiltered ? <span style={{ fontSize: '0.6em', color: '#9ca3af', position: 'absolute', bottom: '2px', right: '2px' }}>B:{bCount}</span> : '-'}
+                      {isSkipped ? <span style={{ fontSize: '0.75em', color: '#6b7280' }}>skip</span> : displayValue !== null && displayValue !== undefined ? `${displayValue >= 0 ? '+' : ''}${displayValue.toFixed(1)}` : isFiltered ? <span style={{ fontSize: '0.6em', color: '#9ca3af', position: 'absolute', bottom: '2px', right: '2px' }}>B:{bCount}</span> : '-'}
                     </td>
                   );
                 })}
