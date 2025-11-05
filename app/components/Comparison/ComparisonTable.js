@@ -130,14 +130,14 @@ export function ComparisonTable({
             <div className="flex bg-gray-700 rounded-lg p-1">
               <button
                 onClick={() => onViewModeChange('table')}
-                className={`px-3 py-1 rounded-md text-sm transition ${
-                  viewMode === 'table' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white'
+                className={`px-3 py-1 rounded-md text-sm font-semibold transition ${
+                  viewMode === 'table' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-300 hover:text-white hover:bg-gray-600'
                 }`}
               >Table</button>
               <button
                 onClick={() => onViewModeChange('heatmap')}
-                className={`px-3 py-1 rounded-md text-sm transition ${
-                  viewMode === 'heatmap' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white'
+                className={`px-3 py-1 rounded-md text-sm font-semibold transition ${
+                  viewMode === 'heatmap' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-300 hover:text-white hover:bg-gray-600'
                 }`}
               >Heatmap</button>
             </div>
@@ -148,11 +148,13 @@ export function ComparisonTable({
               <div className="flex bg-gray-700 rounded-lg p-1">
                 <button
                   onClick={() => setColorMode('historical')}
-                  className={`px-3 py-1 rounded-md text-sm transition ${colorMode === 'historical' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white'}`}
+                  className={`px-3 py-1 rounded-md text-sm font-semibold transition ${colorMode === 'historical' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-300 hover:text-white hover:bg-gray-600'}`}
+                  title="Historical: Colors based on absolute performance thresholds (green for gains, red for losses)"
                 >Historical</button>
                 <button
                   onClick={() => setColorMode('relative')}
-                  className={`px-3 py-1 rounded-md text-sm transition ${colorMode === 'relative' ? 'bg-blue-600 text-white' : 'text-gray-300 hover:text-white'}`}
+                  className={`px-3 py-1 rounded-md text-sm font-semibold transition ${colorMode === 'relative' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-300 hover:text-white hover:bg-gray-600'}`}
+                  title="Relative: Colors based on relative performance within the comparison group (green for best, red for worst)"
                 >Relative</button>
               </div>
             </div>
