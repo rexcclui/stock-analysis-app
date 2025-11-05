@@ -67,6 +67,10 @@ export function CorrelationTable({ symbol, relatedStocks, onSelectStock }) {
   }, [symbol, relatedStocks, years]);
 
   const getColorForCorrelation = (correlation) => {
+    if (correlation === null || correlation === undefined) {
+      return 'rgba(107, 114, 128, 0.3)'; // gray for null/undefined
+    }
+
     const absCorr = Math.abs(correlation);
 
     if (correlation >= 0) {
@@ -83,12 +87,14 @@ export function CorrelationTable({ symbol, relatedStocks, onSelectStock }) {
   };
 
   const formatLeadLag = (leadLag) => {
+    if (!leadLag) return "N/A";
+
     if (leadLag.bestLag === 0) {
       return "Simultaneous";
     } else if (leadLag.bestLag > 0) {
-      return `${symbol} leads by ${leadLag.leadDays}d`;
+      return `${symbol} leads by ${leadLag.leadDays ?? 0}d`;
     } else {
-      return `${leadLag.leaderSymbol} leads by ${leadLag.leadDays}d`;
+      return `${leadLag.leaderSymbol ?? 'Stock'} leads by ${leadLag.leadDays ?? 0}d`;
     }
   };
 
@@ -199,7 +205,7 @@ export function CorrelationTable({ symbol, relatedStocks, onSelectStock }) {
                   className="px-4 py-3 font-bold text-white text-center"
                   style={{ backgroundColor: getColorForCorrelation(item.correlation) }}
                 >
-                  {item.correlation.toFixed(3)}
+                  {(item.correlation ?? 0).toFixed(3)}
                 </td>
                 <td className="px-4 py-3 text-gray-300">
                   <span className={`px-2 py-1 rounded text-xs font-semibold ${
@@ -208,14 +214,14 @@ export function CorrelationTable({ symbol, relatedStocks, onSelectStock }) {
                     item.strength === 'Moderate' ? 'bg-yellow-800/50 text-yellow-300' :
                     'bg-gray-700 text-gray-400'
                   }`}>
-                    {item.strength}
+                    {item.strength ?? 'Unknown'}
                   </span>
                 </td>
                 <td className="px-4 py-3 text-gray-300 text-sm">
                   {formatLeadLag(item.leadLag)}
                 </td>
                 <td className="px-4 py-3 text-gray-400 text-center text-sm">
-                  {item.dataPoints}
+                  {item.dataPoints ?? 0}
                 </td>
                 <td className="px-4 py-3">
                   <button

@@ -80,9 +80,26 @@ export function LeadLagAnalysis({ symbol1, symbol2, onBack }) {
     return null;
   }
 
-  // Find the best correlation
-  const bestCorr = data.leadLag.bestCorrelation;
-  const bestLag = data.leadLag.bestLag;
+  // Validate data structure
+  if (!data.leadLag || !data.correlation || !data.summary) {
+    return (
+      <div className="space-y-4">
+        <button
+          onClick={onBack}
+          className="text-blue-400 hover:text-blue-300 flex items-center gap-2"
+        >
+          ← Back to Correlation Table
+        </button>
+        <div className="bg-red-900/20 border border-red-500 rounded-lg p-4">
+          <p className="text-red-400">Invalid or incomplete correlation data received.</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Find the best correlation with null safety
+  const bestCorr = data.leadLag?.bestCorrelation ?? 0;
+  const bestLag = data.leadLag?.bestLag ?? 0;
 
   return (
     <div className="space-y-6">
@@ -141,14 +158,14 @@ export function LeadLagAnalysis({ symbol1, symbol2, onBack }) {
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
           <div className="text-sm text-gray-400">Basic Correlation</div>
           <div className={`text-3xl font-bold mt-2 ${
-            Math.abs(data.correlation.value) > 0.7 ? 'text-green-400' :
-            Math.abs(data.correlation.value) > 0.3 ? 'text-yellow-400' :
+            Math.abs(data.correlation?.value ?? 0) > 0.7 ? 'text-green-400' :
+            Math.abs(data.correlation?.value ?? 0) > 0.3 ? 'text-yellow-400' :
             'text-gray-400'
           }`}>
-            {data.correlation.value.toFixed(3)}
+            {(data.correlation?.value ?? 0).toFixed(3)}
           </div>
           <div className="text-sm text-gray-400 mt-1">
-            {data.correlation.strength} {data.correlation.direction}
+            {data.correlation?.strength ?? 'Unknown'} {data.correlation?.direction ?? ''}
           </div>
         </div>
 
@@ -169,10 +186,10 @@ export function LeadLagAnalysis({ symbol1, symbol2, onBack }) {
         <div className="bg-gray-800 border border-gray-700 rounded-lg p-4">
           <div className="text-sm text-gray-400">Leading Stock</div>
           <div className="text-3xl font-bold mt-2 text-blue-400">
-            {data.leadLag.leader === 'None' ? 'Simultaneous' : data.leadLag.leaderSymbol}
+            {(data.leadLag?.leader === 'None' || !data.leadLag?.leaderSymbol) ? 'Simultaneous' : data.leadLag.leaderSymbol}
           </div>
           <div className="text-sm text-gray-400 mt-1">
-            {data.leadLag.leadDays > 0 ? `${data.leadLag.leadDays} day${data.leadLag.leadDays > 1 ? 's' : ''} ahead` : 'Moves together'}
+            {(data.leadLag?.leadDays ?? 0) > 0 ? `${data.leadLag.leadDays} day${data.leadLag.leadDays > 1 ? 's' : ''} ahead` : 'Moves together'}
           </div>
         </div>
       </div>
@@ -180,10 +197,11 @@ export function LeadLagAnalysis({ symbol1, symbol2, onBack }) {
       {/* Interpretation */}
       <div className="bg-blue-900/20 border border-blue-500 rounded-lg p-4">
         <h4 className="font-semibold text-blue-300 mb-2">Interpretation</h4>
-        <p className="text-gray-300">{data.leadLag.interpretation}</p>
+        <p className="text-gray-300">{data.leadLag?.interpretation ?? 'No interpretation available.'}</p>
       </div>
 
       {/* Cross-Correlation Chart */}
+      {data.crossCorrelation && data.crossCorrelation.length > 0 && (
       <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
         <h4 className="text-lg font-semibold text-white mb-4">Cross-Correlation Function</h4>
         <p className="text-sm text-gray-400 mb-4">
@@ -233,8 +251,10 @@ export function LeadLagAnalysis({ symbol1, symbol2, onBack }) {
           </BarChart>
         </ResponsiveContainer>
       </div>
+      )}
 
       {/* Rolling Correlation Chart */}
+      {data.rollingCorrelation && data.rollingCorrelation.length > 0 && (
       <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
         <h4 className="text-lg font-semibold text-white mb-4">Rolling 30-Day Correlation</h4>
         <p className="text-sm text-gray-400 mb-4">
@@ -283,6 +303,7 @@ export function LeadLagAnalysis({ symbol1, symbol2, onBack }) {
           </LineChart>
         </ResponsiveContainer>
       </div>
+      )}
 
       {/* Statistics Summary */}
       <div className="bg-gray-800 border border-gray-700 rounded-lg p-6">
@@ -291,29 +312,29 @@ export function LeadLagAnalysis({ symbol1, symbol2, onBack }) {
           <div>
             <div className="text-sm text-gray-400">Avg Return ({symbol1})</div>
             <div className={`text-xl font-bold mt-1 ${
-              data.summary.avgReturn1 > 0 ? 'text-green-400' : 'text-red-400'
+              (data.summary?.avgReturn1 ?? 0) > 0 ? 'text-green-400' : 'text-red-400'
             }`}>
-              {(data.summary.avgReturn1 * 100).toFixed(3)}%
+              {((data.summary?.avgReturn1 ?? 0) * 100).toFixed(3)}%
             </div>
           </div>
           <div>
             <div className="text-sm text-gray-400">Avg Return ({symbol2})</div>
             <div className={`text-xl font-bold mt-1 ${
-              data.summary.avgReturn2 > 0 ? 'text-green-400' : 'text-red-400'
+              (data.summary?.avgReturn2 ?? 0) > 0 ? 'text-green-400' : 'text-red-400'
             }`}>
-              {(data.summary.avgReturn2 * 100).toFixed(3)}%
+              {((data.summary?.avgReturn2 ?? 0) * 100).toFixed(3)}%
             </div>
           </div>
           <div>
             <div className="text-sm text-gray-400">Volatility ({symbol1})</div>
             <div className="text-xl font-bold mt-1 text-yellow-400">
-              {(data.summary.volatility1 * 100).toFixed(3)}%
+              {((data.summary?.volatility1 ?? 0) * 100).toFixed(3)}%
             </div>
           </div>
           <div>
             <div className="text-sm text-gray-400">Volatility ({symbol2})</div>
             <div className="text-xl font-bold mt-1 text-yellow-400">
-              {(data.summary.volatility2 * 100).toFixed(3)}%
+              {((data.summary?.volatility2 ?? 0) * 100).toFixed(3)}%
             </div>
           </div>
         </div>
@@ -321,7 +342,7 @@ export function LeadLagAnalysis({ symbol1, symbol2, onBack }) {
 
       {/* Data Points Info */}
       <div className="text-sm text-gray-400 text-center">
-        Analysis based on {data.dataPoints} trading days of overlapping data
+        Analysis based on {data.dataPoints ?? 0} trading days of overlapping data
       </div>
     </div>
   );
