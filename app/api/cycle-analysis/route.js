@@ -369,10 +369,9 @@ function analyzeMovingAverageCrossovers(data, maShort = 50, maLong = 200) {
   const currentMALong = maLongValues[maLongValues.length - 1];
   const currentPrice = data[data.length - 1].close;
 
-  // Prepare chart data (last 250 days for performance)
-  const chartDataLength = Math.min(250, data.length);
+  // Prepare chart data (return all data for zoom/pan functionality)
   const chartData = [];
-  for (let i = data.length - chartDataLength; i < data.length; i++) {
+  for (let i = 0; i < data.length; i++) {
     chartData.push({
       date: data[i].date,
       price: parseFloat(data[i].close.toFixed(2)),
