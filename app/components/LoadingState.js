@@ -15,8 +15,8 @@ export function LoadingState({ message = 'Loading...', className = '' }) {
       aria-busy="true"
     >
       <div className="flex items-center gap-3 text-base">
-        <Loader2 className="animate-spin text-blue-400" size={20} />
-        <span>{message}</span>
+        <Loader2 className="animate-spin text-cyan-400" size={20} />
+        <span className="italic" style={{ color: '#22d3ee' }}>{message}</span>
       </div>
     </div>
   );

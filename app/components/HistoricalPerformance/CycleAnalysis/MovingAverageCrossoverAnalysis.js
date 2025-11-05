@@ -18,9 +18,9 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
         <div className="flex items-center justify-between mb-4">
           <h3 className="text-lg font-bold" style={{ color: '#dbeafe' }}>Current Moving Average Status</h3>
           {loading && (
-            <div className="flex items-center gap-2 text-blue-400">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
-              <span className="text-sm">Analyzing...</span>
+            <div className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-cyan-400"></div>
+              <span className="text-sm" style={{ color: '#22d3ee', fontStyle: 'italic' }}>Analyzing...</span>
             </div>
           )}
         </div>

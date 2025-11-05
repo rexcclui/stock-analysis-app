@@ -9,56 +9,48 @@ const getMarketCapValue = (marketCap) => {
 };
 
 // Generate color based on relative position between min and max (conditional formatting)
-const getRelativeHeatmapColor = (value, min, max) => {
+const getRelativeHeatmapColor = (value, min, max, allValues) => {
   // If all values are the same, return neutral color
   if (min === max) return "#ecfdf5";
 
-  // Calculate normalized position (0 = min, 1 = max)
-  const normalized = (value - min) / (max - min);
+  // Separate positive and negative values from allValues
+  const positiveValues = allValues.filter(v => v > 0);
+  const negativeValues = allValues.filter(v => v < 0);
 
-  // Define color stops for gradient
-  // Red (negative) -> White (neutral) -> Green (positive)
-  const colorStops = [
-    { pos: 0.0, color: { r: 69, g: 10, b: 10 } },      // #450a0a - darkest red
-    { pos: 0.1, color: { r: 127, g: 29, b: 29 } },     // #7f1d1d - very dark red
-    { pos: 0.2, color: { r: 185, g: 28, b: 28 } },     // #b91c1c - dark red
-    { pos: 0.3, color: { r: 239, g: 68, b: 68 } },     // #ef4444 - red
-    { pos: 0.4, color: { r: 252, g: 165, b: 165 } },   // #fca5a5 - light red
-    { pos: 0.5, color: { r: 236, g: 253, b: 245 } },   // #ecfdf5 - neutral (white-ish)
-    { pos: 0.6, color: { r: 167, g: 243, b: 208 } },   // #a7f3d0 - light green
-    { pos: 0.7, color: { r: 52, g: 211, b: 153 } },    // #34d399 - medium green
-    { pos: 0.8, color: { r: 16, g: 185, b: 129 } },    // #10b981 - green
-    { pos: 0.9, color: { r: 4, g: 120, b: 87 } },      // #047857 - dark green
-    { pos: 1.0, color: { r: 6, g: 78, b: 59 } },       // #064e3b - darkest green
-  ];
+  // Get ranges for positive and negative
+  const maxPositive = positiveValues.length > 0 ? Math.max(...positiveValues) : 0;
+  const minPositive = positiveValues.length > 0 ? Math.min(...positiveValues) : 0;
+  const minNegative = negativeValues.length > 0 ? Math.min(...negativeValues) : 0;  // Most negative
+  const maxNegative = negativeValues.length > 0 ? Math.max(...negativeValues) : 0;  // Closest to 0
 
-  // Find the two color stops to interpolate between
-  let lowerStop = colorStops[0];
-  let upperStop = colorStops[colorStops.length - 1];
+  if (value > 0) {
+    // Positive values: light green (lowest) to deep green (highest)
+    const ratio = maxPositive > minPositive ? (value - minPositive) / (maxPositive - minPositive) : 0.5;
 
-  for (let i = 0; i < colorStops.length - 1; i++) {
-    if (normalized >= colorStops[i].pos && normalized <= colorStops[i + 1].pos) {
-      lowerStop = colorStops[i];
-      upperStop = colorStops[i + 1];
-      break;
-    }
+    // Interpolate from light green (#bbf7d0) to deep green (#14532d)
+    const r = Math.round(187 - (187 - 20) * ratio);
+    const g = Math.round(247 - (247 - 83) * ratio);
+    const b = Math.round(208 - (208 - 45) * ratio);
+    return `rgb(${r}, ${g}, ${b})`;
+  } else if (value < 0) {
+    // Negative values: light red (highest/closest to 0) to deep red (most negative)
+    const ratio = minNegative < maxNegative ? (value - maxNegative) / (minNegative - maxNegative) : 0.5;
+
+    // Interpolate from light red (#fecaca) to deep red (#7f1d1d)
+    const r = Math.round(254 - (254 - 127) * ratio);
+    const g = Math.round(202 - (202 - 29) * ratio);
+    const b = Math.round(202 - (202 - 29) * ratio);
+    return `rgb(${r}, ${g}, ${b})`;
+  } else {
+    // Value is 0 - neutral gray
+    return "#e5e7eb";
   }
-
-  // Interpolate between the two stops
-  const range = upperStop.pos - lowerStop.pos;
-  const rangeNormalized = range === 0 ? 0 : (normalized - lowerStop.pos) / range;
-
-  const r = Math.round(lowerStop.color.r + (upperStop.color.r - lowerStop.color.r) * rangeNormalized);
-  const g = Math.round(lowerStop.color.g + (upperStop.color.g - lowerStop.color.g) * rangeNormalized);
-  const b = Math.round(lowerStop.color.b + (upperStop.color.b - lowerStop.color.b) * rangeNormalized);
-
-  return `rgb(${r}, ${g}, ${b})`;
 };
 
 // Keep old function for legend generation, but will be replaced by relative colors
-const getHeatmapColor = (value, min, max) => {
-  if (min !== undefined && max !== undefined) {
-    return getRelativeHeatmapColor(value, min, max);
+const getHeatmapColor = (value, min, max, allValues) => {
+  if (min !== undefined && max !== undefined && allValues) {
+    return getRelativeHeatmapColor(value, min, max, allValues);
   }
   // Fallback to absolute if min/max not provided
   if (value >= 500) return "#064e3b";
@@ -379,7 +371,7 @@ export function HeatmapView({
       >
         {layout.map(({ stock, x, y, width, height }) => {
           const performance = stock.performance[heatmapColorBy];
-          const backgroundColor = getHeatmapColor(performance, minPerformance, maxPerformance);
+          const backgroundColor = getHeatmapColor(performance, minPerformance, maxPerformance, performanceValues);
           const textColor = getTextColor(backgroundColor);
 
           // Determine what to display for SIZE metric (heatmapSizeBy)
@@ -523,17 +515,17 @@ export function HeatmapView({
                 <div
                   key={index}
                   className="w-6 h-6 rounded"
-                  style={{ backgroundColor: getHeatmapColor(value, minPerformance, maxPerformance) }}
+                  style={{ backgroundColor: getHeatmapColor(value, minPerformance, maxPerformance, performanceValues) }}
                   title={`${value > 0 ? '+' : ''}${value}%`}
                 />
               ))}
             </div>
             <span className="text-gray-300 text-sm ml-2">
-              <span style={{ color: getHeatmapColor(maxPerformance, minPerformance, maxPerformance) }}>
+              <span style={{ color: getHeatmapColor(maxPerformance, minPerformance, maxPerformance, performanceValues) }}>
                 {maxPerformance > 0 ? '+' : ''}{maxPerformance.toFixed(1)}%
               </span>
               {' to '}
-              <span style={{ color: getHeatmapColor(minPerformance, minPerformance, maxPerformance) }}>
+              <span style={{ color: getHeatmapColor(minPerformance, minPerformance, maxPerformance, performanceValues) }}>
                 {minPerformance > 0 ? '+' : ''}{minPerformance.toFixed(1)}%
               </span>
             </span>

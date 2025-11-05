@@ -5,13 +5,15 @@ export function MAPerformanceMatrix({ simulationResults, onParametersSelect }) {
 
   // Create matrix data structure for table
   const getMatrixData = (perfKey) => {
-    if (!simulationResults) return { matrix: {}, shortMAs: [], longMAs: [], minValue: 0, maxValue: 0 };
+    if (!simulationResults) return { matrix: {}, shortMAs: [], longMAs: [], minValue: 0, maxValue: 0, minNegative: 0, maxPositive: 0 };
 
     const matrix = {};
     const shortMAsSet = new Set();
     const longMAsSet = new Set();
     let minValue = Infinity;
     let maxValue = -Infinity;
+    let minNegative = 0; // Most negative value
+    let maxPositive = 0; // Most positive value
 
     simulationResults.allResults.forEach(result => {
       const value = result[perfKey];
@@ -25,36 +27,46 @@ export function MAPerformanceMatrix({ simulationResults, onParametersSelect }) {
 
       if (value < minValue) minValue = value;
       if (value > maxValue) maxValue = value;
+
+      // Track separate positive and negative ranges
+      if (value < 0 && value < minNegative) minNegative = value;
+      if (value > 0 && value > maxPositive) maxPositive = value;
     });
 
     const shortMAs = Array.from(shortMAsSet).sort((a, b) => a - b);
     const longMAs = Array.from(longMAsSet).sort((a, b) => a - b);
 
-    return { matrix, shortMAs, longMAs, minValue, maxValue };
+    return { matrix, shortMAs, longMAs, minValue, maxValue, minNegative, maxPositive };
   };
 
   // Get background color for cell based on value
-  const getCellColor = (value, minValue, maxValue) => {
+  const getCellColor = (value, minNegative, maxPositive) => {
     if (value === null || value === undefined) return 'transparent';
 
-    if (value >= 0) {
-      // Positive values: light green to deep green
-      const ratio = maxValue > 0 ? value / maxValue : 0;
+    // Ensure value is a number
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+
+    if (numValue > 0) {
+      // Positive values: light green (lowest) to deep green (highest)
+      const ratio = maxPositive > 0 ? numValue / maxPositive : 0;
 
       // Interpolate from light green (#bbf7d0) to deep green (#14532d)
       const r = Math.round(187 - (187 - 20) * ratio);
       const g = Math.round(247 - (247 - 83) * ratio);
       const b = Math.round(208 - (208 - 45) * ratio);
       return `rgb(${r}, ${g}, ${b})`;
-    } else {
-      // Negative values: light red to very red
-      const ratio = minValue < 0 ? value / minValue : 0;
+    } else if (numValue < 0) {
+      // Negative values: light red (highest/closest to 0) to deep red (lowest/most negative)
+      const ratio = minNegative < 0 ? numValue / minNegative : 0;
 
-      // Interpolate from light red (#fecaca) to very red (#7f1d1d)
+      // Interpolate from light red (#fecaca) to deep red (#7f1d1d)
       const r = Math.round(254 - (254 - 127) * ratio);
       const g = Math.round(202 - (202 - 29) * ratio);
       const b = Math.round(202 - (202 - 29) * ratio);
       return `rgb(${r}, ${g}, ${b})`;
+    } else {
+      // Value is 0 or very close to 0 - neutral gray
+      return '#e5e7eb';
     }
   };
 
@@ -77,7 +89,7 @@ export function MAPerformanceMatrix({ simulationResults, onParametersSelect }) {
 
   // Render matrix table
   const renderMatrix = (perfKey) => {
-    const { matrix, shortMAs, longMAs, minValue, maxValue } = getMatrixData(perfKey);
+    const { matrix, shortMAs, longMAs, minNegative, maxPositive } = getMatrixData(perfKey);
 
     return (
       <div className="overflow-auto max-h-[600px]">
@@ -107,7 +119,7 @@ export function MAPerformanceMatrix({ simulationResults, onParametersSelect }) {
                       key={`${longMA}-${shortMA}`}
                       className="border border-blue-700 px-2 py-1 text-center font-semibold cursor-pointer hover:opacity-80"
                       style={{
-                        backgroundColor: getCellColor(value, minValue, maxValue),
+                        backgroundColor: getCellColor(value, minNegative, maxPositive),
                         color: getTextColor(value)
                       }}
                       onClick={() => value !== null && value !== undefined && applyParameters(shortMA, longMA)}
@@ -134,7 +146,7 @@ export function MAPerformanceMatrix({ simulationResults, onParametersSelect }) {
       </h4>
       <p className="text-xs mb-4" style={{ color: '#bfdbfe' }}>
         Rows show Long MA, columns show Short MA.
-        Color coding: <span style={{ color: '#14532d', backgroundColor: '#bbf7d0', padding: '2px 4px', borderRadius: '2px' }}>light green (low positive)</span> → <span style={{ color: '#ffffff', backgroundColor: '#14532d', padding: '2px 4px', borderRadius: '2px' }}>deep green (high positive)</span> | <span style={{ color: '#1f2937', backgroundColor: '#fecaca', padding: '2px 4px', borderRadius: '2px' }}>light red (near zero negative)</span> → <span style={{ color: '#ffffff', backgroundColor: '#7f1d1d', padding: '2px 4px', borderRadius: '2px' }}>very red (most negative)</span>
+        Color coding: <span style={{ color: '#1f2937', backgroundColor: '#bbf7d0', padding: '2px 4px', borderRadius: '2px' }}>light green (lowest positive)</span> → <span style={{ color: '#ffffff', backgroundColor: '#14532d', padding: '2px 4px', borderRadius: '2px' }}>deep green (highest positive)</span> | <span style={{ color: '#1f2937', backgroundColor: '#fecaca', padding: '2px 4px', borderRadius: '2px' }}>light red (highest negative)</span> → <span style={{ color: '#ffffff', backgroundColor: '#7f1d1d', padding: '2px 4px', borderRadius: '2px' }}>deep red (lowest/most negative)</span>
       </p>
 
       {/* Tabs */}

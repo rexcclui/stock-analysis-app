@@ -241,8 +241,8 @@ export function MASimulation({ stockCode, onParametersSelect }) {
         {simulating && progressMessage && (
           <div className="mt-4 p-3 rounded-lg" style={{ backgroundColor: 'rgba(59, 130, 246, 0.2)', borderLeft: '2px solid #60a5fa' }}>
             <div className="flex items-center gap-2">
-              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-400"></div>
-              <span style={{ color: '#bfdbfe' }} className="text-sm font-medium">{progressMessage}</span>
+              <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-cyan-400"></div>
+              <span style={{ color: '#22d3ee', fontStyle: 'italic' }} className="text-sm font-medium">{progressMessage}</span>
             </div>
           </div>
         )}
@@ -251,15 +251,17 @@ export function MASimulation({ stockCode, onParametersSelect }) {
       {/* Simulation Results Table */}
       {simulationResults && (
         <div className="p-4 rounded-lg" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', borderLeft: '3px solid #10b981' }}>
-          <h4 className="text-base font-bold mb-3" style={{ color: '#86efac' }}>
-            Top 20 MA Combinations - All Time Periods
-          </h4>
-          <p className="text-xs mb-3" style={{ color: '#bfdbfe' }}>
-            <strong>Market Benchmark:</strong> Buy-and-hold return for the simulation period:
-            <span className="ml-2 font-bold" style={{ color: simulationResults.marketReturn >= 0 ? '#22c55e' : '#ef4444' }}>
-              {simulationResults.marketReturn >= 0 ? '+' : ''}{simulationResults.marketReturn}%
+          <div className="flex items-center gap-3 mb-3">
+            <h4 className="text-base font-bold" style={{ color: '#86efac' }}>
+              Top 20 MA Combinations - All Time Periods
+            </h4>
+            <span className="text-xs" style={{ color: '#bfdbfe' }}>
+              (Market Benchmark:
+              <span className="ml-1 font-bold" style={{ color: simulationResults.marketReturn >= 0 ? '#22c55e' : '#ef4444' }}>
+                {simulationResults.marketReturn >= 0 ? '+' : ''}{simulationResults.marketReturn}%
+              </span>)
             </span>
-          </p>
+          </div>
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -314,9 +316,6 @@ export function MASimulation({ stockCode, onParametersSelect }) {
                   >
                     Signals {sortBy === 'crossoverCount' && (sortOrder === 'desc' ? '↓' : '↑')}
                   </th>
-                  <th className="text-right py-2 px-3" style={{ color: '#fbbf24' }}>
-                    Market %
-                  </th>
                 </tr>
               </thead>
               <tbody>
@@ -345,9 +344,6 @@ export function MASimulation({ stockCode, onParametersSelect }) {
                       {result.totalPerf30day >= 0 ? '+' : ''}{result.totalPerf30day}%
                     </td>
                     <td className="text-center py-2 px-3" style={{ color: '#d1d5db' }}>{result.crossoverCount}</td>
-                    <td className="text-right py-2 px-3 font-bold" style={{ color: simulationResults.marketReturn >= 0 ? '#22c55e' : '#ef4444' }}>
-                      {simulationResults.marketReturn >= 0 ? '+' : ''}{simulationResults.marketReturn}%
-                    </td>
                   </tr>
                 ))}
               </tbody>

@@ -600,7 +600,7 @@ export default function StockAnalysisDashboard() {
               className="px-6 py-3 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition flex items-center gap-2 disabled:opacity-50"
             >
               <Search size={20} />
-              {loading ? 'Loading...' : 'Search'}
+              {loading ? <span className="italic" style={{ color: '#22d3ee' }}>Loading...</span> : 'Search'}
             </button>
           </div>
 
