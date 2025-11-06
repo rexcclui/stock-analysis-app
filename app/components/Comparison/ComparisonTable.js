@@ -256,6 +256,9 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
     return true; // Default to expanded for SSR
   });
 
+  // Fundamentals columns (Market Cap to Rating) - expanded by default for all platforms
+  const [fundamentalsExpanded, setFundamentalsExpanded] = useState(true);
+
   // Update nameExpanded on window resize
   useEffect(() => {
     const handleResize = () => {
@@ -469,36 +472,63 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
             <th className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
               Type
             </th>
-            <th
-              className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
-              onClick={() => handleSort('marketCap')}
-            >
-              Market Cap <SortIcon active={isActive('marketCap')} direction={sortDirection} />
-            </th>
-            <th
-              className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
-              onClick={() => handleSort('beta')}
-            >
-              Beta <SortIcon active={isActive('beta')} direction={sortDirection} />
-            </th>
-            <th
-              className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
-              onClick={() => handleSort('pe')}
-            >
-              P/E <SortIcon active={isActive('pe')} direction={sortDirection} />
-            </th>
-            <th
-              className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
-              onClick={() => handleSort('dividendYield')}
-            >
-              Dividend <SortIcon active={isActive('dividendYield')} direction={sortDirection} />
-            </th>
-            <th
-              className="px-4 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
-              onClick={() => handleSort('rating')}
-            >
-              Rating <SortIcon active={isActive('rating')} direction={sortDirection} />
-            </th>
+            {fundamentalsExpanded ? (
+              <>
+                <th
+                  className="px-4 py-3 text-right hover:bg-gray-800 transition"
+                >
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      onClick={() => setFundamentalsExpanded(!fundamentalsExpanded)}
+                      className="p-1 hover:bg-gray-700 rounded transition"
+                      title="Click to collapse fundamentals columns"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <span
+                      className="cursor-pointer"
+                      onClick={() => handleSort('marketCap')}
+                    >
+                      Market Cap <SortIcon active={isActive('marketCap')} direction={sortDirection} />
+                    </span>
+                  </div>
+                </th>
+                <th
+                  className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
+                  onClick={() => handleSort('beta')}
+                >
+                  Beta <SortIcon active={isActive('beta')} direction={sortDirection} />
+                </th>
+                <th
+                  className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
+                  onClick={() => handleSort('pe')}
+                >
+                  P/E <SortIcon active={isActive('pe')} direction={sortDirection} />
+                </th>
+                <th
+                  className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
+                  onClick={() => handleSort('dividendYield')}
+                >
+                  Dividend <SortIcon active={isActive('dividendYield')} direction={sortDirection} />
+                </th>
+                <th
+                  className="px-4 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
+                  onClick={() => handleSort('rating')}
+                >
+                  Rating <SortIcon active={isActive('rating')} direction={sortDirection} />
+                </th>
+              </>
+            ) : (
+              <th className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
+                <button
+                  onClick={() => setFundamentalsExpanded(!fundamentalsExpanded)}
+                  className="p-1 hover:bg-gray-700 rounded transition"
+                  title="Click to expand fundamentals columns"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </th>
+            )}
             <th
               className="px-2 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
               style={{width: sentimentExpanded ? '90px' : '30px', minWidth: sentimentExpanded ? '90px' : '30px'}}
@@ -566,31 +596,37 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
               )}
             </td>
             <td className="px-2 py-3 text-center text-gray-400" style={{width:'50px', minWidth:'50px'}}>-</td>
-            <td className="px-4 py-3">
-              <div style={getMarketCapCellStyle(selectedStock.marketCap)}>
-                ${selectedStock.marketCap}
-              </div>
-            </td>
-            <td className="px-4 py-3 text-right">
-              <div style={getBetaCellStyle(selectedStock.beta)}>
-                {selectedStock.beta || 'N/A'}
-              </div>
-            </td>
-            <td className="px-4 py-3">
-              <div style={getPeCellStyle(selectedStock.pe)}>
-                {selectedStock.pe === '—' ? '—' : selectedStock.pe}
-              </div>
-            </td>
-            <td className="px-4 py-3 text-right">
-              <div style={getDividendCellStyle(selectedStock.dividendYield)}>
-                {selectedStock.dividendYield}
-              </div>
-            </td>
-            <td className="px-4 py-3 text-center">
-              <span style={getRatingStyle(selectedStock.analystRating)}>
-                {selectedStock.analystRating}
-              </span>
-            </td>
+            {fundamentalsExpanded ? (
+              <>
+                <td className="px-4 py-3">
+                  <div style={getMarketCapCellStyle(selectedStock.marketCap)}>
+                    ${selectedStock.marketCap}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <div style={getBetaCellStyle(selectedStock.beta)}>
+                    {selectedStock.beta || 'N/A'}
+                  </div>
+                </td>
+                <td className="px-4 py-3">
+                  <div style={getPeCellStyle(selectedStock.pe)}>
+                    {selectedStock.pe === '—' ? '—' : selectedStock.pe}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <div style={getDividendCellStyle(selectedStock.dividendYield)}>
+                    {selectedStock.dividendYield}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <span style={getRatingStyle(selectedStock.analystRating)}>
+                    {selectedStock.analystRating}
+                  </span>
+                </td>
+              </>
+            ) : (
+              <td className="px-2 py-3 text-center text-gray-400" style={{width:'50px', minWidth:'50px'}}>•</td>
+            )}
             <td className="px-2 py-3 text-center" style={{width: sentimentExpanded ? '90px' : '30px', minWidth: sentimentExpanded ? '90px' : '30px'}}>
               {sentimentExpanded ? (
                 <div className="mx-auto" style={{width:'84px'}}>
@@ -687,31 +723,37 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
               <td className="px-2 py-3 text-center text-gray-200" style={{width:'50px', minWidth:'50px'}}>
                 {getRelationshipTypeAbbr(stock.relationshipType)}
               </td>
-              <td className="px-4 py-3">
-                <div style={getMarketCapCellStyle(stock.marketCap)}>
-                  ${stock.marketCap}
-                </div>
-              </td>
-              <td className="px-4 py-3 text-right">
-                <div style={getBetaCellStyle(stock.beta)}>
-                  {stock.beta || 'N/A'}
-                </div>
-              </td>
-              <td className="px-4 py-3">
-                <div style={getPeCellStyle(stock.pe)}>
-                  {stock.pe === '—' ? '—' : stock.pe}
-                </div>
-              </td>
-              <td className="px-4 py-3 text-right">
-                <div style={getDividendCellStyle(stock.dividendYield)}>
-                  {stock.dividendYield}
-                </div>
-              </td>
-              <td className="px-4 py-3 text-center">
-                <span style={getRatingStyle(stock.analystRating)}>
-                  {stock.analystRating}
-                </span>
-              </td>
+              {fundamentalsExpanded ? (
+                <>
+                  <td className="px-4 py-3">
+                    <div style={getMarketCapCellStyle(stock.marketCap)}>
+                      ${stock.marketCap}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div style={getBetaCellStyle(stock.beta)}>
+                      {stock.beta || 'N/A'}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div style={getPeCellStyle(stock.pe)}>
+                      {stock.pe === '—' ? '—' : stock.pe}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div style={getDividendCellStyle(stock.dividendYield)}>
+                      {stock.dividendYield}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span style={getRatingStyle(stock.analystRating)}>
+                      {stock.analystRating}
+                    </span>
+                  </td>
+                </>
+              ) : (
+                <td className="px-2 py-3 text-center text-gray-400" style={{width:'50px', minWidth:'50px'}}>•</td>
+              )}
               <td className="px-2 py-3 text-center" style={{width: sentimentExpanded ? '90px' : '30px', minWidth: sentimentExpanded ? '90px' : '30px'}}>
                 {sentimentExpanded ? (
                   <div className="mx-auto" style={{width:'84px'}}>
