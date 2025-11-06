@@ -97,6 +97,36 @@ const fetchCompleteStockData = async (symbol, apiCounts = null) => {
         console.warn('[PAGE] Google News fetch failed:', err.message);
     }
 
+    // Fetch Yahoo News (optional)
+    let yahooNews = [];
+    try {
+        if (apiCounts) apiCounts.yahooNews = (apiCounts.yahooNews || 0) + 1;
+        const yahooNewsRes = await fetchWithTimeout(`/api/yahoo-news?symbol=${symbol}`, 10000);
+        if (yahooNewsRes.ok) {
+            yahooNews = await yahooNewsRes.json();
+            console.log(`[PAGE] Yahoo News received: ${Array.isArray(yahooNews) ? yahooNews.length : 0} articles`);
+        } else {
+            console.warn(`[PAGE] Yahoo News API returned: ${yahooNewsRes.status}`);
+        }
+    } catch (err) {
+        console.warn('[PAGE] Yahoo News fetch failed:', err.message);
+    }
+
+    // Fetch Bloomberg News (optional)
+    let bloombergNews = [];
+    try {
+        if (apiCounts) apiCounts.bloombergNews = (apiCounts.bloombergNews || 0) + 1;
+        const bloombergNewsRes = await fetchWithTimeout(`/api/bloomberg-news?symbol=${symbol}`, 10000);
+        if (bloombergNewsRes.ok) {
+            bloombergNews = await bloombergNewsRes.json();
+            console.log(`[PAGE] Bloomberg News received: ${Array.isArray(bloombergNews) ? bloombergNews.length : 0} articles`);
+        } else {
+            console.warn(`[PAGE] Bloomberg News API returned: ${bloombergNewsRes.status}`);
+        }
+    } catch (err) {
+        console.warn('[PAGE] Bloomberg News fetch failed:', err.message);
+    }
+
     return {
       ...stock,
       sentiment,
@@ -105,6 +135,8 @@ const fetchCompleteStockData = async (symbol, apiCounts = null) => {
       relatedStocks: Array.isArray(relatedStocksData) ? relatedStocksData : [],
       news: Array.isArray(news) ? news : [],
       googleNews: Array.isArray(googleNews) ? googleNews : [],
+      yahooNews: Array.isArray(yahooNews) ? yahooNews : [],
+      bloombergNews: Array.isArray(bloombergNews) ? bloombergNews : [],
       comparisonType: fetchedComparisonType
     };
   } catch (error) {
@@ -132,6 +164,8 @@ export default function StockAnalysisDashboard() {
   const [searchHistory, setSearchHistory] = useState([]);
   const [news, setNews] = useState([]);
   const [googleNews, setGoogleNews] = useState([]);
+  const [yahooNews, setYahooNews] = useState([]);
+  const [bloombergNews, setBloombergNews] = useState([]);
   // Detailed search history entries with day change for table (bounded by 3 rows dynamic columns)
   const [searchHistoryStocks, setSearchHistoryStocks] = useState([]); // array of { code, dayChange }
   const HISTORY_COL_WIDTH = 140; // approximate width for each cell
@@ -253,6 +287,18 @@ export default function StockAnalysisDashboard() {
         setGoogleNews(JSON.parse(savedGoogleNews));
       } catch {}
     }
+    const savedYahooNews = localStorage.getItem('selectedStockYahooNews');
+    if (savedYahooNews) {
+      try {
+        setYahooNews(JSON.parse(savedYahooNews));
+      } catch {}
+    }
+    const savedBloombergNews = localStorage.getItem('selectedStockBloombergNews');
+    if (savedBloombergNews) {
+      try {
+        setBloombergNews(JSON.parse(savedBloombergNews));
+      } catch {}
+    }
     const savedComparisonStocks = localStorage.getItem('comparisonStocks');
     if (savedComparisonStocks) {
       try {
@@ -317,6 +363,30 @@ export default function StockAnalysisDashboard() {
     } catch {}
   }, [googleNews, isClient]);
 
+  // Persist Yahoo News whenever it changes
+  React.useEffect(() => {
+    if (!isClient) return;
+    try {
+      if (yahooNews && yahooNews.length > 0) {
+        localStorage.setItem('selectedStockYahooNews', JSON.stringify(yahooNews));
+      } else {
+        localStorage.removeItem('selectedStockYahooNews');
+      }
+    } catch {}
+  }, [yahooNews, isClient]);
+
+  // Persist Bloomberg News whenever it changes
+  React.useEffect(() => {
+    if (!isClient) return;
+    try {
+      if (bloombergNews && bloombergNews.length > 0) {
+        localStorage.setItem('selectedStockBloombergNews', JSON.stringify(bloombergNews));
+      } else {
+        localStorage.removeItem('selectedStockBloombergNews');
+      }
+    } catch {}
+  }, [bloombergNews, isClient]);
+
   // Persist comparison stocks whenever they change
   React.useEffect(() => {
     if (!isClient) return;
@@ -364,6 +434,8 @@ export default function StockAnalysisDashboard() {
     setSelectedStock(null);
     setNews([]);
     setGoogleNews([]);
+    setYahooNews([]);
+    setBloombergNews([]);
     setComparisonStocks([]);
     setChartCompareStocks([]);
     
@@ -385,6 +457,8 @@ export default function StockAnalysisDashboard() {
       setSelectedStock(stockData);
       setNews(stockData.news);
       setGoogleNews(stockData.googleNews);
+      setYahooNews(stockData.yahooNews);
+      setBloombergNews(stockData.bloombergNews);
       setComparisonType(stockData.comparisonType || 'industry');
       addToSearchHistory(stockCode);
       
@@ -755,7 +829,7 @@ export default function StockAnalysisDashboard() {
 
               <SentimentSection sentiment={selectedStock.sentiment} loading={loading} />
 
-              <NewsSection newsApiNews={news} googleNews={googleNews} loading={loading} symbol={selectedStock.code} />
+              <NewsSection newsApiNews={news} googleNews={googleNews} yahooNews={yahooNews} bloombergNews={bloombergNews} loading={loading} symbol={selectedStock.code} />
               </TabPanel>
 
               <TabPanel activeTab={activeTab} tabId="historical-data-analysis">

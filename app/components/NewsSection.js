@@ -10,25 +10,33 @@ import { Tabs, TabPanel } from './Tabs';
  * Props:
  * - newsApiNews: array of { title, date, sentiment, url } from NewsAPI
  * - googleNews: array of { title, date, sentiment, url } from Google News
+ * - yahooNews: array of { title, date, sentiment, url } from Yahoo Finance
+ * - bloombergNews: array of { title, date, sentiment, url } from Bloomberg
  * - title: optional override title
  * - symbol: stock symbol for external news links
  * - loading: loading state
  */
-export function NewsSection({ newsApiNews = [], googleNews = [], title = 'Latest News', loading = false, symbol = '' }) {
+export function NewsSection({ newsApiNews = [], googleNews = [], yahooNews = [], bloombergNews = [], title = 'Latest News', loading = false, symbol = '' }) {
   const [activeTab, setActiveTab] = useState('newsapi');
 
   console.log('[NewsSection] Received news:', {
     newsApiLength: newsApiNews?.length,
     googleNewsLength: googleNews?.length,
+    yahooNewsLength: yahooNews?.length,
+    bloombergNewsLength: bloombergNews?.length,
     isNewsApiArray: Array.isArray(newsApiNews),
-    isGoogleNewsArray: Array.isArray(googleNews)
+    isGoogleNewsArray: Array.isArray(googleNews),
+    isYahooNewsArray: Array.isArray(yahooNews),
+    isBloombergNewsArray: Array.isArray(bloombergNews)
   });
 
-  // If both sources are empty or invalid, show loading or nothing
+  // Check if any source has news
   const hasNewsApi = newsApiNews && Array.isArray(newsApiNews) && newsApiNews.length > 0;
   const hasGoogle = googleNews && Array.isArray(googleNews) && googleNews.length > 0;
+  const hasYahoo = yahooNews && Array.isArray(yahooNews) && yahooNews.length > 0;
+  const hasBloomberg = bloombergNews && Array.isArray(bloombergNews) && bloombergNews.length > 0;
 
-  if (!hasNewsApi && !hasGoogle) {
+  if (!hasNewsApi && !hasGoogle && !hasYahoo && !hasBloomberg) {
     console.log('[NewsSection] No news to display from any source');
     if (loading) {
       return <LoadingState message="Loading latest news..." className="mb-6" />;
@@ -36,13 +44,17 @@ export function NewsSection({ newsApiNews = [], googleNews = [], title = 'Latest
     return null;
   }
 
-  // Filter out error entries from both sources
+  // Filter out error entries from all sources
   const validNewsApi = hasNewsApi ? newsApiNews.filter(article => !article.error) : [];
   const validGoogleNews = hasGoogle ? googleNews.filter(article => !article.error) : [];
+  const validYahooNews = hasYahoo ? yahooNews.filter(article => !article.error) : [];
+  const validBloombergNews = hasBloomberg ? bloombergNews.filter(article => !article.error) : [];
 
   console.log('[NewsSection] Valid news after filtering:', {
     newsApi: validNewsApi.length,
-    google: validGoogleNews.length
+    google: validGoogleNews.length,
+    yahoo: validYahooNews.length,
+    bloomberg: validBloombergNews.length
   });
   
   const newsLinks = symbol ? [
@@ -56,7 +68,9 @@ export function NewsSection({ newsApiNews = [], googleNews = [], title = 'Latest
   // Tabs configuration
   const tabs = [
     { id: 'newsapi', label: 'NewsAPI' },
-    { id: 'google', label: 'Google News' }
+    { id: 'google', label: 'Google News' },
+    { id: 'yahoo', label: 'Yahoo Finance' },
+    { id: 'bloomberg', label: 'Bloomberg' }
   ];
 
   // Helper function to render news articles
@@ -141,6 +155,14 @@ export function NewsSection({ newsApiNews = [], googleNews = [], title = 'Latest
 
       <TabPanel activeTab={activeTab} tabId="google">
         {renderNewsList(validGoogleNews)}
+      </TabPanel>
+
+      <TabPanel activeTab={activeTab} tabId="yahoo">
+        {renderNewsList(validYahooNews)}
+      </TabPanel>
+
+      <TabPanel activeTab={activeTab} tabId="bloomberg">
+        {renderNewsList(validBloombergNews)}
       </TabPanel>
     </div>
   );
