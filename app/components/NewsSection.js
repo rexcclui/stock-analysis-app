@@ -30,11 +30,11 @@ export function NewsSection({ news = [], title = 'Latest News', loading = false,
   }
   
   const newsLinks = symbol ? [
-    { name: 'Google', url: `https://news.google.com/search?q=${encodeURIComponent(symbol + ' stock')}`, color: 'bg-blue-600 hover:bg-blue-700' },
-    { name: 'Yahoo Finance', url: `https://finance.yahoo.com/quote/${symbol}/news`, color: 'bg-purple-600 hover:bg-purple-700' },
-    { name: 'MarketWatch', url: `https://www.marketwatch.com/investing/stock/${symbol.toLowerCase()}`, color: 'bg-green-600 hover:bg-green-700' },
-    { name: 'Seeking Alpha', url: `https://seekingalpha.com/symbol/${symbol}/news`, color: 'bg-orange-600 hover:bg-orange-700' },
-    { name: 'Bloomberg', url: `https://www.bloomberg.com/quote/${symbol}:US`, color: 'bg-gray-600 hover:bg-gray-700' }
+    { name: 'Google', url: `https://news.google.com/search?q=${encodeURIComponent(symbol + ' stock')}`, color: 'bg-blue-600 hover:bg-blue-700', logo: 'https://www.google.com/favicon.ico' },
+    { name: 'Yahoo Finance', url: `https://finance.yahoo.com/quote/${symbol}/news`, color: 'bg-purple-600 hover:bg-purple-700', logo: 'https://finance.yahoo.com/favicon.ico' },
+    { name: 'MarketWatch', url: `https://www.marketwatch.com/investing/stock/${symbol.toLowerCase()}`, color: 'bg-green-600 hover:bg-green-700', logo: 'https://www.marketwatch.com/favicon.ico' },
+    { name: 'Seeking Alpha', url: `https://seekingalpha.com/symbol/${symbol}/news`, color: 'bg-orange-600 hover:bg-orange-700', logo: 'https://seekingalpha.com/favicon.ico' },
+    { name: 'Bloomberg', url: `https://www.bloomberg.com/quote/${symbol}:US`, color: 'bg-gray-600 hover:bg-gray-700', logo: 'https://www.bloomberg.com/favicon.ico' }
   ] : [];
 
   return (
@@ -52,6 +52,12 @@ export function NewsSection({ news = [], title = 'Latest News', loading = false,
               rel="noopener noreferrer"
               className={`px-3 py-1.5 ${link.color} text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5`}
             >
+              <img
+                src={link.logo}
+                alt={`${link.name} logo`}
+                className="w-4 h-4 object-contain"
+                onError={(e) => { e.target.style.display = 'none'; }}
+              />
               {link.name}
               <ExternalLink size={14} />
             </a>
