@@ -414,14 +414,16 @@ export function HeatmapView({
           // Determine if tile is small (width or height < 80px)
           const isSmallTile = width < 80 || height < 80;
 
-          // Determine font sizes based on tile dimensions
-          const isLargeTile = width >= 150 && height >= 150;
-          const isMediumTile = !isSmallTile && !isLargeTile;
+          // Determine font sizes based on tile dimensions - adjusted for 100px grid units
+          const isExtraLargeTile = width >= 200 && height >= 200;
+          const isLargeTile = width >= 100 && height >= 100 && !isExtraLargeTile;
+          const isMediumTile = !isSmallTile && !isLargeTile && !isExtraLargeTile;
 
           // Font size classes - more dramatic differences for better visibility
-          const codeFontSize = isLargeTile ? 'text-2xl' : isMediumTile ? 'text-base' : 'text-xs';
-          const infoFontSize = isLargeTile ? 'text-xl' : isMediumTile ? 'text-sm' : 'text-xs';
-          const labelFontSize = isLargeTile ? 'text-base' : isMediumTile ? 'text-xs' : 'text-xs';
+          // Most tiles are 100px (1 grid unit), so they'll use large fonts
+          const codeFontSize = isExtraLargeTile ? 'text-3xl' : isLargeTile ? 'text-xl' : isMediumTile ? 'text-base' : 'text-xs';
+          const infoFontSize = isExtraLargeTile ? 'text-2xl' : isLargeTile ? 'text-lg' : isMediumTile ? 'text-sm' : 'text-xs';
+          const labelFontSize = isExtraLargeTile ? 'text-lg' : isLargeTile ? 'text-base' : isMediumTile ? 'text-xs' : 'text-xs';
 
           // Create tooltip text
           const tooltipText = `${stock.code}\n${sizeDisplayLabel}: ${sizeDisplayValue}${showBothMetrics ? `\n${colorDisplayLabel}: ${colorDisplayValue}` : ''}`;
