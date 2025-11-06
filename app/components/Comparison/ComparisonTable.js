@@ -534,27 +534,27 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
 
   return (
     <div className="overflow-x-auto">
-      <table className="w-full">
+      <table className="w-full" style={{borderCollapse: 'collapse'}}>
         <thead className="bg-gray-900 text-white">
           <tr>
             <th
-              className="px-4 py-3 text-left cursor-pointer hover:bg-gray-800 transition"
+              className="pl-2 pr-1 py-3 text-left cursor-pointer hover:bg-gray-800 transition"
               onClick={() => handleSort('code')}
             >
               Code <SortIcon active={isActive('code')} direction={sortDirection} />
             </th>
-            <th className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
+            <th className="px-1 py-3 text-center" style={{width:'40px', minWidth:'40px'}}>
             </th>
             {showNameColumn && (
               <>
                 <th
-                  className="px-2 py-3 text-left cursor-pointer hover:bg-gray-800 transition"
+                  className="px-1 py-3 text-left cursor-pointer hover:bg-gray-800 transition"
                   style={{width: '160px', minWidth: '160px'}}
                   onClick={() => handleSort('name')}
                 >
                   Name <SortIcon active={isActive('name')} direction={sortDirection} />
                 </th>
-                <th className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
+                <th className="px-1 py-3 text-center" style={{width:'40px', minWidth:'40px'}}>
                   Type
                 </th>
               </>
@@ -562,37 +562,37 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
             {showMarketDetail && (
               <>
                 <th
-                  className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
+                  className="px-1 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
                   onClick={() => handleSort('marketCap')}
                 >
                   Market Cap <SortIcon active={isActive('marketCap')} direction={sortDirection} />
                 </th>
                 <th
-                  className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
+                  className="px-1 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
                   onClick={() => handleSort('beta')}
                 >
                   Beta <SortIcon active={isActive('beta')} direction={sortDirection} />
                 </th>
                 <th
-                  className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
+                  className="px-1 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
                   onClick={() => handleSort('pe')}
                 >
                   P/E <SortIcon active={isActive('pe')} direction={sortDirection} />
                 </th>
                 <th
-                  className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
+                  className="px-1 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
                   onClick={() => handleSort('dividendYield')}
                 >
                   Dividend <SortIcon active={isActive('dividendYield')} direction={sortDirection} />
                 </th>
                 <th
-                  className="px-4 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
+                  className="px-1 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
                   onClick={() => handleSort('rating')}
                 >
                   Rating <SortIcon active={isActive('rating')} direction={sortDirection} />
                 </th>
                 <th
-                  className="px-2 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
+                  className="px-1 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
                   style={{width: sentimentExpanded ? '90px' : '30px', minWidth: sentimentExpanded ? '90px' : '30px'}}
                   onClick={() => setSentimentExpanded(!sentimentExpanded)}
                   title={sentimentExpanded ? "Click to collapse" : "Click to expand sentiment"}
@@ -605,7 +605,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
               periods.map(period => (
                 <th
                   key={period}
-                  className="px-2 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
+                  className="px-1 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
                   style={{width:'90px', minWidth:'90px'}}
                   onClick={() => handleSort(period)}
                 >
@@ -619,7 +619,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 return (
                   <th
                     key={`period-${i}`}
-                    className="px-2 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
+                    className="px-1 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
                     style={{width:'90px', minWidth:'90px'}}
                     onClick={() => handleSort(`period-${i}`)}
                   >
@@ -628,12 +628,12 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 );
               })
             )}
-            <th className="px-4 py-3 text-center">Action</th>
+            <th className="pl-1 pr-2 py-3 text-center">Action</th>
           </tr>
         </thead>
         <tbody>
           <tr className="bg-blue-900/30 border-b-2 border-blue-700">
-            <td className="px-4 py-3 font-bold text-white">
+            <td className="pl-2 pr-1 py-3 font-bold text-white">
               <span
                 onClick={() => onStockCodeClick && onStockCodeClick(selectedStock.code)}
                 role="link"
@@ -643,7 +643,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 {selectedStock.code}
               </span>
             </td>
-            <td className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
+            <td className="px-1 py-3 text-center" style={{width:'40px', minWidth:'40px'}}>
               {onAddToChart && (() => {
                 const isInChart = chartCompareStocks?.find(s => s.code === selectedStock.code);
                 return (
@@ -659,7 +659,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
             </td>
             {showNameColumn && (
               <>
-                <td className="px-2 py-3 font-medium text-white" style={{width: '160px', maxWidth: '160px'}}>
+                <td className="px-1 py-3 font-medium text-white" style={{width: '160px', maxWidth: '160px'}}>
                   {selectedStock.website ? (
                     <a href={selectedStock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate" style={{ color: '#FBBF24' }} title={selectedStock.name}>
                       {selectedStock.name}
@@ -674,37 +674,37 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                     >{selectedStock.name}</span>
                   )}
                 </td>
-                <td className="px-2 py-3 text-center text-gray-400" style={{width:'50px', minWidth:'50px'}}>-</td>
+                <td className="px-1 py-3 text-center text-gray-400" style={{width:'40px', minWidth:'40px'}}>-</td>
               </>
             )}
             {showMarketDetail && (
               <>
-                <td className="px-4 py-3">
+                <td className="px-1 py-3">
                   <div style={getMarketCapCellStyle(selectedStock.marketCap)}>
                     ${selectedStock.marketCap}
                   </div>
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-1 py-3 text-right">
                   <div style={getBetaCellStyle(selectedStock.beta)}>
                     {selectedStock.beta || 'N/A'}
                   </div>
                 </td>
-                <td className="px-4 py-3">
+                <td className="px-1 py-3">
                   <div style={getPeCellStyle(selectedStock.pe)}>
                     {selectedStock.pe === '—' ? '—' : selectedStock.pe}
                   </div>
                 </td>
-                <td className="px-4 py-3 text-right">
+                <td className="px-1 py-3 text-right">
                   <div style={getDividendCellStyle(selectedStock.dividendYield)}>
                     {selectedStock.dividendYield}
                   </div>
                 </td>
-                <td className="px-4 py-3 text-center">
+                <td className="px-1 py-3 text-center">
                   <span style={getRatingStyle(selectedStock.analystRating)}>
                     {selectedStock.analystRating}
                   </span>
                 </td>
-                <td className="px-2 py-3 text-center" style={{width: sentimentExpanded ? '90px' : '30px', minWidth: sentimentExpanded ? '90px' : '30px'}}>
+                <td className="px-1 py-3 text-center" style={{width: sentimentExpanded ? '90px' : '30px', minWidth: sentimentExpanded ? '90px' : '30px'}}>
                   {sentimentExpanded ? (
                     <div className="mx-auto" style={{width:'84px'}}>
                       <SentimentChart data={selectedStock.sentimentTimeSeries} />
@@ -739,7 +739,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                   styleObj = { backgroundColor: lerp('10b981','ef4444', 1 - ratio), color:'white' };
                 }
                 return (
-                  <td key={period} className="px-2 py-3 text-center" style={{width:'90px', minWidth:'90px'}}>
+                  <td key={period} className="px-1 py-3 text-center" style={{width:'90px', minWidth:'90px'}}>
                     <div style={{
                       ...styleObj,
                       padding: '0.75rem',
@@ -779,7 +779,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                     styleObj = { backgroundColor: lerp('10b981','ef4444', 1 - ratio), color:'white' };
                   }
                   return (
-                    <td key={`period-${i}`} className="px-2 py-3 text-center" style={{width:'90px', minWidth:'90px'}}>
+                    <td key={`period-${i}`} className="px-1 py-3 text-center" style={{width:'90px', minWidth:'90px'}}>
                       <div style={{
                         ...styleObj,
                         padding: '0.75rem',
@@ -795,11 +795,11 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 });
               })()
             )}
-            <td className="px-4 py-3 text-center text-gray-400">-</td>
+            <td className="pl-1 pr-2 py-3 text-center text-gray-400">-</td>
           </tr>
           {sortedComparisonStocks.map((stock, idx) => (
             <tr key={stock.code} className={idx % 2 === 0 ? 'bg-gray-700/50' : 'bg-gray-800/50'}>
-              <td className="px-4 py-3 font-medium text-white">
+              <td className="pl-2 pr-1 py-3 font-medium text-white">
                 <span
                   onClick={() => onStockCodeClick && onStockCodeClick(stock.code)}
                   role="link"
@@ -809,7 +809,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                   {stock.code}
                 </span>
               </td>
-              <td className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
+              <td className="px-1 py-3 text-center" style={{width:'40px', minWidth:'40px'}}>
                 {onAddToChart && (() => {
                   const isInChart = chartCompareStocks?.find(s => s.code === stock.code);
                   return (
@@ -825,7 +825,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
               </td>
               {showNameColumn && (
                 <>
-                  <td className="px-2 py-3 text-gray-200" style={{width: '160px', maxWidth: '160px'}}>
+                  <td className="px-1 py-3 text-gray-200" style={{width: '160px', maxWidth: '160px'}}>
                     {stock.website ? (
                       <a href={stock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate" style={{ color: '#FBBF24' }} title={stock.name}>
                         {stock.name}
@@ -840,39 +840,39 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                       >{stock.name}</span>
                     )}
                   </td>
-                  <td className="px-2 py-3 text-center text-gray-200" style={{width:'50px', minWidth:'50px'}}>
+                  <td className="px-1 py-3 text-center text-gray-200" style={{width:'40px', minWidth:'40px'}}>
                     {getRelationshipTypeAbbr(stock.relationshipType)}
                   </td>
                 </>
               )}
               {showMarketDetail && (
                 <>
-                  <td className="px-4 py-3">
+                  <td className="px-1 py-3">
                     <div style={getMarketCapCellStyle(stock.marketCap)}>
                       ${stock.marketCap}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-1 py-3 text-right">
                     <div style={getBetaCellStyle(stock.beta)}>
                       {stock.beta || 'N/A'}
                     </div>
                   </td>
-                  <td className="px-4 py-3">
+                  <td className="px-1 py-3">
                     <div style={getPeCellStyle(stock.pe)}>
                       {stock.pe === '—' ? '—' : stock.pe}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-right">
+                  <td className="px-1 py-3 text-right">
                     <div style={getDividendCellStyle(stock.dividendYield)}>
                       {stock.dividendYield}
                     </div>
                   </td>
-                  <td className="px-4 py-3 text-center">
+                  <td className="px-1 py-3 text-center">
                     <span style={getRatingStyle(stock.analystRating)}>
                       {stock.analystRating}
                     </span>
                   </td>
-                  <td className="px-2 py-3 text-center" style={{width: sentimentExpanded ? '90px' : '30px', minWidth: sentimentExpanded ? '90px' : '30px'}}>
+                  <td className="px-1 py-3 text-center" style={{width: sentimentExpanded ? '90px' : '30px', minWidth: sentimentExpanded ? '90px' : '30px'}}>
                     {sentimentExpanded ? (
                       <div className="mx-auto" style={{width:'84px'}}>
                         <SentimentChart data={stock.sentimentTimeSeries} />
@@ -904,7 +904,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                     styleObj = { backgroundColor: lerp('10b981','ef4444', 1 - ratio), color:'white' };
                   }
                   return (
-                    <td key={period} className="px-2 py-3 text-center" style={{width:'90px', minWidth:'90px'}}>
+                    <td key={period} className="px-1 py-3 text-center" style={{width:'90px', minWidth:'90px'}}>
                       <div style={{
                         ...styleObj,
                         padding: '0.75rem',
@@ -944,7 +944,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                       styleObj = { backgroundColor: lerp('10b981','ef4444', 1 - ratio), color:'white' };
                     }
                     return (
-                      <td key={`period-${i}`} className="px-2 py-3 text-center" style={{width:'90px', minWidth:'90px'}}>
+                      <td key={`period-${i}`} className="px-1 py-3 text-center" style={{width:'90px', minWidth:'90px'}}>
                         <div style={{
                           ...styleObj,
                           padding: '0.75rem',
@@ -960,7 +960,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                   });
                 })()
               )}
-              <td className="px-4 py-3 text-center">
+              <td className="pl-1 pr-2 py-3 text-center">
                 {stock.code !== 'SPY' && stock.code !== 'QQQ' ? (
                   <button
                     onClick={() => onRemoveComparison(stock.code)}
