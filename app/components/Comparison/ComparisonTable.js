@@ -543,10 +543,8 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
             >
               Code <SortIcon active={isActive('code')} direction={sortDirection} />
             </th>
-            {(showNameColumn || showMarketDetail) && (
-              <th className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
-              </th>
-            )}
+            <th className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
+            </th>
             {showNameColumn && (
               <>
                 <th
@@ -645,22 +643,20 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 {selectedStock.code}
               </span>
             </td>
-            {(showNameColumn || showMarketDetail) && (
-              <td className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
-                {onAddToChart && (() => {
-                  const isInChart = chartCompareStocks?.find(s => s.code === selectedStock.code);
-                  return (
-                    <button
-                      onClick={() => onAddToChart(selectedStock.code)}
-                      className={`p-1 rounded transition`}
-                      title={isInChart ? "Remove from chart" : "Add to chart"}
-                    >
-                      <LineChart size={16} fill={isInChart ? "currentColor" : "none"} className={isInChart ? 'text-green-400' : 'text-blue-400'} />
-                    </button>
-                  );
-                })()}
-              </td>
-            )}
+            <td className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
+              {onAddToChart && (() => {
+                const isInChart = chartCompareStocks?.find(s => s.code === selectedStock.code);
+                return (
+                  <button
+                    onClick={() => onAddToChart(selectedStock.code)}
+                    className={`p-1 rounded transition`}
+                    title={isInChart ? "Remove from chart" : "Add to chart"}
+                  >
+                    <LineChart size={16} fill={isInChart ? "currentColor" : "none"} className={isInChart ? 'text-green-400' : 'text-blue-400'} />
+                  </button>
+                );
+              })()}
+            </td>
             {showNameColumn && (
               <>
                 <td className="px-2 py-3 font-medium text-white" style={{width: '160px', maxWidth: '160px'}}>
@@ -813,22 +809,20 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                   {stock.code}
                 </span>
               </td>
-              {(showNameColumn || showMarketDetail) && (
-                <td className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
-                  {onAddToChart && (() => {
-                    const isInChart = chartCompareStocks?.find(s => s.code === stock.code);
-                    return (
-                      <button
-                        onClick={() => onAddToChart(stock.code)}
-                        className={`p-1 rounded transition`}
-                        title={isInChart ? "Remove from chart" : "Add to chart"}
-                      >
-                        <LineChart size={16} fill={isInChart ? "currentColor" : "none"} className={isInChart ? 'text-green-400' : 'text-blue-400'} />
-                      </button>
-                    );
-                  })()}
-                </td>
-              )}
+              <td className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
+                {onAddToChart && (() => {
+                  const isInChart = chartCompareStocks?.find(s => s.code === stock.code);
+                  return (
+                    <button
+                      onClick={() => onAddToChart(stock.code)}
+                      className={`p-1 rounded transition`}
+                      title={isInChart ? "Remove from chart" : "Add to chart"}
+                    >
+                      <LineChart size={16} fill={isInChart ? "currentColor" : "none"} className={isInChart ? 'text-green-400' : 'text-blue-400'} />
+                    </button>
+                  );
+                })()}
+              </td>
               {showNameColumn && (
                 <>
                   <td className="px-2 py-3 text-gray-200" style={{width: '160px', maxWidth: '160px'}}>
