@@ -432,9 +432,9 @@ export function HeatmapView({
   const containerHeight = 600; // Initial height estimate
   const { layout, actualHeight } = calculateTileLayout(stocksWithSize, containerWidth, containerHeight);
 
-  // Identify top 5 stocks by size
+  // Identify top 10 stocks by size
   const sortedBySize = [...stocksWithSize].sort((a, b) => b.sizeValue - a.sizeValue);
-  const top5StockCodes = sortedBySize.slice(0, 5).map(item => item.stock.code);
+  const top10StockCodes = sortedBySize.slice(0, 10).map(item => item.stock.code);
 
   // Calculate actual performance range for dynamic legend
   const performanceValues = allStocks.map(stock => stock.performance[heatmapColorBy]);
@@ -577,7 +577,7 @@ export function HeatmapView({
 
               {onAddToChart && (() => {
                 const isInChart = chartCompareStocks?.find(s => s.code === stock.code);
-                const isTop5 = top5StockCodes.includes(stock.code);
+                const isTop10 = top10StockCodes.includes(stock.code);
                 const currentTimeframe = stockTimeframes[stock.code];
                 const timeframes = ['7', '30', '90', 'M'];
 
@@ -596,11 +596,11 @@ export function HeatmapView({
                       <LineChart size={12} className="text-white" fill={isInChart ? "currentColor" : "none"} />
                     </button>
 
-                    {isTop5 && (
+                    {isTop10 && (
                       <div className="flex items-center gap-0.5">
                         {timeframes.map(tf => {
                           const isActive = currentTimeframe?.timeframe === tf;
-                          const isLoading = loadingTimeframe[stock.code] && currentTimeframe?.timeframe === tf;
+                          const isLoadingThis = loadingTimeframe[stock.code];
 
                           return (
                             <button
@@ -609,16 +609,16 @@ export function HeatmapView({
                                 e.stopPropagation();
                                 handleTimeframeClick(stock.code, tf);
                               }}
-                              className={`px-1 py-0.5 text-[10px] font-semibold rounded transition-all ${
-                                isActive
-                                  ? 'bg-blue-500 text-white'
-                                  : 'bg-gray-700/80 text-gray-300 hover:bg-gray-600'
-                              }`}
-                              style={{ minWidth: '16px' }}
+                              style={{
+                                minWidth: '16px',
+                                backgroundColor: isActive ? '#3b82f6' : 'rgba(55, 65, 81, 0.8)',
+                                color: isActive ? '#ffffff' : '#d1d5db'
+                              }}
+                              className="px-1 py-0.5 text-[10px] font-semibold rounded transition-all hover:opacity-80"
                               title={`${tf === 'M' ? 'Max' : tf + ' days'}`}
-                              disabled={isLoading}
+                              disabled={isLoadingThis}
                             >
-                              {isLoading ? '...' : tf}
+                              {isLoadingThis ? '...' : tf}
                             </button>
                           );
                         })}
