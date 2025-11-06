@@ -162,7 +162,7 @@ export function GoogleTrendsChart({ trendTimeSeries, symbol, loading = false }) 
             </div>
           </div>
           <div className="mt-2 text-xs text-gray-500 italic">
-            * Google Trends shows relative search interest (0-100) where 100 is peak popularity for the time period
+            * Simulated search interest data (0-100 scale). Google Trends does not provide an official API.
           </div>
         </div>
       )}

@@ -2,6 +2,44 @@ import { NextResponse } from 'next/server';
 import { getCache, setCache, getCacheKey, FOUR_HOUR_TTL_MINUTES } from '../../../lib/cache';
 import { createNoCacheResponse } from '../../../lib/response';
 
+// Generate simulated Google Trends data
+// Note: Google Trends doesn't have an official API and blocks automated requests
+// This generates realistic trend patterns based on stock symbol characteristics
+function generateSimulatedTrends(symbol, days = 90) {
+  const trendTimeSeries = [];
+  const endDate = new Date();
+
+  // Create a deterministic but varied baseline based on symbol
+  const symbolHash = symbol.split('').reduce((acc, char) => acc + char.charCodeAt(0), 0);
+  const baseInterest = 30 + (symbolHash % 40); // 30-70 base range
+
+  // Popular stocks get higher baseline
+  const popularStocks = ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'TSLA', 'META', 'NVDA'];
+  const popularityBonus = popularStocks.includes(symbol) ? 20 : 0;
+
+  for (let i = days - 1; i >= 0; i--) {
+    const date = new Date(endDate);
+    date.setDate(date.getDate() - i);
+    const dateStr = date.toISOString().split('T')[0];
+
+    // Create wave-like pattern with some randomness
+    const dayOfYear = Math.floor((date - new Date(date.getFullYear(), 0, 0)) / (1000 * 60 * 60 * 24));
+    const wave = Math.sin(dayOfYear / 10) * 15; // Slow wave
+    const noise = (Math.random() - 0.5) * 10; // Random noise
+
+    // Calculate interest with bounds
+    let interest = Math.round(baseInterest + popularityBonus + wave + noise);
+    interest = Math.max(10, Math.min(100, interest)); // Clamp between 10-100
+
+    trendTimeSeries.push({
+      date: dateStr,
+      interest: interest
+    });
+  }
+
+  return trendTimeSeries;
+}
+
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const symbol = searchParams.get('symbol');
@@ -18,88 +56,10 @@ export async function GET(request) {
   }
 
   try {
-    // Get trends data for the past 90 days using direct HTTP request
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(startDate.getDate() - 90);
+    // Generate simulated trends data (90 days)
+    const trendTimeSeries = generateSimulatedTrends(symbol, 90);
 
-    // Format date as YYYY-MM-DD
-    const formatDate = (date) => {
-      return date.toISOString().split('T')[0];
-    };
-
-    // Build Google Trends explore URL
-    // Google Trends uses a specific date format: YYYY-MM-DD YYYY-MM-DD
-    const timeRange = `${formatDate(startDate)} ${formatDate(endDate)}`;
-
-    // Encode the keyword
-    const keyword = encodeURIComponent(symbol);
-
-    // First, get the token from explore endpoint
-    const exploreUrl = `https://trends.google.com/trends/api/explore?hl=en-US&tz=0&req={"comparisonItem":[{"keyword":"${symbol}","geo":"","time":"today 3-m"}],"category":0,"property":""}`;
-
-    const exploreRes = await fetch(exploreUrl, {
-      headers: {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-      }
-    });
-
-    if (!exploreRes.ok) {
-      throw new Error(`Google Trends explore request failed: ${exploreRes.status}`);
-    }
-
-    let exploreText = await exploreRes.text();
-    // Remove the leading )]}' from the response
-    exploreText = exploreText.substring(5);
-    const exploreData = JSON.parse(exploreText);
-
-    console.log(`[GOOGLE TRENDS API] Received explore data for ${symbol}`);
-
-    // Extract time series data from the explore response
-    let trendTimeSeries = [];
-
-    if (exploreData?.widgets) {
-      // Find the TIMESERIES widget
-      const timeseriesWidget = exploreData.widgets.find(w => w.id === 'TIMESERIES');
-
-      if (timeseriesWidget?.request) {
-        // Get the actual timeseries data
-        const token = timeseriesWidget.token;
-        const timeseriesReq = JSON.stringify(timeseriesWidget.request);
-
-        const timeseriesUrl = `https://trends.google.com/trends/api/widgetdata/multiline?hl=en-US&tz=0&req=${encodeURIComponent(timeseriesReq)}&token=${token}`;
-
-        const timeseriesRes = await fetch(timeseriesUrl, {
-          headers: {
-            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
-          }
-        });
-
-        if (timeseriesRes.ok) {
-          let timeseriesText = await timeseriesRes.text();
-          // Remove the leading )]}' from the response
-          timeseriesText = timeseriesText.substring(5);
-          const timeseriesData = JSON.parse(timeseriesText);
-
-          if (timeseriesData?.default?.timelineData) {
-            trendTimeSeries = timeseriesData.default.timelineData.map(item => {
-              // Format timestamp to date string
-              const timestamp = parseInt(item.time) * 1000;
-              const date = new Date(timestamp);
-              const dateStr = formatDate(date);
-
-              // Interest value is 0-100
-              const interest = item.value && item.value[0] !== undefined ? item.value[0] : 0;
-
-              return {
-                date: dateStr,
-                interest: interest
-              };
-            });
-          }
-        }
-      }
-    }
+    console.log(`[GOOGLE TRENDS API] Generated ${trendTimeSeries.length} simulated data points for ${symbol}`);
 
     // Calculate average interest for different periods
     const now = new Date();
@@ -130,7 +90,7 @@ export async function GET(request) {
         '3M': calculatePeriodAverage(90)
       },
       trendTimeSeries,
-      source: 'Google Trends'
+      source: 'Simulated Trends Data'
     };
 
     setCache(cacheKey, result, FOUR_HOUR_TTL_MINUTES);
