@@ -11,6 +11,7 @@ import { PeakTroughAnalysis } from "./HistoricalPerformance/CycleAnalysis/PeakTr
 import { MovingAverageCrossoverAnalysis } from "./HistoricalPerformance/CycleAnalysis/MovingAverageCrossoverAnalysis";
 import { FourierAnalysis } from "./HistoricalPerformance/CycleAnalysis/FourierAnalysis";
 import { SupportResistanceAnalysis } from "./HistoricalPerformance/CycleAnalysis/SupportResistanceAnalysis";
+import { StockCorrelationSection } from "./HistoricalPerformance/StockCorrelation/StockCorrelationSection";
 
 export function HistoricalPerformanceCheck({ stockCode }) {
   // Default expanded so the Historical Data Analysis section is open on initial render
@@ -515,6 +516,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
                 { value: "gapopen", label: "Up/Down Gap Open" },
                 { value: "gapopenstat", label: "Market Open Statistic" },
                 { value: "intradaystat", label: "Intraday Statistic" },
+                { value: "stock-correlation", label: "Stock Correlation & Lead-Lag" },
                 { value: "seasonal", label: "Seasonal/Calendar Patterns" },
                 { value: "peak-trough", label: "Peak-to-Trough Cycles" },
                 { value: "ma-crossover", label: "Moving Average Crossovers" },
@@ -559,6 +561,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
               { value: "gapopen", label: "Up/Down Gap Open" },
               { value: "gapopenstat", label: "Market Open Statistic" },
               { value: "intradaystat", label: "Intraday Statistic" },
+              { value: "stock-correlation", label: "Stock Correlation & Lead-Lag" },
               { value: "seasonal", label: "Seasonal/Calendar Patterns" },
               { value: "peak-trough", label: "Peak-to-Trough Cycles" },
               { value: "ma-crossover", label: "Moving Average Crossovers" },
@@ -854,6 +857,11 @@ export function HistoricalPerformanceCheck({ stockCode }) {
 
       {cycleAnalysis && selectedOption === "support-resistance" && (
         <SupportResistanceAnalysis cycleAnalysis={cycleAnalysis} />
+      )}
+
+      {/* Stock Correlation Analysis */}
+      {selectedOption === "stock-correlation" && stockCode && (
+        <StockCorrelationSection symbol={stockCode} />
       )}
 
       {/* No Results */}
