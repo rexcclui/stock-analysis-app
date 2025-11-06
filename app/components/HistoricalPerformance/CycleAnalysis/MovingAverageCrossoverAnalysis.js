@@ -325,7 +325,7 @@ export function MovingAverageCrossoverAnalysis({ cycleAnalysis, maShort = 50, ma
               return (
                 <>
                   <div className="text-xs mb-2 text-center" style={{ color: '#93c5fd' }}>
-                    Scroll to zoom • Drag chart or brush to pan • Showing {visibleData.length} of {enrichedData.length} data points
+                    {/* Removed scroll/drag instructions as requested */} Showing {visibleData.length} of {enrichedData.length} data points
                   </div>
                   <ResponsiveContainer width="100%" height="90%">
                     <LineChart data={enrichedData} margin={{ top: 10, right: 30, left: 0, bottom: 50 }}>

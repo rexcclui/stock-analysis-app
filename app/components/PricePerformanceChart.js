@@ -273,8 +273,24 @@ export function PricePerformanceChart({
   return (
     <div className="mb-6" style={{ marginTop: '1rem', marginRight: '2rem' }}>
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-3">
-          <h3 className="text-xl font-bold text-white">Price Performance</h3>
+        <div className="flex items-center gap-3 w-full">
+          <h3 className="text-xl font-bold text-center" style={{ color: '#3B82F6' }}>Price Chart</h3>
+          <div className="flex items-center" style={{ marginLeft: '12px' }}>
+            <input
+              type="text"
+              placeholder="Input stock"
+              value={chartCompareInput}
+              onChange={(e)=> setChartCompareInput(e.target.value)}
+              onKeyDown={(e)=> e.key==='Enter' && addChartCompareStock()}
+              className="w-32 px-2 py-1 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500 placeholder-gray-400"
+              style={{ minWidth: '100px', maxWidth: '140px' }}
+            />
+            <button
+              onClick={addChartCompareStock}
+              className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition"
+              style={{ marginLeft: '4px' }}
+            >Add to Chart</button>
+          </div>
           {(zoomDomain.start !== 0 || zoomDomain.end !== 100) && (
             <button
               onClick={resetZoom}
@@ -293,7 +309,6 @@ export function PricePerformanceChart({
               ← Back to Present ({dataOffset} days ago)
             </button>
           )}
-          <span className="text-xs text-gray-400 italic">Scroll to zoom • Drag to pan timeline</span>
         </div>
         <div className="flex gap-2">
           {periods.map(period => (
