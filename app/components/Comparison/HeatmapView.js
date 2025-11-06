@@ -414,6 +414,15 @@ export function HeatmapView({
           // Determine if tile is small (width or height < 80px)
           const isSmallTile = width < 80 || height < 80;
 
+          // Determine font sizes based on tile dimensions
+          const isLargeTile = width >= 150 && height >= 150;
+          const isMediumTile = !isSmallTile && !isLargeTile;
+
+          // Font size classes
+          const codeFontSize = isLargeTile ? 'text-lg' : isMediumTile ? 'text-sm' : 'text-xs';
+          const infoFontSize = isLargeTile ? 'text-base' : isMediumTile ? 'text-sm' : 'text-xs';
+          const labelFontSize = isLargeTile ? 'text-sm' : 'text-xs';
+
           // Create tooltip text
           const tooltipText = `${stock.code}\n${sizeDisplayLabel}: ${sizeDisplayValue}${showBothMetrics ? `\n${colorDisplayLabel}: ${colorDisplayValue}` : ''}`;
 
@@ -471,20 +480,20 @@ export function HeatmapView({
                     }
                     role="link"
                     tabIndex={0}
-                    className="font-bold text-xs underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 rounded block mb-1"
+                    className={`font-bold ${codeFontSize} underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 rounded block mb-1`}
                     style={{
                       color: stock.code === selectedStock.code ? '#fbbf24' : textColor,
                     }}
                   >
                     {stock.code}
                   </span>
-                  <div className="font-bold text-xs mb-1" style={{ color: textColor }}>
-                    <span className="text-xs" style={{ color: textColor, opacity: 0.9 }}>{sizeDisplayLabel}: </span>
+                  <div className={`font-bold ${infoFontSize} mb-1`} style={{ color: textColor }}>
+                    <span className={labelFontSize} style={{ color: textColor, opacity: 0.9 }}>{sizeDisplayLabel}: </span>
                     {sizeDisplayValue}
                   </div>
                   {showBothMetrics && (
-                    <div className="font-bold text-xs" style={{ color: textColor }}>
-                      <span className="text-xs" style={{ color: textColor, opacity: 0.9 }}>{colorDisplayLabel}: </span>
+                    <div className={`font-bold ${infoFontSize}`} style={{ color: textColor }}>
+                      <span className={labelFontSize} style={{ color: textColor, opacity: 0.9 }}>{colorDisplayLabel}: </span>
                       {colorDisplayValue}
                     </div>
                   )}
