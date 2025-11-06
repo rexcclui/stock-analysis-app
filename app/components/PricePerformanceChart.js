@@ -271,7 +271,7 @@ export function PricePerformanceChart({
   }
 
   return (
-    <div className="mb-6" style={{ marginTop: '1rem', marginRight: '2rem' }}>
+  <div className="mb-6" style={{ marginTop: '1rem' }}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3 w-full">
           <h3 className="text-xl font-bold text-center" style={{ color: '#3B82F6' }}>Price Chart</h3>
@@ -334,23 +334,7 @@ export function PricePerformanceChart({
           ))}
         </div>
       </div>
-      <div className="bg-gray-800 rounded-xl p-4 shadow-xl border border-gray-700">
-        <div className="flex flex-col sm:flex-row sm:items-center gap-3 mb-4">
-          <div className="flex gap-2 flex-1">
-            <input
-              type="text"
-              placeholder="Add stock to chart (e.g. MSFT)"
-              value={chartCompareInput}
-              onChange={(e)=> setChartCompareInput(e.target.value)}
-              onKeyDown={(e)=> e.key==='Enter' && addChartCompareStock()}
-              className="flex-1 px-3 py-2 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500 placeholder-gray-400"
-            />
-            <button
-              onClick={addChartCompareStock}
-              className="px-4 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition"
-            >Add</button>
-          </div>
-        </div>
+  <div className="bg-gray-800 rounded-xl shadow-xl border border-gray-700" style={{ padding: '4px 24px -24px -24px', margin: 0 }}>
         {chartCompareStocks.length > 0 && (
           <div className="flex flex-wrap gap-2 mb-3">
             {chartCompareStocks.map(s => (
@@ -372,7 +356,7 @@ export function PricePerformanceChart({
           }}
           onMouseLeave={handleMouseUp}
         >
-          <ResponsiveContainer width="100%" height={320}>
+          <ResponsiveContainer width="100%" height={320} style={{ margin: 0, padding: 0 }}>
             {(() => {
               // Get current data slice based on offset
               const currentData = getCurrentDataSlice();
@@ -490,7 +474,7 @@ export function PricePerformanceChart({
                   </>
                 )}
                 {chartCompareStocks.length === 0 ? (
-                  <Line type="monotone" dataKey="price" stroke="#3B82F6" strokeWidth={2} dot={false} />
+                  <Line type="monotone" dataKey="price" name={`${selectedStock?.code || ''} Price`} stroke="#3B82F6" strokeWidth={2} dot={false} />
                 ) : (
                   <>
                     <Line type="monotone" dataKey={selectedStock.code} name={selectedStock.code} stroke="#3B82F6" strokeWidth={2} dot={false} />
