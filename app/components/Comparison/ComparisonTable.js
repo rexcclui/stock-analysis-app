@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ArrowUp, ArrowDown, LineChart, ChevronDown, ChevronRight } from 'lucide-react';
+import { X, ArrowUp, ArrowDown, LineChart, ChevronLeft, ChevronRight } from 'lucide-react';
 import SentimentChart from '../SentimentChart';
 import { HeatmapView } from './HeatmapView';
 import { LoadingState } from '../LoadingState';
@@ -454,7 +454,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                   className="p-1 hover:bg-gray-700 rounded transition"
                   title={nameExpanded ? "Click to collapse Name column" : "Click to expand Name column"}
                 >
-                  {nameExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                  {nameExpanded ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
                 </button>
                 {nameExpanded && (
                   <span
