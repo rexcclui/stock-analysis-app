@@ -39,31 +39,32 @@ export function NewsSection({ news = [], title = 'Latest News', loading = false,
 
   return (
     <div className="bg-gray-800 rounded-xl shadow-xl p-6 border border-gray-700" style={{ marginTop: '1rem' }}>
-      <h3 className="text-xl font-bold text-white mb-4">{title}</h3>
+      <div className="flex items-center justify-between mb-4 flex-wrap gap-3">
+        <h3 className="text-xl font-bold text-white">{title}</h3>
 
-      {symbol && newsLinks.length > 0 && (
-        <div className="mb-4 flex flex-wrap gap-2">
-          <span className="text-sm text-gray-400 self-center mr-2">More news from:</span>
-          {newsLinks.map((link) => (
-            <a
-              key={link.name}
-              href={link.url}
-              target="_blank"
-              rel="noopener noreferrer"
-              className={`px-3 py-1.5 ${link.color} text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5`}
-            >
-              <img
-                src={link.logo}
-                alt={`${link.name} logo`}
-                className="w-4 h-4 object-contain"
-                onError={(e) => { e.target.style.display = 'none'; }}
-              />
-              {link.name}
-              <ExternalLink size={14} />
-            </a>
-          ))}
-        </div>
-      )}
+        {symbol && newsLinks.length > 0 && (
+          <div className="flex flex-wrap gap-2 items-center">
+            {newsLinks.map((link) => (
+              <a
+                key={link.name}
+                href={link.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className={`px-3 py-1.5 ${link.color} text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5`}
+              >
+                <img
+                  src={link.logo}
+                  alt={`${link.name} logo`}
+                  className="w-4 h-4 object-contain"
+                  onError={(e) => { e.target.style.display = 'none'; }}
+                />
+                {link.name}
+                <ExternalLink size={14} />
+              </a>
+            ))}
+          </div>
+        )}
+      </div>
 
       <div className="space-y-3">
         {validNews.map((article, idx) => (
