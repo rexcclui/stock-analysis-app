@@ -1,7 +1,9 @@
 import { NextResponse } from 'next/server';
-import googleTrends from 'google-trends-api';
 import { getCache, setCache, getCacheKey, FOUR_HOUR_TTL_MINUTES } from '../../../lib/cache';
 import { createNoCacheResponse } from '../../../lib/response';
+
+// Use require for CommonJS module in server-side code
+const googleTrends = require('google-trends-api');
 
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
