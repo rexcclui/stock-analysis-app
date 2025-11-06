@@ -2,9 +2,6 @@ import { NextResponse } from 'next/server';
 import { getCache, setCache, getCacheKey, FOUR_HOUR_TTL_MINUTES } from '../../../lib/cache';
 import { createNoCacheResponse } from '../../../lib/response';
 
-// Use require for CommonJS module in server-side code
-const googleTrends = require('google-trends-api');
-
 export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const symbol = searchParams.get('symbol');
@@ -21,6 +18,9 @@ export async function GET(request) {
   }
 
   try {
+    // Dynamically import the CommonJS module at runtime
+    const googleTrends = await import('google-trends-api').then(mod => mod.default || mod);
+
     // Get trends data for the past 90 days
     const endDate = new Date();
     const startDate = new Date();
