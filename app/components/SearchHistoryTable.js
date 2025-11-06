@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { RefreshCw } from 'lucide-react';
 import { LoadingState } from './LoadingState';
 
@@ -7,12 +7,35 @@ import { LoadingState } from './LoadingState';
 // onReload: optional callback to reload all stocks
 // loading: boolean to show loading state
 export function SearchHistoryTable({ historyStocks, onClickCode, onReload, loading }) {
+  const [isMobile, setIsMobile] = useState(false);
+
+  useEffect(() => {
+    // Check if screen is mobile size (768px or below)
+    const checkMobileSize = () => {
+      setIsMobile(window.innerWidth <= 768);
+    };
+
+    // Check on mount
+    checkMobileSize();
+
+    // Add event listener for window resize
+    window.addEventListener('resize', checkMobileSize);
+
+    // Cleanup
+    return () => window.removeEventListener('resize', checkMobileSize);
+  }, []);
+
   if (!historyStocks || historyStocks.length === 0) {
     if (loading) {
       return <LoadingState message="Loading previous searches..." className="mb-6" />;
     }
     return null;
   }
+
+  // On mobile, show only the last 5 stocks
+  const displayStocks = isMobile && historyStocks.length > 5
+    ? historyStocks.slice(-5)
+    : historyStocks;
 
   return (
     <div className="bg-gray-800 rounded-xl p-4 mb-6 border border-gray-700 shadow-md" style={{ marginTop: '1rem' }}>
@@ -31,7 +54,7 @@ export function SearchHistoryTable({ historyStocks, onClickCode, onReload, loadi
         )}
       </div>
       <div className="flex flex-wrap gap-3">
-        {historyStocks.map(item => {
+        {displayStocks.map(item => {
           const pct = item.dayChange ?? 0;
           const trendBg = pct > 0
             ? 'bg-green-700 hover:bg-green-600 border-green-600 hover:border-green-500'
