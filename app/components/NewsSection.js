@@ -1,5 +1,5 @@
 import React from 'react';
-import { TrendingUp, TrendingDown } from 'lucide-react';
+import { TrendingUp, TrendingDown, ExternalLink } from 'lucide-react';
 import { LoadingState } from './LoadingState';
 
 /**
@@ -7,8 +7,9 @@ import { LoadingState } from './LoadingState';
  * Props:
  * - news: array of { title, date, sentiment }
  * - title: optional override title
+ * - symbol: stock symbol for external news links
  */
-export function NewsSection({ news = [], title = 'Latest News', loading = false }) {
+export function NewsSection({ news = [], title = 'Latest News', loading = false, symbol = '' }) {
   console.log('[NewsSection] Received news:', { length: news?.length, isArray: Array.isArray(news), data: news });
 
   if (!news || !Array.isArray(news) || news.length === 0) {
@@ -28,9 +29,36 @@ export function NewsSection({ news = [], title = 'Latest News', loading = false 
     return null;
   }
   
+  const newsLinks = symbol ? [
+    { name: 'Google', url: `https://news.google.com/search?q=${encodeURIComponent(symbol + ' stock')}`, color: 'bg-blue-600 hover:bg-blue-700' },
+    { name: 'Yahoo Finance', url: `https://finance.yahoo.com/quote/${symbol}/news`, color: 'bg-purple-600 hover:bg-purple-700' },
+    { name: 'MarketWatch', url: `https://www.marketwatch.com/investing/stock/${symbol.toLowerCase()}`, color: 'bg-green-600 hover:bg-green-700' },
+    { name: 'Seeking Alpha', url: `https://seekingalpha.com/symbol/${symbol}/news`, color: 'bg-orange-600 hover:bg-orange-700' },
+    { name: 'Bloomberg', url: `https://www.bloomberg.com/quote/${symbol}:US`, color: 'bg-gray-600 hover:bg-gray-700' }
+  ] : [];
+
   return (
     <div className="bg-gray-800 rounded-xl shadow-xl p-6 border border-gray-700" style={{ marginTop: '1rem' }}>
       <h3 className="text-xl font-bold text-white mb-4">{title}</h3>
+
+      {symbol && newsLinks.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-2">
+          <span className="text-sm text-gray-400 self-center mr-2">More news from:</span>
+          {newsLinks.map((link) => (
+            <a
+              key={link.name}
+              href={link.url}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={`px-3 py-1.5 ${link.color} text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5`}
+            >
+              {link.name}
+              <ExternalLink size={14} />
+            </a>
+          ))}
+        </div>
+      )}
+
       <div className="space-y-3">
         {validNews.map((article, idx) => (
           <div key={idx} className="flex items-start gap-3 p-3 bg-gray-700/40 rounded-lg border border-gray-600">

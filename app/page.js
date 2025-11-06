@@ -718,7 +718,7 @@ export default function StockAnalysisDashboard() {
 
               <SentimentSection sentiment={selectedStock.sentiment} loading={loading} />
 
-              <NewsSection news={news} loading={loading} />
+              <NewsSection news={news} loading={loading} symbol={selectedStock.code} />
               </TabPanel>
 
               <TabPanel activeTab={activeTab} tabId="historical-data-analysis">
