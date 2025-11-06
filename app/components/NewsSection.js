@@ -40,7 +40,18 @@ export function NewsSection({ news = [], title = 'Latest News', loading = false 
               <TrendingDown className="text-red-400 mt-1" size={20} />
             )}
             <div className="flex-1">
-              <div className="font-medium text-white">{article.title}</div>
+              {article.url ? (
+                <a
+                  href={article.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-white hover:text-blue-400 transition-colors cursor-pointer"
+                >
+                  {article.title}
+                </a>
+              ) : (
+                <div className="font-medium text-white">{article.title}</div>
+              )}
               <div className="text-sm text-gray-400">{article.date}</div>
             </div>
           </div>
