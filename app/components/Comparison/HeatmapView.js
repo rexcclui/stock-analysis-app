@@ -269,6 +269,125 @@ export function HeatmapView({
 }) {
   const containerRef = useRef(null);
   const [containerWidth, setContainerWidth] = useState(1200);
+  const [stockTimeframes, setStockTimeframes] = useState({}); // { stockCode: { timeframe: '7', data: [...] } }
+  const [loadingTimeframe, setLoadingTimeframe] = useState({});
+
+  // Fetch historical data for a stock and timeframe
+  const fetchTimeframeData = async (stockCode, timeframe) => {
+    setLoadingTimeframe(prev => ({ ...prev, [stockCode]: true }));
+
+    try {
+      // Determine the period based on timeframe
+      let period = '1mo';
+      let interval = '1d';
+
+      if (timeframe === '7') {
+        period = '7d';
+        interval = '1h';
+      } else if (timeframe === '30') {
+        period = '1mo';
+        interval = '1d';
+      } else if (timeframe === '90') {
+        period = '3mo';
+        interval = '1d';
+      } else if (timeframe === 'M') {
+        period = 'max';
+        interval = '1wk';
+      }
+
+      const response = await fetch(
+        `/api/stock-data?symbol=${stockCode}&period=${period}&interval=${interval}`
+      );
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch data');
+      }
+
+      const data = await response.json();
+
+      // Extract closing prices
+      const prices = data.chart?.result?.[0]?.indicators?.quote?.[0]?.close || [];
+      const timestamps = data.chart?.result?.[0]?.timestamp || [];
+
+      // Filter out null values
+      const validData = timestamps.map((ts, i) => ({
+        timestamp: ts,
+        price: prices[i]
+      })).filter(d => d.price !== null && d.price !== undefined);
+
+      setStockTimeframes(prev => ({
+        ...prev,
+        [stockCode]: { timeframe, data: validData }
+      }));
+    } catch (error) {
+      console.error('Error fetching timeframe data:', error);
+    } finally {
+      setLoadingTimeframe(prev => ({ ...prev, [stockCode]: false }));
+    }
+  };
+
+  // Handle timeframe icon click
+  const handleTimeframeClick = (stockCode, timeframe) => {
+    const current = stockTimeframes[stockCode];
+
+    // If clicking the same timeframe, toggle it off
+    if (current?.timeframe === timeframe) {
+      setStockTimeframes(prev => {
+        const newState = { ...prev };
+        delete newState[stockCode];
+        return newState;
+      });
+    } else {
+      // Fetch new timeframe data
+      fetchTimeframeData(stockCode, timeframe);
+    }
+  };
+
+  // Render mini line chart
+  const renderMiniChart = (data, width, height, textColor) => {
+    if (!data || data.length < 2) return null;
+
+    const prices = data.map(d => d.price);
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    const priceRange = maxPrice - minPrice;
+
+    // Add padding
+    const padding = 4;
+    const chartWidth = width - padding * 2;
+    const chartHeight = height - padding * 2;
+
+    // Generate path points
+    const points = data.map((d, i) => {
+      const x = padding + (i / (data.length - 1)) * chartWidth;
+      const y = padding + chartHeight - ((d.price - minPrice) / priceRange) * chartHeight;
+      return `${x},${y}`;
+    });
+
+    const pathD = `M ${points.join(' L ')}`;
+
+    // Determine line color based on performance
+    const firstPrice = prices[0];
+    const lastPrice = prices[prices.length - 1];
+    const performance = ((lastPrice - firstPrice) / firstPrice) * 100;
+    const lineColor = performance >= 0 ? '#10b981' : '#ef4444';
+
+    return (
+      <svg
+        width={width}
+        height={height}
+        style={{ position: 'absolute', top: 0, left: 0, pointerEvents: 'none' }}
+      >
+        <path
+          d={pathD}
+          fill="none"
+          stroke={lineColor}
+          strokeWidth="2"
+          opacity="0.8"
+        />
+      </svg>
+    );
+  };
 
   // Measure container width on mount and resize
   useEffect(() => {
@@ -321,6 +440,10 @@ export function HeatmapView({
   // Calculate layout based on actual container width
   const containerHeight = 600; // Initial height estimate
   const { layout, actualHeight } = calculateTileLayout(stocksWithSize, containerWidth, containerHeight);
+
+  // Identify top 5 stocks by size
+  const sortedBySize = [...stocksWithSize].sort((a, b) => b.sizeValue - a.sizeValue);
+  const top5StockCodes = sortedBySize.slice(0, 5).map(item => item.stock.code);
 
   // Calculate actual performance range for dynamic legend
   const performanceValues = allStocks.map(stock => stock.performance[heatmapColorBy]);
@@ -453,22 +576,64 @@ export function HeatmapView({
                 </div>
               )}
 
+              {/* Render mini chart if timeframe is selected */}
+              {stockTimeframes[stock.code]?.data && renderMiniChart(
+                stockTimeframes[stock.code].data,
+                width,
+                height,
+                textColor
+              )}
+
               {onAddToChart && (() => {
                 const isInChart = chartCompareStocks?.find(s => s.code === stock.code);
+                const isTop5 = top5StockCodes.includes(stock.code);
+                const currentTimeframe = stockTimeframes[stock.code];
+                const timeframes = ['7', '30', '90', 'M'];
+
                 return (
-                  <button
-                    onClick={() => onAddToChart(stock.code)}
-                    className={`absolute p-1 rounded-full transition-all ${
-                      isInChart
-                        ? 'bg-green-500/80 hover:bg-green-600'
-                        : 'bg-blue-500/80 hover:bg-blue-600'
-                    }`}
-                    style={{ top: "4px", left: "4px", zIndex: 10 }}
-                    title={isInChart ? "Remove from chart" : "Add to chart"}
-                    aria-label={isInChart ? "Remove from chart" : "Add to chart"}
-                  >
-                    <LineChart size={12} className="text-white" fill={isInChart ? "currentColor" : "none"} />
-                  </button>
+                  <div className="absolute flex items-center gap-1" style={{ top: "4px", left: "4px", zIndex: 10 }}>
+                    <button
+                      onClick={() => onAddToChart(stock.code)}
+                      className={`p-1 rounded-full transition-all ${
+                        isInChart
+                          ? 'bg-green-500/80 hover:bg-green-600'
+                          : 'bg-blue-500/80 hover:bg-blue-600'
+                      }`}
+                      title={isInChart ? "Remove from chart" : "Add to chart"}
+                      aria-label={isInChart ? "Remove from chart" : "Add to chart"}
+                    >
+                      <LineChart size={12} className="text-white" fill={isInChart ? "currentColor" : "none"} />
+                    </button>
+
+                    {isTop5 && (
+                      <div className="flex items-center gap-0.5">
+                        {timeframes.map(tf => {
+                          const isActive = currentTimeframe?.timeframe === tf;
+                          const isLoading = loadingTimeframe[stock.code] && currentTimeframe?.timeframe === tf;
+
+                          return (
+                            <button
+                              key={tf}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleTimeframeClick(stock.code, tf);
+                              }}
+                              className={`px-1 py-0.5 text-[10px] font-semibold rounded transition-all ${
+                                isActive
+                                  ? 'bg-blue-500 text-white'
+                                  : 'bg-gray-700/80 text-gray-300 hover:bg-gray-600'
+                              }`}
+                              style={{ minWidth: '16px' }}
+                              title={`${tf === 'M' ? 'Max' : tf + ' days'}`}
+                              disabled={isLoading}
+                            >
+                              {isLoading ? '...' : tf}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
+                  </div>
                 );
               })()}
 
