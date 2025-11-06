@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, ArrowUp, ArrowDown, LineChart } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, ArrowUp, ArrowDown, LineChart, ChevronLeft, ChevronRight } from 'lucide-react';
 import SentimentChart from '../SentimentChart';
 import { HeatmapView } from './HeatmapView';
 import { LoadingState } from '../LoadingState';
@@ -248,6 +248,30 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
   const [sortColumn, setSortColumn] = useState(null);
   const [sortDirection, setSortDirection] = useState('asc');
 
+  // Detect mobile device and set initial name column state
+  const [nameExpanded, setNameExpanded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth > 768; // Collapsed on mobile (<=768px), expanded on desktop
+    }
+    return true; // Default to expanded for SSR
+  });
+
+  // Fundamentals columns (Market Cap to Rating) - expanded by default for all platforms
+  const [fundamentalsExpanded, setFundamentalsExpanded] = useState(true);
+
+  // Update nameExpanded on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      const isMobile = window.innerWidth <= 768;
+      setNameExpanded(!isMobile);
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, []);
+
   const handleSort = (column) => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -424,45 +448,89 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
             <th className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
             </th>
             <th
-              className="px-2 py-3 text-left cursor-pointer hover:bg-gray-800 transition max-w-[160px]"
-              onClick={() => handleSort('name')}
-              style={{width:'160px'}}
+              className="px-2 py-3 text-left hover:bg-gray-800 transition"
+              style={{width: nameExpanded ? '160px' : '50px', minWidth: nameExpanded ? '160px' : '50px'}}
             >
-              <span className="inline-block truncate max-w-[140px] align-middle">Name</span> <SortIcon active={isActive('name')} direction={sortDirection} />
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setNameExpanded(!nameExpanded)}
+                  className="p-1 hover:bg-gray-700 rounded transition"
+                  title={nameExpanded ? "Click to collapse Name column" : "Click to expand Name column"}
+                >
+                  {nameExpanded ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
+                </button>
+                {nameExpanded && (
+                  <span
+                    className="inline-block truncate cursor-pointer"
+                    onClick={() => handleSort('name')}
+                  >
+                    Name <SortIcon active={isActive('name')} direction={sortDirection} />
+                  </span>
+                )}
+              </div>
             </th>
-            <th className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
-              Type
-            </th>
-            <th
-              className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
-              onClick={() => handleSort('marketCap')}
-            >
-              Market Cap <SortIcon active={isActive('marketCap')} direction={sortDirection} />
-            </th>
-            <th
-              className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
-              onClick={() => handleSort('beta')}
-            >
-              Beta <SortIcon active={isActive('beta')} direction={sortDirection} />
-            </th>
-            <th
-              className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
-              onClick={() => handleSort('pe')}
-            >
-              P/E <SortIcon active={isActive('pe')} direction={sortDirection} />
-            </th>
-            <th
-              className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
-              onClick={() => handleSort('dividendYield')}
-            >
-              Dividend <SortIcon active={isActive('dividendYield')} direction={sortDirection} />
-            </th>
-            <th
-              className="px-4 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
-              onClick={() => handleSort('rating')}
-            >
-              Rating <SortIcon active={isActive('rating')} direction={sortDirection} />
-            </th>
+            {nameExpanded && (
+              <th className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
+                Type
+              </th>
+            )}
+            {fundamentalsExpanded ? (
+              <>
+                <th
+                  className="px-4 py-3 text-right hover:bg-gray-800 transition"
+                >
+                  <div className="flex items-center justify-end gap-1">
+                    <button
+                      onClick={() => setFundamentalsExpanded(!fundamentalsExpanded)}
+                      className="p-1 hover:bg-gray-700 rounded transition"
+                      title="Click to collapse fundamentals columns"
+                    >
+                      <ChevronLeft size={16} />
+                    </button>
+                    <span
+                      className="cursor-pointer"
+                      onClick={() => handleSort('marketCap')}
+                    >
+                      Market Cap <SortIcon active={isActive('marketCap')} direction={sortDirection} />
+                    </span>
+                  </div>
+                </th>
+                <th
+                  className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
+                  onClick={() => handleSort('beta')}
+                >
+                  Beta <SortIcon active={isActive('beta')} direction={sortDirection} />
+                </th>
+                <th
+                  className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
+                  onClick={() => handleSort('pe')}
+                >
+                  P/E <SortIcon active={isActive('pe')} direction={sortDirection} />
+                </th>
+                <th
+                  className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
+                  onClick={() => handleSort('dividendYield')}
+                >
+                  Dividend <SortIcon active={isActive('dividendYield')} direction={sortDirection} />
+                </th>
+                <th
+                  className="px-4 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
+                  onClick={() => handleSort('rating')}
+                >
+                  Rating <SortIcon active={isActive('rating')} direction={sortDirection} />
+                </th>
+              </>
+            ) : (
+              <th className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
+                <button
+                  onClick={() => setFundamentalsExpanded(!fundamentalsExpanded)}
+                  className="p-1 hover:bg-gray-700 rounded transition"
+                  title="Click to expand fundamentals columns"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </th>
+            )}
             <th
               className="px-2 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
               style={{width: sentimentExpanded ? '90px' : '30px', minWidth: sentimentExpanded ? '90px' : '30px'}}
@@ -510,47 +578,59 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 );
               })()}
             </td>
-            <td className="px-2 py-3 font-medium text-white max-w-[160px]" style={{width:'160px'}}>
-              {selectedStock.website ? (
-                <a href={selectedStock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate" style={{ color: '#FBBF24' }} title={selectedStock.name}>
-                  {selectedStock.name}
-                </a>
+            <td className="px-2 py-3 font-medium text-white" style={{width: nameExpanded ? '160px' : '50px', maxWidth: nameExpanded ? '160px' : '50px'}}>
+              {nameExpanded ? (
+                selectedStock.website ? (
+                  <a href={selectedStock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate" style={{ color: '#FBBF24' }} title={selectedStock.name}>
+                    {selectedStock.name}
+                  </a>
+                ) : (
+                  <span
+                    onClick={() => onStockCodeClick && onStockCodeClick(selectedStock.code)}
+                    role="link"
+                    tabIndex={0}
+                    className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate"
+                    title={selectedStock.name}
+                  >{selectedStock.name}</span>
+                )
               ) : (
-                <span
-                  onClick={() => onStockCodeClick && onStockCodeClick(selectedStock.code)}
-                  role="link"
-                  tabIndex={0}
-                  className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate"
-                  title={selectedStock.name}
-                >{selectedStock.name}</span>
+                <span className="text-gray-400 text-xs text-center block" title={selectedStock.name}>•</span>
               )}
             </td>
-            <td className="px-2 py-3 text-center text-gray-400" style={{width:'50px', minWidth:'50px'}}>-</td>
-            <td className="px-4 py-3">
-              <div style={getMarketCapCellStyle(selectedStock.marketCap)}>
-                ${selectedStock.marketCap}
-              </div>
-            </td>
-            <td className="px-4 py-3 text-right">
-              <div style={getBetaCellStyle(selectedStock.beta)}>
-                {selectedStock.beta || 'N/A'}
-              </div>
-            </td>
-            <td className="px-4 py-3">
-              <div style={getPeCellStyle(selectedStock.pe)}>
-                {selectedStock.pe === '—' ? '—' : selectedStock.pe}
-              </div>
-            </td>
-            <td className="px-4 py-3 text-right">
-              <div style={getDividendCellStyle(selectedStock.dividendYield)}>
-                {selectedStock.dividendYield}
-              </div>
-            </td>
-            <td className="px-4 py-3 text-center">
-              <span style={getRatingStyle(selectedStock.analystRating)}>
-                {selectedStock.analystRating}
-              </span>
-            </td>
+            {nameExpanded && (
+              <td className="px-2 py-3 text-center text-gray-400" style={{width:'50px', minWidth:'50px'}}>-</td>
+            )}
+            {fundamentalsExpanded ? (
+              <>
+                <td className="px-4 py-3">
+                  <div style={getMarketCapCellStyle(selectedStock.marketCap)}>
+                    ${selectedStock.marketCap}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <div style={getBetaCellStyle(selectedStock.beta)}>
+                    {selectedStock.beta || 'N/A'}
+                  </div>
+                </td>
+                <td className="px-4 py-3">
+                  <div style={getPeCellStyle(selectedStock.pe)}>
+                    {selectedStock.pe === '—' ? '—' : selectedStock.pe}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-right">
+                  <div style={getDividendCellStyle(selectedStock.dividendYield)}>
+                    {selectedStock.dividendYield}
+                  </div>
+                </td>
+                <td className="px-4 py-3 text-center">
+                  <span style={getRatingStyle(selectedStock.analystRating)}>
+                    {selectedStock.analystRating}
+                  </span>
+                </td>
+              </>
+            ) : (
+              <td className="px-2 py-3 text-center text-gray-400" style={{width:'50px', minWidth:'50px'}}>•</td>
+            )}
             <td className="px-2 py-3 text-center" style={{width: sentimentExpanded ? '90px' : '30px', minWidth: sentimentExpanded ? '90px' : '30px'}}>
               {sentimentExpanded ? (
                 <div className="mx-auto" style={{width:'84px'}}>
@@ -625,49 +705,61 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                   );
                 })()}
               </td>
-              <td className="px-2 py-3 text-gray-200 max-w-[160px]" style={{width:'160px'}}>
-                {stock.website ? (
-                  <a href={stock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate" style={{ color: '#FBBF24' }} title={stock.name}>
-                    {stock.name}
-                  </a>
+              <td className="px-2 py-3 text-gray-200" style={{width: nameExpanded ? '160px' : '50px', maxWidth: nameExpanded ? '160px' : '50px'}}>
+                {nameExpanded ? (
+                  stock.website ? (
+                    <a href={stock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate" style={{ color: '#FBBF24' }} title={stock.name}>
+                      {stock.name}
+                    </a>
+                  ) : (
+                    <span
+                      onClick={() => onStockCodeClick && onStockCodeClick(stock.code)}
+                      role="link"
+                      tabIndex={0}
+                      className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate"
+                      title={stock.name}
+                    >{stock.name}</span>
+                  )
                 ) : (
-                  <span
-                    onClick={() => onStockCodeClick && onStockCodeClick(stock.code)}
-                    role="link"
-                    tabIndex={0}
-                    className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate"
-                    title={stock.name}
-                  >{stock.name}</span>
+                  <span className="text-gray-400 text-xs text-center block" title={stock.name}>•</span>
                 )}
               </td>
-              <td className="px-2 py-3 text-center text-gray-200" style={{width:'50px', minWidth:'50px'}}>
-                {getRelationshipTypeAbbr(stock.relationshipType)}
-              </td>
-              <td className="px-4 py-3">
-                <div style={getMarketCapCellStyle(stock.marketCap)}>
-                  ${stock.marketCap}
-                </div>
-              </td>
-              <td className="px-4 py-3 text-right">
-                <div style={getBetaCellStyle(stock.beta)}>
-                  {stock.beta || 'N/A'}
-                </div>
-              </td>
-              <td className="px-4 py-3">
-                <div style={getPeCellStyle(stock.pe)}>
-                  {stock.pe === '—' ? '—' : stock.pe}
-                </div>
-              </td>
-              <td className="px-4 py-3 text-right">
-                <div style={getDividendCellStyle(stock.dividendYield)}>
-                  {stock.dividendYield}
-                </div>
-              </td>
-              <td className="px-4 py-3 text-center">
-                <span style={getRatingStyle(stock.analystRating)}>
-                  {stock.analystRating}
-                </span>
-              </td>
+              {nameExpanded && (
+                <td className="px-2 py-3 text-center text-gray-200" style={{width:'50px', minWidth:'50px'}}>
+                  {getRelationshipTypeAbbr(stock.relationshipType)}
+                </td>
+              )}
+              {fundamentalsExpanded ? (
+                <>
+                  <td className="px-4 py-3">
+                    <div style={getMarketCapCellStyle(stock.marketCap)}>
+                      ${stock.marketCap}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div style={getBetaCellStyle(stock.beta)}>
+                      {stock.beta || 'N/A'}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div style={getPeCellStyle(stock.pe)}>
+                      {stock.pe === '—' ? '—' : stock.pe}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-right">
+                    <div style={getDividendCellStyle(stock.dividendYield)}>
+                      {stock.dividendYield}
+                    </div>
+                  </td>
+                  <td className="px-4 py-3 text-center">
+                    <span style={getRatingStyle(stock.analystRating)}>
+                      {stock.analystRating}
+                    </span>
+                  </td>
+                </>
+              ) : (
+                <td className="px-2 py-3 text-center text-gray-400" style={{width:'50px', minWidth:'50px'}}>•</td>
+              )}
               <td className="px-2 py-3 text-center" style={{width: sentimentExpanded ? '90px' : '30px', minWidth: sentimentExpanded ? '90px' : '30px'}}>
                 {sentimentExpanded ? (
                   <div className="mx-auto" style={{width:'84px'}}>
