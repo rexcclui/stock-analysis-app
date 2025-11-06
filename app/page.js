@@ -82,6 +82,21 @@ const fetchCompleteStockData = async (symbol, apiCounts = null) => {
         console.warn('[PAGE] News fetch failed:', err.message);
     }
 
+    // Fetch Google News (optional)
+    let googleNews = [];
+    try {
+        if (apiCounts) apiCounts.googleNews = (apiCounts.googleNews || 0) + 1;
+        const googleNewsRes = await fetchWithTimeout(`/api/google-news?symbol=${symbol}`, 10000);
+        if (googleNewsRes.ok) {
+            googleNews = await googleNewsRes.json();
+            console.log(`[PAGE] Google News received: ${Array.isArray(googleNews) ? googleNews.length : 0} articles`);
+        } else {
+            console.warn(`[PAGE] Google News API returned: ${googleNewsRes.status}`);
+        }
+    } catch (err) {
+        console.warn('[PAGE] Google News fetch failed:', err.message);
+    }
+
     return {
       ...stock,
       sentiment,
@@ -89,6 +104,7 @@ const fetchCompleteStockData = async (symbol, apiCounts = null) => {
       sentimentTimeSeries: sentiment.sentimentTimeSeries,
       relatedStocks: Array.isArray(relatedStocksData) ? relatedStocksData : [],
       news: Array.isArray(news) ? news : [],
+      googleNews: Array.isArray(googleNews) ? googleNews : [],
       comparisonType: fetchedComparisonType
     };
   } catch (error) {
@@ -115,6 +131,7 @@ export default function StockAnalysisDashboard() {
   const [heatmapSizeBy, setHeatmapSizeBy] = useState('marketCap');
   const [searchHistory, setSearchHistory] = useState([]);
   const [news, setNews] = useState([]);
+  const [googleNews, setGoogleNews] = useState([]);
   // Detailed search history entries with day change for table (bounded by 3 rows dynamic columns)
   const [searchHistoryStocks, setSearchHistoryStocks] = useState([]); // array of { code, dayChange }
   const HISTORY_COL_WIDTH = 140; // approximate width for each cell
@@ -230,6 +247,12 @@ export default function StockAnalysisDashboard() {
         setNews(JSON.parse(savedNews));
       } catch {}
     }
+    const savedGoogleNews = localStorage.getItem('selectedStockGoogleNews');
+    if (savedGoogleNews) {
+      try {
+        setGoogleNews(JSON.parse(savedGoogleNews));
+      } catch {}
+    }
     const savedComparisonStocks = localStorage.getItem('comparisonStocks');
     if (savedComparisonStocks) {
       try {
@@ -282,6 +305,18 @@ export default function StockAnalysisDashboard() {
     } catch {}
   }, [news, isClient]);
 
+  // Persist Google News whenever it changes
+  React.useEffect(() => {
+    if (!isClient) return;
+    try {
+      if (googleNews && googleNews.length > 0) {
+        localStorage.setItem('selectedStockGoogleNews', JSON.stringify(googleNews));
+      } else {
+        localStorage.removeItem('selectedStockGoogleNews');
+      }
+    } catch {}
+  }, [googleNews, isClient]);
+
   // Persist comparison stocks whenever they change
   React.useEffect(() => {
     if (!isClient) return;
@@ -328,6 +363,7 @@ export default function StockAnalysisDashboard() {
     // Clear previous data immediately to avoid confusion
     setSelectedStock(null);
     setNews([]);
+    setGoogleNews([]);
     setComparisonStocks([]);
     setChartCompareStocks([]);
     
@@ -348,6 +384,7 @@ export default function StockAnalysisDashboard() {
       
       setSelectedStock(stockData);
       setNews(stockData.news);
+      setGoogleNews(stockData.googleNews);
       setComparisonType(stockData.comparisonType || 'industry');
       addToSearchHistory(stockCode);
       
@@ -718,7 +755,7 @@ export default function StockAnalysisDashboard() {
 
               <SentimentSection sentiment={selectedStock.sentiment} loading={loading} />
 
-              <NewsSection news={news} loading={loading} symbol={selectedStock.code} />
+              <NewsSection newsApiNews={news} googleNews={googleNews} loading={loading} symbol={selectedStock.code} />
               </TabPanel>
 
               <TabPanel activeTab={activeTab} tabId="historical-data-analysis">

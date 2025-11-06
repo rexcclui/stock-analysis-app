@@ -1,33 +1,49 @@
-import React from 'react';
+'use client';
+
+import React, { useState } from 'react';
 import { TrendingUp, TrendingDown, ExternalLink } from 'lucide-react';
 import { LoadingState } from './LoadingState';
+import { Tabs, TabPanel } from './Tabs';
 
 /**
  * NewsSection
  * Props:
- * - news: array of { title, date, sentiment }
+ * - newsApiNews: array of { title, date, sentiment, url } from NewsAPI
+ * - googleNews: array of { title, date, sentiment, url } from Google News
  * - title: optional override title
  * - symbol: stock symbol for external news links
+ * - loading: loading state
  */
-export function NewsSection({ news = [], title = 'Latest News', loading = false, symbol = '' }) {
-  console.log('[NewsSection] Received news:', { length: news?.length, isArray: Array.isArray(news), data: news });
+export function NewsSection({ newsApiNews = [], googleNews = [], title = 'Latest News', loading = false, symbol = '' }) {
+  const [activeTab, setActiveTab] = useState('newsapi');
 
-  if (!news || !Array.isArray(news) || news.length === 0) {
-    console.log('[NewsSection] No news to display');
+  console.log('[NewsSection] Received news:', {
+    newsApiLength: newsApiNews?.length,
+    googleNewsLength: googleNews?.length,
+    isNewsApiArray: Array.isArray(newsApiNews),
+    isGoogleNewsArray: Array.isArray(googleNews)
+  });
+
+  // If both sources are empty or invalid, show loading or nothing
+  const hasNewsApi = newsApiNews && Array.isArray(newsApiNews) && newsApiNews.length > 0;
+  const hasGoogle = googleNews && Array.isArray(googleNews) && googleNews.length > 0;
+
+  if (!hasNewsApi && !hasGoogle) {
+    console.log('[NewsSection] No news to display from any source');
     if (loading) {
       return <LoadingState message="Loading latest news..." className="mb-6" />;
     }
     return null;
   }
-  
-  // Filter out error entries
-  const validNews = news.filter(article => !article.error);
-  console.log('[NewsSection] Valid news after filtering:', { total: news.length, valid: validNews.length });
-  
-  if (validNews.length === 0) {
-    console.log('[NewsSection] All news articles were errors');
-    return null;
-  }
+
+  // Filter out error entries from both sources
+  const validNewsApi = hasNewsApi ? newsApiNews.filter(article => !article.error) : [];
+  const validGoogleNews = hasGoogle ? googleNews.filter(article => !article.error) : [];
+
+  console.log('[NewsSection] Valid news after filtering:', {
+    newsApi: validNewsApi.length,
+    google: validGoogleNews.length
+  });
   
   const newsLinks = symbol ? [
     { name: 'Google', url: `https://news.google.com/search?q=${encodeURIComponent(symbol + ' stock')}`, color: 'bg-blue-600 hover:bg-blue-700', logo: 'https://www.google.com/favicon.ico' },
@@ -36,6 +52,55 @@ export function NewsSection({ news = [], title = 'Latest News', loading = false,
     { name: 'Seeking Alpha', url: `https://seekingalpha.com/symbol/${symbol}/news`, color: 'bg-orange-600 hover:bg-orange-700', logo: 'https://seekingalpha.com/favicon.ico' },
     { name: 'Bloomberg', url: `https://www.bloomberg.com/quote/${symbol}:US`, color: 'bg-gray-600 hover:bg-gray-700', logo: 'https://www.bloomberg.com/favicon.ico' }
   ] : [];
+
+  // Tabs configuration
+  const tabs = [
+    { id: 'newsapi', label: 'NewsAPI' },
+    { id: 'google', label: 'Google News' }
+  ];
+
+  // Helper function to render news articles
+  const renderNewsList = (articles) => {
+    if (!articles || articles.length === 0) {
+      return (
+        <div className="text-gray-400 text-center py-8">
+          No news articles available
+        </div>
+      );
+    }
+
+    return (
+      <div className="space-y-3">
+        {articles.map((article, idx) => (
+          <div key={idx} className="flex items-start gap-3 p-3 bg-gray-700/40 rounded-lg border border-gray-600">
+            {article.sentiment === 'positive' ? (
+              <TrendingUp className="text-green-400 mt-1" size={20} />
+            ) : (
+              <TrendingDown className="text-red-400 mt-1" size={20} />
+            )}
+            <div className="flex-1">
+              {article.url ? (
+                <a
+                  href={article.url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="font-medium text-white hover:text-blue-400 transition-colors cursor-pointer"
+                >
+                  {article.title}
+                </a>
+              ) : (
+                <div className="font-medium text-white">{article.title}</div>
+              )}
+              <div className="text-sm text-gray-400">
+                {article.date}
+                {article.source && <span className="ml-2">• {article.source}</span>}
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    );
+  };
 
   return (
     <div className="bg-gray-800 rounded-xl shadow-xl p-6 border border-gray-700" style={{ marginTop: '1rem' }}>
@@ -66,32 +131,17 @@ export function NewsSection({ news = [], title = 'Latest News', loading = false,
         )}
       </div>
 
-      <div className="space-y-3">
-        {validNews.map((article, idx) => (
-          <div key={idx} className="flex items-start gap-3 p-3 bg-gray-700/40 rounded-lg border border-gray-600">
-            {article.sentiment === 'positive' ? (
-              <TrendingUp className="text-green-400 mt-1" size={20} />
-            ) : (
-              <TrendingDown className="text-red-400 mt-1" size={20} />
-            )}
-            <div className="flex-1">
-              {article.url ? (
-                <a
-                  href={article.url}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="font-medium text-white hover:text-blue-400 transition-colors cursor-pointer"
-                >
-                  {article.title}
-                </a>
-              ) : (
-                <div className="font-medium text-white">{article.title}</div>
-              )}
-              <div className="text-sm text-gray-400">{article.date}</div>
-            </div>
-          </div>
-        ))}
-      </div>
+      {/* Tabs */}
+      <Tabs activeTab={activeTab} onTabChange={setActiveTab} tabs={tabs} />
+
+      {/* Tab Panels */}
+      <TabPanel activeTab={activeTab} tabId="newsapi">
+        {renderNewsList(validNewsApi)}
+      </TabPanel>
+
+      <TabPanel activeTab={activeTab} tabId="google">
+        {renderNewsList(validGoogleNews)}
+      </TabPanel>
     </div>
   );
 }
