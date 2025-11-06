@@ -96,7 +96,7 @@ export function GoogleTrendsChart({ trendTimeSeries, symbol, loading = false }) 
         <div className="bg-gray-800 rounded-xl p-4 shadow-xl border border-gray-700">
           <div className="mb-3 flex items-center justify-between">
             <div className="text-sm text-gray-300">
-              Search interest for "{symbol}" over the available period ({dayCount} day{dayCount !== 1 ? 's' : ''})
+              Search interest for &quot;{symbol}&quot; over the available period ({dayCount} day{dayCount !== 1 ? 's' : ''})
             </div>
             <div className="flex items-center gap-4 text-xs">
               <div className="flex items-center gap-2">
