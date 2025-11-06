@@ -469,9 +469,11 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 )}
               </div>
             </th>
-            <th className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
-              Type
-            </th>
+            {nameExpanded && (
+              <th className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
+                Type
+              </th>
+            )}
             {fundamentalsExpanded ? (
               <>
                 <th
@@ -595,7 +597,9 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 <span className="text-gray-400 text-xs text-center block" title={selectedStock.name}>•</span>
               )}
             </td>
-            <td className="px-2 py-3 text-center text-gray-400" style={{width:'50px', minWidth:'50px'}}>-</td>
+            {nameExpanded && (
+              <td className="px-2 py-3 text-center text-gray-400" style={{width:'50px', minWidth:'50px'}}>-</td>
+            )}
             {fundamentalsExpanded ? (
               <>
                 <td className="px-4 py-3">
@@ -720,9 +724,11 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                   <span className="text-gray-400 text-xs text-center block" title={stock.name}>•</span>
                 )}
               </td>
-              <td className="px-2 py-3 text-center text-gray-200" style={{width:'50px', minWidth:'50px'}}>
-                {getRelationshipTypeAbbr(stock.relationshipType)}
-              </td>
+              {nameExpanded && (
+                <td className="px-2 py-3 text-center text-gray-200" style={{width:'50px', minWidth:'50px'}}>
+                  {getRelationshipTypeAbbr(stock.relationshipType)}
+                </td>
+              )}
               {fundamentalsExpanded ? (
                 <>
                   <td className="px-4 py-3">
