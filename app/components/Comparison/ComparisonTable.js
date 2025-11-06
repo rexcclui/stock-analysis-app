@@ -639,19 +639,13 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
               ))
             ) : (
               Array.from({ length: 8 }, (_, i) => {
-                let label;
-                if (i === 0) {
-                  label = `-${nDays}D`;
-                } else {
-                  const start = i * nDays;
-                  const end = (i + 1) * nDays;
-                  label = `-${end}D to -${start}D`;
-                }
+                const end = (i + 1) * nDays;
+                const label = `-${end}D`;
                 return (
                   <th
                     key={`period-${i}`}
                     className="px-2 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
-                    style={{width:'100px', minWidth:'100px', fontSize: '12px'}}
+                    style={{width:'90px', minWidth:'90px'}}
                     onClick={() => handleSort(`period-${i}`)}
                   >
                     {label} <SortIcon active={isActive(`period-${i}`)} direction={sortDirection} />
