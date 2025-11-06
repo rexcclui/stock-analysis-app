@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { X, ArrowUp, ArrowDown, LineChart } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { X, ArrowUp, ArrowDown, LineChart, ChevronDown, ChevronRight } from 'lucide-react';
 import SentimentChart from '../SentimentChart';
 import { HeatmapView } from './HeatmapView';
 import { LoadingState } from '../LoadingState';
@@ -248,6 +248,27 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
   const [sortColumn, setSortColumn] = useState(null);
   const [sortDirection, setSortDirection] = useState('asc');
 
+  // Detect mobile device and set initial name column state
+  const [nameExpanded, setNameExpanded] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth > 768; // Collapsed on mobile (<=768px), expanded on desktop
+    }
+    return true; // Default to expanded for SSR
+  });
+
+  // Update nameExpanded on window resize
+  useEffect(() => {
+    const handleResize = () => {
+      const isMobile = window.innerWidth <= 768;
+      setNameExpanded(!isMobile);
+    };
+
+    if (typeof window !== 'undefined') {
+      window.addEventListener('resize', handleResize);
+      return () => window.removeEventListener('resize', handleResize);
+    }
+  }, []);
+
   const handleSort = (column) => {
     if (sortColumn === column) {
       setSortDirection(sortDirection === 'asc' ? 'desc' : 'asc');
@@ -424,11 +445,26 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
             <th className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
             </th>
             <th
-              className="px-2 py-3 text-left cursor-pointer hover:bg-gray-800 transition max-w-[160px]"
-              onClick={() => handleSort('name')}
-              style={{width:'160px'}}
+              className="px-2 py-3 text-left hover:bg-gray-800 transition"
+              style={{width: nameExpanded ? '160px' : '50px', minWidth: nameExpanded ? '160px' : '50px'}}
             >
-              <span className="inline-block truncate max-w-[140px] align-middle">Name</span> <SortIcon active={isActive('name')} direction={sortDirection} />
+              <div className="flex items-center gap-1">
+                <button
+                  onClick={() => setNameExpanded(!nameExpanded)}
+                  className="p-1 hover:bg-gray-700 rounded transition"
+                  title={nameExpanded ? "Click to collapse Name column" : "Click to expand Name column"}
+                >
+                  {nameExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
+                </button>
+                {nameExpanded && (
+                  <span
+                    className="inline-block truncate cursor-pointer"
+                    onClick={() => handleSort('name')}
+                  >
+                    Name <SortIcon active={isActive('name')} direction={sortDirection} />
+                  </span>
+                )}
+              </div>
             </th>
             <th className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
               Type
@@ -510,19 +546,23 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 );
               })()}
             </td>
-            <td className="px-2 py-3 font-medium text-white max-w-[160px]" style={{width:'160px'}}>
-              {selectedStock.website ? (
-                <a href={selectedStock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate" style={{ color: '#FBBF24' }} title={selectedStock.name}>
-                  {selectedStock.name}
-                </a>
+            <td className="px-2 py-3 font-medium text-white" style={{width: nameExpanded ? '160px' : '50px', maxWidth: nameExpanded ? '160px' : '50px'}}>
+              {nameExpanded ? (
+                selectedStock.website ? (
+                  <a href={selectedStock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate" style={{ color: '#FBBF24' }} title={selectedStock.name}>
+                    {selectedStock.name}
+                  </a>
+                ) : (
+                  <span
+                    onClick={() => onStockCodeClick && onStockCodeClick(selectedStock.code)}
+                    role="link"
+                    tabIndex={0}
+                    className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate"
+                    title={selectedStock.name}
+                  >{selectedStock.name}</span>
+                )
               ) : (
-                <span
-                  onClick={() => onStockCodeClick && onStockCodeClick(selectedStock.code)}
-                  role="link"
-                  tabIndex={0}
-                  className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate"
-                  title={selectedStock.name}
-                >{selectedStock.name}</span>
+                <span className="text-gray-400 text-xs text-center block" title={selectedStock.name}>•</span>
               )}
             </td>
             <td className="px-2 py-3 text-center text-gray-400" style={{width:'50px', minWidth:'50px'}}>-</td>
@@ -625,19 +665,23 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                   );
                 })()}
               </td>
-              <td className="px-2 py-3 text-gray-200 max-w-[160px]" style={{width:'160px'}}>
-                {stock.website ? (
-                  <a href={stock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate" style={{ color: '#FBBF24' }} title={stock.name}>
-                    {stock.name}
-                  </a>
+              <td className="px-2 py-3 text-gray-200" style={{width: nameExpanded ? '160px' : '50px', maxWidth: nameExpanded ? '160px' : '50px'}}>
+                {nameExpanded ? (
+                  stock.website ? (
+                    <a href={stock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate" style={{ color: '#FBBF24' }} title={stock.name}>
+                      {stock.name}
+                    </a>
+                  ) : (
+                    <span
+                      onClick={() => onStockCodeClick && onStockCodeClick(stock.code)}
+                      role="link"
+                      tabIndex={0}
+                      className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate"
+                      title={stock.name}
+                    >{stock.name}</span>
+                  )
                 ) : (
-                  <span
-                    onClick={() => onStockCodeClick && onStockCodeClick(stock.code)}
-                    role="link"
-                    tabIndex={0}
-                    className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate"
-                    title={stock.name}
-                  >{stock.name}</span>
+                  <span className="text-gray-400 text-xs text-center block" title={stock.name}>•</span>
                 )}
               </td>
               <td className="px-2 py-3 text-center text-gray-200" style={{width:'50px', minWidth:'50px'}}>
