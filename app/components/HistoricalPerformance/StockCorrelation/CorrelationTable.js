@@ -243,7 +243,7 @@ export function CorrelationTable({ symbol, relatedStocks, onSelectStock }) {
           <li><strong>+1.0:</strong> Perfect positive correlation (stocks move together)</li>
           <li><strong>0.0:</strong> No correlation (stocks move independently)</li>
           <li><strong>-1.0:</strong> Perfect negative correlation (stocks move opposite)</li>
-          <li><strong>Lead-Lag:</strong> Indicates if one stock's movements predict the other's</li>
+          <li><strong>Lead-Lag:</strong> Indicates if one stock&apos;s movements predict the other&apos;s</li>
         </ul>
       </div>
     </div>
