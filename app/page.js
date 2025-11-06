@@ -8,6 +8,7 @@ import { PricePerformanceChart } from './components/PricePerformanceChart';
 import { NewsSection } from './components/NewsSection';
 import { SentimentSection } from './components/SentimentSection';
 import { SentimentTimeSeriesChart } from './components/SentimentTimeSeriesChart';
+import { GoogleTrendsChart } from './components/GoogleTrendsChart';
 import { StockResultCard } from './components/StockResultCard';
 import { HistoricalPerformanceCheck } from './components/HistoricalPerformanceCheck';
 import { LoadingState } from './components/LoadingState';
@@ -82,11 +83,27 @@ const fetchCompleteStockData = async (symbol, apiCounts = null) => {
         console.warn('[PAGE] News fetch failed:', err.message);
     }
 
+    // Fetch Google Trends data (optional)
+    let googleTrends = { trendTimeSeries: [] };
+    try {
+        const trendsRes = await fetchWithTimeout(`/api/google-trends?symbol=${symbol}`, 15000);
+        if (trendsRes.ok) {
+            googleTrends = await trendsRes.json();
+            console.log(`[PAGE] Google Trends received: ${Array.isArray(googleTrends.trendTimeSeries) ? googleTrends.trendTimeSeries.length : 0} data points`);
+        } else {
+            console.warn(`[PAGE] Google Trends API returned: ${trendsRes.status}`);
+        }
+    } catch (err) {
+        console.warn('[PAGE] Google Trends fetch failed:', err.message);
+    }
+
     return {
       ...stock,
       sentiment,
       sentimentHistory: sentiment.sentimentHistory, // Ensure this is passed
       sentimentTimeSeries: sentiment.sentimentTimeSeries,
+      googleTrends: googleTrends,
+      trendTimeSeries: googleTrends.trendTimeSeries || [],
       relatedStocks: Array.isArray(relatedStocksData) ? relatedStocksData : [],
       news: Array.isArray(news) ? news : [],
       comparisonType: fetchedComparisonType
@@ -686,6 +703,12 @@ export default function StockAnalysisDashboard() {
 
               <SentimentTimeSeriesChart
                 sentimentTimeSeries={selectedStock.sentimentTimeSeries}
+                loading={loading}
+              />
+
+              <GoogleTrendsChart
+                trendTimeSeries={selectedStock.trendTimeSeries}
+                symbol={selectedStock.code}
                 loading={loading}
               />
 
