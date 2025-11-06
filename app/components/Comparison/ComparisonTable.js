@@ -74,6 +74,8 @@ export function ComparisonTable({
 }) {
   const [colorMode, setColorMode] = useState('historical'); // 'historical' | 'relative'
   const [sentimentExpanded, setSentimentExpanded] = useState(false); // Start collapsed
+  const [periodMode, setPeriodMode] = useState('accumulated'); // 'accumulated' | 'non-accumulated'
+  const [nDays, setNDays] = useState(7); // Default N days for non-accumulated mode
 
   if (!comparisonStocks || comparisonStocks.length === 0) {
     if (loading) {
@@ -123,7 +125,42 @@ export function ComparisonTable({
   return (
     <div className="bg-gray-800 rounded-xl shadow-xl overflow-hidden border border-gray-700">
       <div className="flex items-center justify-between flex-wrap gap-4 px-6 py-4 bg-gray-900 border-b border-gray-700">
-        <span className="text-lg font-semibold text-white">{comparisonHeading}</span>
+        <div className="flex items-center gap-4 flex-wrap">
+          <span className="text-lg font-semibold text-white">{comparisonHeading}</span>
+          {viewMode === 'table' && (
+            <div className="flex items-center gap-3">
+              <div className="flex bg-gray-700 rounded-lg p-1">
+                <button
+                  onClick={() => setPeriodMode('accumulated')}
+                  className={`px-3 py-1 rounded-md text-sm font-semibold transition ${
+                    periodMode === 'accumulated' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-300 hover:text-white hover:bg-gray-600'
+                  }`}
+                  style={periodMode === 'accumulated' ? { backgroundColor: '#FBBF24', color: '#0ea5ff', boxShadow: '0 6px 12px rgba(0,0,0,0.06)' } : undefined}
+                >Accumulated</button>
+                <button
+                  onClick={() => setPeriodMode('non-accumulated')}
+                  className={`px-3 py-1 rounded-md text-sm font-semibold transition ${
+                    periodMode === 'non-accumulated' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-300 hover:text-white hover:bg-gray-600'
+                  }`}
+                  style={periodMode === 'non-accumulated' ? { backgroundColor: '#FBBF24', color: '#0ea5ff', boxShadow: '0 6px 12px rgba(0,0,0,0.06)' } : undefined}
+                >Non-accumulated</button>
+              </div>
+              {periodMode === 'non-accumulated' && (
+                <div className="flex items-center gap-2">
+                  <label className="text-gray-300 text-sm">N days:</label>
+                  <input
+                    type="number"
+                    min="1"
+                    max="90"
+                    value={nDays}
+                    onChange={(e) => setNDays(Math.max(1, Math.min(90, parseInt(e.target.value) || 7)))}
+                    className="bg-gray-700 text-gray-200 text-sm rounded px-3 py-1 w-16 focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  />
+                </div>
+              )}
+            </div>
+          )}
+        </div>
         <div className="flex items-center gap-6 flex-wrap">
           <div className="flex items-center gap-2">
             <span className="text-gray-300 text-sm">View:</span>
@@ -215,6 +252,8 @@ export function ComparisonTable({
             setColorMode={setColorMode}
             sentimentExpanded={sentimentExpanded}
             setSentimentExpanded={setSentimentExpanded}
+            periodMode={periodMode}
+            nDays={nDays}
           />
         </>
       ) : (
@@ -244,9 +283,51 @@ const SortIcon = ({ active, direction }) => {
     : <ArrowDown size={14} className="inline ml-1" />;
 };
 
-function TableView({ selectedStock, comparisonStocks, periods, onRemoveComparison, onStockCodeClick, onAddToChart, chartCompareStocks, colorMode, sentimentExpanded, setSentimentExpanded }) {
+function TableView({ selectedStock, comparisonStocks, periods, onRemoveComparison, onStockCodeClick, onAddToChart, chartCompareStocks, colorMode, sentimentExpanded, setSentimentExpanded, periodMode, nDays }) {
   const [sortColumn, setSortColumn] = useState(null);
   const [sortDirection, setSortDirection] = useState('asc');
+
+  // Helper function to calculate N-day period performance
+  const calculateNDayPeriods = (stock, n) => {
+    const historical = stock?.chartData?.fullHistorical;
+    if (!historical || !Array.isArray(historical) || historical.length === 0) {
+      return Array(8).fill(0);
+    }
+
+    const periods = [];
+    for (let i = 0; i < 8; i++) {
+      const startIdx = i * n;
+      const endIdx = (i + 1) * n;
+
+      if (startIdx >= historical.length) {
+        periods.push(0);
+        continue;
+      }
+
+      // Get prices at the boundaries
+      // Note: fullHistorical is ordered oldest to newest (already reversed in API)
+      // We need to look from the end (most recent)
+      const recentIdx = historical.length - 1 - startIdx;
+      const pastIdx = historical.length - 1 - endIdx;
+
+      if (recentIdx < 0 || pastIdx < 0 || recentIdx >= historical.length) {
+        periods.push(0);
+        continue;
+      }
+
+      const recentPrice = historical[recentIdx]?.price;
+      const pastPrice = pastIdx >= 0 ? historical[pastIdx]?.price : null;
+
+      if (recentPrice && pastPrice && pastPrice !== 0) {
+        const change = ((recentPrice - pastPrice) / pastPrice) * 100;
+        periods.push(parseFloat(change.toFixed(2)));
+      } else {
+        periods.push(0);
+      }
+    }
+
+    return periods;
+  };
 
   // Detect mobile device and set initial name column state
   const [nameExpanded, setNameExpanded] = useState(() => {
@@ -293,6 +374,12 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
     }
     if (column === 'rating') return stock.analystRating;
     if (periods.includes(column)) return stock.performance[column];
+    // Handle non-accumulated period columns (period-0, period-1, etc.)
+    if (column.startsWith('period-')) {
+      const periodIndex = parseInt(column.split('-')[1]);
+      const nDayPeriodsData = calculateNDayPeriods(stock, nDays);
+      return nDayPeriodsData[periodIndex] || 0;
+    }
     return 0;
   };
 
@@ -539,16 +626,39 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
             >
               {sentimentExpanded ? 'Sentiment (1M)' : '📊'}
             </th>
-            {periods.map(period => (
-              <th
-                key={period}
-                className="px-2 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
-                style={{width:'90px', minWidth:'90px'}}
-                onClick={() => handleSort(period)}
-              >
-                {period} <SortIcon active={isActive(period)} direction={sortDirection} />
-              </th>
-            ))}
+            {periodMode === 'accumulated' ? (
+              periods.map(period => (
+                <th
+                  key={period}
+                  className="px-2 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
+                  style={{width:'90px', minWidth:'90px'}}
+                  onClick={() => handleSort(period)}
+                >
+                  {period} <SortIcon active={isActive(period)} direction={sortDirection} />
+                </th>
+              ))
+            ) : (
+              Array.from({ length: 8 }, (_, i) => {
+                let label;
+                if (i === 0) {
+                  label = `-${nDays}D`;
+                } else {
+                  const start = i * nDays;
+                  const end = (i + 1) * nDays;
+                  label = `-${end}D to -${start}D`;
+                }
+                return (
+                  <th
+                    key={`period-${i}`}
+                    className="px-2 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
+                    style={{width:'100px', minWidth:'100px', fontSize: '12px'}}
+                    onClick={() => handleSort(`period-${i}`)}
+                  >
+                    {label} <SortIcon active={isActive(`period-${i}`)} direction={sortDirection} />
+                  </th>
+                );
+              })
+            )}
             <th className="px-4 py-3 text-center">Action</th>
           </tr>
         </thead>
@@ -640,43 +750,86 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 <span className="text-xs">📊</span>
               )}
             </td>
-            {periods.map(period => {
-              const basePerf = selectedStock.performance[period];
-              // Relative mode: compute min/max across all stocks (primary + comparisons) for this period
-              let styleObj = getColorForPerformance(basePerf);
-              if (colorMode === 'relative') {
-                const allValues = [selectedStock, ...comparisonStocks].map(s => s.performance[period]);
-                const min = Math.min(...allValues);
-                const max = Math.max(...allValues);
-                // Map value to 0..1
-                const ratio = max === min ? 0.5 : (basePerf - min) / (max - min);
-                // Interpolate green (best) to red (worst)
-                const lerp = (hex1, hex2, t) => {
-                  const toRgb = h => h.match(/.{2}/g).map(x => parseInt(x,16));
-                  const [r1,g1,b1] = toRgb(hex1);
-                  const [r2,g2,b2] = toRgb(hex2);
-                  const r = Math.round(r1 + (r2 - r1) * t);
-                  const g = Math.round(g1 + (g2 - g1) * t);
-                  const b = Math.round(b1 + (b2 - b1) * t);
-                  return `rgb(${r}, ${g}, ${b})`;
-                };
-                styleObj = { backgroundColor: lerp('10b981','ef4444', 1 - ratio), color:'white' };
-              }
-              return (
-                <td key={period} className="px-2 py-3 text-center" style={{width:'90px', minWidth:'90px'}}>
-                  <div style={{
-                    ...styleObj,
-                    padding: '0.75rem',
-                    borderRadius: '0.5rem',
-                    textAlign: 'center',
-                    fontWeight: 'bold',
-                    marginBottom: '0.25rem'
-                  }}>
-                    {basePerf > 0 ? '+' : ''}{basePerf.toFixed(1)}%
-                  </div>
-                </td>
-              );
-            })}
+            {periodMode === 'accumulated' ? (
+              periods.map(period => {
+                const basePerf = selectedStock.performance[period];
+                // Relative mode: compute min/max across all stocks (primary + comparisons) for this period
+                let styleObj = getColorForPerformance(basePerf);
+                if (colorMode === 'relative') {
+                  const allValues = [selectedStock, ...comparisonStocks].map(s => s.performance[period]);
+                  const min = Math.min(...allValues);
+                  const max = Math.max(...allValues);
+                  // Map value to 0..1
+                  const ratio = max === min ? 0.5 : (basePerf - min) / (max - min);
+                  // Interpolate green (best) to red (worst)
+                  const lerp = (hex1, hex2, t) => {
+                    const toRgb = h => h.match(/.{2}/g).map(x => parseInt(x,16));
+                    const [r1,g1,b1] = toRgb(hex1);
+                    const [r2,g2,b2] = toRgb(hex2);
+                    const r = Math.round(r1 + (r2 - r1) * t);
+                    const g = Math.round(g1 + (g2 - g1) * t);
+                    const b = Math.round(b1 + (b2 - b1) * t);
+                    return `rgb(${r}, ${g}, ${b})`;
+                  };
+                  styleObj = { backgroundColor: lerp('10b981','ef4444', 1 - ratio), color:'white' };
+                }
+                return (
+                  <td key={period} className="px-2 py-3 text-center" style={{width:'90px', minWidth:'90px'}}>
+                    <div style={{
+                      ...styleObj,
+                      padding: '0.75rem',
+                      borderRadius: '0.5rem',
+                      textAlign: 'center',
+                      fontWeight: 'bold',
+                      marginBottom: '0.25rem'
+                    }}>
+                      {basePerf > 0 ? '+' : ''}{basePerf.toFixed(1)}%
+                    </div>
+                  </td>
+                );
+              })
+            ) : (
+              (() => {
+                const nDayPeriodsData = calculateNDayPeriods(selectedStock, nDays);
+                return nDayPeriodsData.map((value, i) => {
+                  let styleObj = getColorForPerformance(value);
+                  if (colorMode === 'relative') {
+                    // Collect all values for this period index across all stocks
+                    const allValues = [
+                      value,
+                      ...comparisonStocks.map(s => calculateNDayPeriods(s, nDays)[i])
+                    ];
+                    const min = Math.min(...allValues);
+                    const max = Math.max(...allValues);
+                    const ratio = max === min ? 0.5 : (value - min) / (max - min);
+                    const lerp = (hex1, hex2, t) => {
+                      const toRgb = h => h.match(/.{2}/g).map(x => parseInt(x,16));
+                      const [r1,g1,b1] = toRgb(hex1);
+                      const [r2,g2,b2] = toRgb(hex2);
+                      const r = Math.round(r1 + (r2 - r1) * t);
+                      const g = Math.round(g1 + (g2 - g1) * t);
+                      const b = Math.round(b1 + (b2 - b1) * t);
+                      return `rgb(${r}, ${g}, ${b})`;
+                    };
+                    styleObj = { backgroundColor: lerp('10b981','ef4444', 1 - ratio), color:'white' };
+                  }
+                  return (
+                    <td key={`period-${i}`} className="px-2 py-3 text-center" style={{width:'90px', minWidth:'90px'}}>
+                      <div style={{
+                        ...styleObj,
+                        padding: '0.75rem',
+                        borderRadius: '0.5rem',
+                        textAlign: 'center',
+                        fontWeight: 'bold',
+                        marginBottom: '0.25rem'
+                      }}>
+                        {value > 0 ? '+' : ''}{value.toFixed(1)}%
+                      </div>
+                    </td>
+                  );
+                });
+              })()
+            )}
             <td className="px-4 py-3 text-center text-gray-400">-</td>
           </tr>
           {sortedComparisonStocks.map((stock, idx) => (
@@ -769,40 +922,83 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                   <span className="text-xs">📊</span>
                 )}
               </td>
-              {periods.map(period => {
-                const value = stock.performance[period];
-                let styleObj = getColorForPerformance(value);
-                if (colorMode === 'relative') {
-                  const allValues = [selectedStock, ...comparisonStocks].map(s => s.performance[period]);
-                  const min = Math.min(...allValues);
-                  const max = Math.max(...allValues);
-                  const ratio = max === min ? 0.5 : (value - min) / (max - min);
-                  const lerp = (hex1, hex2, t) => {
-                    const toRgb = h => h.match(/.{2}/g).map(x => parseInt(x,16));
-                    const [r1,g1,b1] = toRgb(hex1);
-                    const [r2,g2,b2] = toRgb(hex2);
-                    const r = Math.round(r1 + (r2 - r1) * t);
-                    const g = Math.round(g1 + (g2 - g1) * t);
-                    const b = Math.round(b1 + (b2 - b1) * t);
-                    return `rgb(${r}, ${g}, ${b})`;
-                  };
-                  styleObj = { backgroundColor: lerp('10b981','ef4444', 1 - ratio), color:'white' };
-                }
-                return (
-                  <td key={period} className="px-2 py-3 text-center" style={{width:'90px', minWidth:'90px'}}>
-                    <div style={{
-                      ...styleObj,
-                      padding: '0.75rem',
-                      borderRadius: '0.5rem',
-                      textAlign: 'center',
-                      fontWeight: 'bold',
-                      marginBottom: '0.25rem'
-                    }}>
-                      {value > 0 ? '+' : ''}{value.toFixed(1)}%
-                    </div>
-                  </td>
-                );
-              })}
+              {periodMode === 'accumulated' ? (
+                periods.map(period => {
+                  const value = stock.performance[period];
+                  let styleObj = getColorForPerformance(value);
+                  if (colorMode === 'relative') {
+                    const allValues = [selectedStock, ...comparisonStocks].map(s => s.performance[period]);
+                    const min = Math.min(...allValues);
+                    const max = Math.max(...allValues);
+                    const ratio = max === min ? 0.5 : (value - min) / (max - min);
+                    const lerp = (hex1, hex2, t) => {
+                      const toRgb = h => h.match(/.{2}/g).map(x => parseInt(x,16));
+                      const [r1,g1,b1] = toRgb(hex1);
+                      const [r2,g2,b2] = toRgb(hex2);
+                      const r = Math.round(r1 + (r2 - r1) * t);
+                      const g = Math.round(g1 + (g2 - g1) * t);
+                      const b = Math.round(b1 + (b2 - b1) * t);
+                      return `rgb(${r}, ${g}, ${b})`;
+                    };
+                    styleObj = { backgroundColor: lerp('10b981','ef4444', 1 - ratio), color:'white' };
+                  }
+                  return (
+                    <td key={period} className="px-2 py-3 text-center" style={{width:'90px', minWidth:'90px'}}>
+                      <div style={{
+                        ...styleObj,
+                        padding: '0.75rem',
+                        borderRadius: '0.5rem',
+                        textAlign: 'center',
+                        fontWeight: 'bold',
+                        marginBottom: '0.25rem'
+                      }}>
+                        {value > 0 ? '+' : ''}{value.toFixed(1)}%
+                      </div>
+                    </td>
+                  );
+                })
+              ) : (
+                (() => {
+                  const nDayPeriodsData = calculateNDayPeriods(stock, nDays);
+                  return nDayPeriodsData.map((value, i) => {
+                    let styleObj = getColorForPerformance(value);
+                    if (colorMode === 'relative') {
+                      // Collect all values for this period index across all stocks
+                      const allValues = [
+                        calculateNDayPeriods(selectedStock, nDays)[i],
+                        ...comparisonStocks.map(s => calculateNDayPeriods(s, nDays)[i])
+                      ];
+                      const min = Math.min(...allValues);
+                      const max = Math.max(...allValues);
+                      const ratio = max === min ? 0.5 : (value - min) / (max - min);
+                      const lerp = (hex1, hex2, t) => {
+                        const toRgb = h => h.match(/.{2}/g).map(x => parseInt(x,16));
+                        const [r1,g1,b1] = toRgb(hex1);
+                        const [r2,g2,b2] = toRgb(hex2);
+                        const r = Math.round(r1 + (r2 - r1) * t);
+                        const g = Math.round(g1 + (g2 - g1) * t);
+                        const b = Math.round(b1 + (b2 - b1) * t);
+                        return `rgb(${r}, ${g}, ${b})`;
+                      };
+                      styleObj = { backgroundColor: lerp('10b981','ef4444', 1 - ratio), color:'white' };
+                    }
+                    return (
+                      <td key={`period-${i}`} className="px-2 py-3 text-center" style={{width:'90px', minWidth:'90px'}}>
+                        <div style={{
+                          ...styleObj,
+                          padding: '0.75rem',
+                          borderRadius: '0.5rem',
+                          textAlign: 'center',
+                          fontWeight: 'bold',
+                          marginBottom: '0.25rem'
+                        }}>
+                          {value > 0 ? '+' : ''}{value.toFixed(1)}%
+                        </div>
+                      </td>
+                    );
+                  });
+                })()
+              )}
               <td className="px-4 py-3 text-center">
                 {stock.code !== 'SPY' && stock.code !== 'QQQ' ? (
                   <button
