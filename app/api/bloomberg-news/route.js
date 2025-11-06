@@ -82,7 +82,7 @@ export async function GET(request) {
         const xmlData = await response.text();
 
         // Parse RSS feed
-        const articles = parseRSSFeed(xmlData).slice(0, 10); // Limit to 10 articles
+        const articles = parseRSSFeed(xmlData).slice(0, 20); // Limit to 20 articles
 
         console.log(`[BLOOMBERG-NEWS] Found ${articles.length} articles for ${symbol}`);
 

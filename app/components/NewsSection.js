@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
-import { TrendingUp, TrendingDown, ExternalLink } from 'lucide-react';
+import { TrendingUp, TrendingDown, ExternalLink, Newspaper, Globe, DollarSign, Building2 } from 'lucide-react';
 import { LoadingState } from './LoadingState';
 import { Tabs, TabPanel } from './Tabs';
 
@@ -67,10 +67,10 @@ export function NewsSection({ newsApiNews = [], googleNews = [], yahooNews = [],
 
   // Tabs configuration
   const tabs = [
-    { id: 'newsapi', label: 'NewsAPI' },
-    { id: 'google', label: 'Google News' },
-    { id: 'yahoo', label: 'Yahoo Finance' },
-    { id: 'bloomberg', label: 'Bloomberg' }
+    { id: 'newsapi', label: 'NewsAPI', icon: Newspaper },
+    { id: 'google', label: 'Google News', icon: Globe },
+    { id: 'yahoo', label: 'Yahoo Finance', icon: DollarSign },
+    { id: 'bloomberg', label: 'Bloomberg', icon: Building2 }
   ];
 
   // Helper function to render news articles

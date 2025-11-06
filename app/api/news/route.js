@@ -26,7 +26,7 @@ export async function GET(request) {
     resultPromise = (async () => {
       try {
         const response = await fetch(
-          `https://newsapi.org/v2/everything?q=${symbol}&sortBy=publishedAt&language=en&pageSize=5&apiKey=${process.env.NEWS_API_KEY}`
+          `https://newsapi.org/v2/everything?q=${symbol}&sortBy=publishedAt&language=en&pageSize=15&apiKey=${process.env.NEWS_API_KEY}`
         );
         const data = await response.json();
         if (data.status === 'error') {
