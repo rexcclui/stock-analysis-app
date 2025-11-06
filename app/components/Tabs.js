@@ -24,6 +24,9 @@ export const Tabs = ({ activeTab, onTabChange, tabs }) => {
 };
 
 export const TabPanel = ({ activeTab, tabId, children }) => {
-  if (activeTab !== tabId) return null;
-  return <div>{children}</div>;
+  return (
+    <div style={{ display: activeTab === tabId ? 'block' : 'none', width: '100%' }}>
+      {children}
+    </div>
+  );
 };
