@@ -147,15 +147,21 @@ export function ComparisonTable({
               </div>
               {periodMode === 'non-accumulated' && (
                 <div className="flex items-center gap-2">
-                  <label className="text-gray-300 text-sm">N days:</label>
-                  <input
-                    type="number"
-                    min="1"
-                    max="90"
-                    value={nDays}
-                    onChange={(e) => setNDays(Math.max(1, Math.min(90, parseInt(e.target.value) || 7)))}
-                    className="bg-gray-700 text-gray-200 text-sm rounded px-3 py-1 w-16 focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  />
+                  <span className="text-gray-300 text-sm">Period:</span>
+                  <div className="flex bg-gray-700 rounded-lg p-1 gap-1">
+                    {[3, 7, 14, 30, 90].map(days => (
+                      <button
+                        key={days}
+                        onClick={() => setNDays(days)}
+                        className={`px-2 py-1 rounded-md text-xs font-semibold transition ${
+                          nDays === days ? 'bg-green-600 text-white shadow-lg' : 'text-gray-300 hover:text-white hover:bg-gray-600'
+                        }`}
+                        style={nDays === days ? { backgroundColor: '#FBBF24', color: '#0ea5ff', boxShadow: '0 6px 12px rgba(0,0,0,0.06)' } : undefined}
+                      >
+                        {days}D
+                      </button>
+                    ))}
+                  </div>
                 </div>
               )}
             </div>
