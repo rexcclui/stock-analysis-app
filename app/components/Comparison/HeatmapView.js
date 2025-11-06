@@ -419,11 +419,10 @@ export function HeatmapView({
           const isLargeTile = width >= 100 && height >= 100 && !isExtraLargeTile;
           const isMediumTile = !isSmallTile && !isLargeTile && !isExtraLargeTile;
 
-          // Font size classes - more dramatic differences for better visibility
-          // Most tiles are 100px (1 grid unit), so they'll use large fonts
-          const codeFontSize = isExtraLargeTile ? 'text-3xl' : isLargeTile ? 'text-xl' : isMediumTile ? 'text-base' : 'text-xs';
-          const infoFontSize = isExtraLargeTile ? 'text-2xl' : isLargeTile ? 'text-lg' : isMediumTile ? 'text-sm' : 'text-xs';
-          const labelFontSize = isExtraLargeTile ? 'text-lg' : isLargeTile ? 'text-base' : isMediumTile ? 'text-xs' : 'text-xs';
+          // Font size - using inline styles to override any caching
+          const codeFontSize = isExtraLargeTile ? '30px' : isLargeTile ? '20px' : isMediumTile ? '16px' : '12px';
+          const infoFontSize = isExtraLargeTile ? '24px' : isLargeTile ? '18px' : isMediumTile ? '14px' : '12px';
+          const labelFontSize = isExtraLargeTile ? '18px' : isLargeTile ? '16px' : '12px';
 
           // Create tooltip text
           const tooltipText = `${stock.code}\n${sizeDisplayLabel}: ${sizeDisplayValue}${showBothMetrics ? `\n${colorDisplayLabel}: ${colorDisplayValue}` : ''}`;
@@ -482,20 +481,21 @@ export function HeatmapView({
                     }
                     role="link"
                     tabIndex={0}
-                    className={`font-bold ${codeFontSize} underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 rounded block mb-1`}
+                    className="font-bold underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 rounded block mb-1"
                     style={{
                       color: stock.code === selectedStock.code ? '#fbbf24' : textColor,
+                      fontSize: codeFontSize,
                     }}
                   >
                     {stock.code}
                   </span>
-                  <div className={`font-bold ${infoFontSize} mb-1`} style={{ color: textColor }}>
-                    <span className={labelFontSize} style={{ color: textColor, opacity: 0.9 }}>{sizeDisplayLabel}: </span>
+                  <div className="font-bold mb-1" style={{ color: textColor, fontSize: infoFontSize }}>
+                    <span style={{ color: textColor, opacity: 0.9, fontSize: labelFontSize }}>{sizeDisplayLabel}: </span>
                     {sizeDisplayValue}
                   </div>
                   {showBothMetrics && (
-                    <div className={`font-bold ${infoFontSize}`} style={{ color: textColor }}>
-                      <span className={labelFontSize} style={{ color: textColor, opacity: 0.9 }}>{colorDisplayLabel}: </span>
+                    <div className="font-bold" style={{ color: textColor, fontSize: infoFontSize }}>
+                      <span style={{ color: textColor, opacity: 0.9, fontSize: labelFontSize }}>{colorDisplayLabel}: </span>
                       {colorDisplayValue}
                     </div>
                   )}
