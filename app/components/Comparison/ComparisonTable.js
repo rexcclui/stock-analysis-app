@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { X, ArrowUp, ArrowDown, LineChart, ChevronLeft, ChevronRight } from 'lucide-react';
+import { X, ArrowUp, ArrowDown, LineChart } from 'lucide-react';
 import SentimentChart from '../SentimentChart';
 import { HeatmapView } from './HeatmapView';
 import { LoadingState } from '../LoadingState';
@@ -76,6 +76,8 @@ export function ComparisonTable({
   const [sentimentExpanded, setSentimentExpanded] = useState(false); // Start collapsed
   const [periodMode, setPeriodMode] = useState('accumulated'); // 'accumulated' | 'non-accumulated'
   const [nDays, setNDays] = useState(7); // Default N days for non-accumulated mode
+  const [showNameColumn, setShowNameColumn] = useState(true); // Show name column by default
+  const [showMarketDetail, setShowMarketDetail] = useState(true); // Show market detail columns by default
 
   if (!comparisonStocks || comparisonStocks.length === 0) {
     if (loading) {
@@ -120,13 +122,37 @@ export function ComparisonTable({
   filteredComparisonStocks = [...benchmarks, ...sortedLimitedNonBenchmarks];
 
   // Generate heading based on comparison type
-  const comparisonHeading = 'Related Stocks Comparison';
+  const comparisonHeading = 'Related Stocks Comparison:';
 
   return (
     <div className="bg-gray-800 rounded-xl shadow-xl overflow-hidden border border-gray-700">
       <div className="flex items-center justify-between flex-wrap gap-4 px-6 py-4 bg-gray-900 border-b border-gray-700">
         <div className="flex items-center gap-4 flex-wrap">
           <span className="text-lg font-semibold text-white">{comparisonHeading}</span>
+          {viewMode === 'table' && (
+            <>
+              <div className="flex bg-gray-700 rounded-lg p-1">
+                <button
+                  onClick={() => setShowNameColumn(!showNameColumn)}
+                  className={`px-3 py-1 rounded-md text-sm font-semibold transition ${
+                    showNameColumn ? 'bg-green-600 text-white shadow-lg' : 'text-gray-300 hover:text-white hover:bg-gray-600'
+                  }`}
+                  style={showNameColumn ? { backgroundColor: '#FBBF24', color: '#0ea5ff', boxShadow: '0 6px 12px rgba(0,0,0,0.06)' } : undefined}
+                  title="Toggle Name and Type columns"
+                >Name Column</button>
+              </div>
+              <div className="flex bg-gray-700 rounded-lg p-1">
+                <button
+                  onClick={() => setShowMarketDetail(!showMarketDetail)}
+                  className={`px-3 py-1 rounded-md text-sm font-semibold transition ${
+                    showMarketDetail ? 'bg-green-600 text-white shadow-lg' : 'text-gray-300 hover:text-white hover:bg-gray-600'
+                  }`}
+                  style={showMarketDetail ? { backgroundColor: '#FBBF24', color: '#0ea5ff', boxShadow: '0 6px 12px rgba(0,0,0,0.06)' } : undefined}
+                  title="Toggle Market Cap, Beta, P/E, Dividend, Rating, and Sentiment columns"
+                >Market Detail</button>
+              </div>
+            </>
+          )}
           {viewMode === 'table' && (
             <div className="flex items-center gap-3">
               <div className="flex bg-gray-700 rounded-lg p-1">
@@ -260,6 +286,8 @@ export function ComparisonTable({
             setSentimentExpanded={setSentimentExpanded}
             periodMode={periodMode}
             nDays={nDays}
+            showNameColumn={showNameColumn}
+            showMarketDetail={showMarketDetail}
           />
         </>
       ) : (
@@ -289,7 +317,7 @@ const SortIcon = ({ active, direction }) => {
     : <ArrowDown size={14} className="inline ml-1" />;
 };
 
-function TableView({ selectedStock, comparisonStocks, periods, onRemoveComparison, onStockCodeClick, onAddToChart, chartCompareStocks, colorMode, sentimentExpanded, setSentimentExpanded, periodMode, nDays }) {
+function TableView({ selectedStock, comparisonStocks, periods, onRemoveComparison, onStockCodeClick, onAddToChart, chartCompareStocks, colorMode, sentimentExpanded, setSentimentExpanded, periodMode, nDays, showNameColumn, showMarketDetail }) {
   const [sortColumn, setSortColumn] = useState(null);
   const [sortDirection, setSortDirection] = useState('asc');
 
@@ -335,29 +363,6 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
     return periods;
   };
 
-  // Detect mobile device and set initial name column state
-  const [nameExpanded, setNameExpanded] = useState(() => {
-    if (typeof window !== 'undefined') {
-      return window.innerWidth > 768; // Collapsed on mobile (<=768px), expanded on desktop
-    }
-    return true; // Default to expanded for SSR
-  });
-
-  // Fundamentals columns (Market Cap to Rating) - expanded by default for all platforms
-  const [fundamentalsExpanded, setFundamentalsExpanded] = useState(true);
-
-  // Update nameExpanded on window resize
-  useEffect(() => {
-    const handleResize = () => {
-      const isMobile = window.innerWidth <= 768;
-      setNameExpanded(!isMobile);
-    };
-
-    if (typeof window !== 'undefined') {
-      window.addEventListener('resize', handleResize);
-      return () => window.removeEventListener('resize', handleResize);
-    }
-  }, []);
 
   const handleSort = (column) => {
     if (sortColumn === column) {
@@ -540,53 +545,27 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
             </th>
             <th className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
             </th>
-            <th
-              className="px-2 py-3 text-left hover:bg-gray-800 transition"
-              style={{width: nameExpanded ? '160px' : '50px', minWidth: nameExpanded ? '160px' : '50px'}}
-            >
-              <div className="flex items-center gap-1">
-                <button
-                  onClick={() => setNameExpanded(!nameExpanded)}
-                  className="p-1 hover:bg-gray-700 rounded transition"
-                  title={nameExpanded ? "Click to collapse Name column" : "Click to expand Name column"}
-                >
-                  {nameExpanded ? <ChevronLeft size={16} /> : <ChevronRight size={16} />}
-                </button>
-                {nameExpanded && (
-                  <span
-                    className="inline-block truncate cursor-pointer"
-                    onClick={() => handleSort('name')}
-                  >
-                    Name <SortIcon active={isActive('name')} direction={sortDirection} />
-                  </span>
-                )}
-              </div>
-            </th>
-            {nameExpanded && (
-              <th className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
-                Type
-              </th>
-            )}
-            {fundamentalsExpanded ? (
+            {showNameColumn && (
               <>
                 <th
-                  className="px-4 py-3 text-right hover:bg-gray-800 transition"
+                  className="px-2 py-3 text-left cursor-pointer hover:bg-gray-800 transition"
+                  style={{width: '160px', minWidth: '160px'}}
+                  onClick={() => handleSort('name')}
                 >
-                  <div className="flex items-center justify-end gap-1">
-                    <button
-                      onClick={() => setFundamentalsExpanded(!fundamentalsExpanded)}
-                      className="p-1 hover:bg-gray-700 rounded transition"
-                      title="Click to collapse fundamentals columns"
-                    >
-                      <ChevronLeft size={16} />
-                    </button>
-                    <span
-                      className="cursor-pointer"
-                      onClick={() => handleSort('marketCap')}
-                    >
-                      Market Cap <SortIcon active={isActive('marketCap')} direction={sortDirection} />
-                    </span>
-                  </div>
+                  Name <SortIcon active={isActive('name')} direction={sortDirection} />
+                </th>
+                <th className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
+                  Type
+                </th>
+              </>
+            )}
+            {showMarketDetail && (
+              <>
+                <th
+                  className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
+                  onClick={() => handleSort('marketCap')}
+                >
+                  Market Cap <SortIcon active={isActive('marketCap')} direction={sortDirection} />
                 </th>
                 <th
                   className="px-4 py-3 text-right cursor-pointer hover:bg-gray-800 transition"
@@ -612,26 +591,16 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 >
                   Rating <SortIcon active={isActive('rating')} direction={sortDirection} />
                 </th>
-              </>
-            ) : (
-              <th className="px-2 py-3 text-center" style={{width:'50px', minWidth:'50px'}}>
-                <button
-                  onClick={() => setFundamentalsExpanded(!fundamentalsExpanded)}
-                  className="p-1 hover:bg-gray-700 rounded transition"
-                  title="Click to expand fundamentals columns"
+                <th
+                  className="px-2 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
+                  style={{width: sentimentExpanded ? '90px' : '30px', minWidth: sentimentExpanded ? '90px' : '30px'}}
+                  onClick={() => setSentimentExpanded(!sentimentExpanded)}
+                  title={sentimentExpanded ? "Click to collapse" : "Click to expand sentiment"}
                 >
-                  <ChevronRight size={16} />
-                </button>
-              </th>
+                  {sentimentExpanded ? 'Sentiment (1M)' : '📊'}
+                </th>
+              </>
             )}
-            <th
-              className="px-2 py-3 text-center cursor-pointer hover:bg-gray-800 transition"
-              style={{width: sentimentExpanded ? '90px' : '30px', minWidth: sentimentExpanded ? '90px' : '30px'}}
-              onClick={() => setSentimentExpanded(!sentimentExpanded)}
-              title={sentimentExpanded ? "Click to collapse" : "Click to expand sentiment"}
-            >
-              {sentimentExpanded ? 'Sentiment (1M)' : '📊'}
-            </th>
             {periodMode === 'accumulated' ? (
               periods.map(period => (
                 <th
@@ -688,29 +657,27 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 );
               })()}
             </td>
-            <td className="px-2 py-3 font-medium text-white" style={{width: nameExpanded ? '160px' : '50px', maxWidth: nameExpanded ? '160px' : '50px'}}>
-              {nameExpanded ? (
-                selectedStock.website ? (
-                  <a href={selectedStock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate" style={{ color: '#FBBF24' }} title={selectedStock.name}>
-                    {selectedStock.name}
-                  </a>
-                ) : (
-                  <span
-                    onClick={() => onStockCodeClick && onStockCodeClick(selectedStock.code)}
-                    role="link"
-                    tabIndex={0}
-                    className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate"
-                    title={selectedStock.name}
-                  >{selectedStock.name}</span>
-                )
-              ) : (
-                <span className="text-gray-400 text-xs text-center block" title={selectedStock.name}>•</span>
-              )}
-            </td>
-            {nameExpanded && (
-              <td className="px-2 py-3 text-center text-gray-400" style={{width:'50px', minWidth:'50px'}}>-</td>
+            {showNameColumn && (
+              <>
+                <td className="px-2 py-3 font-medium text-white" style={{width: '160px', maxWidth: '160px'}}>
+                  {selectedStock.website ? (
+                    <a href={selectedStock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate" style={{ color: '#FBBF24' }} title={selectedStock.name}>
+                      {selectedStock.name}
+                    </a>
+                  ) : (
+                    <span
+                      onClick={() => onStockCodeClick && onStockCodeClick(selectedStock.code)}
+                      role="link"
+                      tabIndex={0}
+                      className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate"
+                      title={selectedStock.name}
+                    >{selectedStock.name}</span>
+                  )}
+                </td>
+                <td className="px-2 py-3 text-center text-gray-400" style={{width:'50px', minWidth:'50px'}}>-</td>
+              </>
             )}
-            {fundamentalsExpanded ? (
+            {showMarketDetail && (
               <>
                 <td className="px-4 py-3">
                   <div style={getMarketCapCellStyle(selectedStock.marketCap)}>
@@ -737,19 +704,17 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                     {selectedStock.analystRating}
                   </span>
                 </td>
+                <td className="px-2 py-3 text-center" style={{width: sentimentExpanded ? '90px' : '30px', minWidth: sentimentExpanded ? '90px' : '30px'}}>
+                  {sentimentExpanded ? (
+                    <div className="mx-auto" style={{width:'84px'}}>
+                      <SentimentChart data={selectedStock.sentimentTimeSeries} />
+                    </div>
+                  ) : (
+                    <span className="text-xs">📊</span>
+                  )}
+                </td>
               </>
-            ) : (
-              <td className="px-2 py-3 text-center text-gray-400" style={{width:'50px', minWidth:'50px'}}>•</td>
             )}
-            <td className="px-2 py-3 text-center" style={{width: sentimentExpanded ? '90px' : '30px', minWidth: sentimentExpanded ? '90px' : '30px'}}>
-              {sentimentExpanded ? (
-                <div className="mx-auto" style={{width:'84px'}}>
-                  <SentimentChart data={selectedStock.sentimentTimeSeries} />
-                </div>
-              ) : (
-                <span className="text-xs">📊</span>
-              )}
-            </td>
             {periodMode === 'accumulated' ? (
               periods.map(period => {
                 const basePerf = selectedStock.performance[period];
@@ -858,31 +823,29 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                   );
                 })()}
               </td>
-              <td className="px-2 py-3 text-gray-200" style={{width: nameExpanded ? '160px' : '50px', maxWidth: nameExpanded ? '160px' : '50px'}}>
-                {nameExpanded ? (
-                  stock.website ? (
-                    <a href={stock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate" style={{ color: '#FBBF24' }} title={stock.name}>
-                      {stock.name}
-                    </a>
-                  ) : (
-                    <span
-                      onClick={() => onStockCodeClick && onStockCodeClick(stock.code)}
-                      role="link"
-                      tabIndex={0}
-                      className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate"
-                      title={stock.name}
-                    >{stock.name}</span>
-                  )
-                ) : (
-                  <span className="text-gray-400 text-xs text-center block" title={stock.name}>•</span>
-                )}
-              </td>
-              {nameExpanded && (
-                <td className="px-2 py-3 text-center text-gray-200" style={{width:'50px', minWidth:'50px'}}>
-                  {getRelationshipTypeAbbr(stock.relationshipType)}
-                </td>
+              {showNameColumn && (
+                <>
+                  <td className="px-2 py-3 text-gray-200" style={{width: '160px', maxWidth: '160px'}}>
+                    {stock.website ? (
+                      <a href={stock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate" style={{ color: '#FBBF24' }} title={stock.name}>
+                        {stock.name}
+                      </a>
+                    ) : (
+                      <span
+                        onClick={() => onStockCodeClick && onStockCodeClick(stock.code)}
+                        role="link"
+                        tabIndex={0}
+                        className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate"
+                        title={stock.name}
+                      >{stock.name}</span>
+                    )}
+                  </td>
+                  <td className="px-2 py-3 text-center text-gray-200" style={{width:'50px', minWidth:'50px'}}>
+                    {getRelationshipTypeAbbr(stock.relationshipType)}
+                  </td>
+                </>
               )}
-              {fundamentalsExpanded ? (
+              {showMarketDetail && (
                 <>
                   <td className="px-4 py-3">
                     <div style={getMarketCapCellStyle(stock.marketCap)}>
@@ -909,19 +872,17 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                       {stock.analystRating}
                     </span>
                   </td>
+                  <td className="px-2 py-3 text-center" style={{width: sentimentExpanded ? '90px' : '30px', minWidth: sentimentExpanded ? '90px' : '30px'}}>
+                    {sentimentExpanded ? (
+                      <div className="mx-auto" style={{width:'84px'}}>
+                        <SentimentChart data={stock.sentimentTimeSeries} />
+                      </div>
+                    ) : (
+                      <span className="text-xs">📊</span>
+                    )}
+                  </td>
                 </>
-              ) : (
-                <td className="px-2 py-3 text-center text-gray-400" style={{width:'50px', minWidth:'50px'}}>•</td>
               )}
-              <td className="px-2 py-3 text-center" style={{width: sentimentExpanded ? '90px' : '30px', minWidth: sentimentExpanded ? '90px' : '30px'}}>
-                {sentimentExpanded ? (
-                  <div className="mx-auto" style={{width:'84px'}}>
-                    <SentimentChart data={stock.sentimentTimeSeries} />
-                  </div>
-                ) : (
-                  <span className="text-xs">📊</span>
-                )}
-              </td>
               {periodMode === 'accumulated' ? (
                 periods.map(period => {
                   const value = stock.performance[period];
