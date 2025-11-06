@@ -418,10 +418,10 @@ export function HeatmapView({
           const isLargeTile = width >= 150 && height >= 150;
           const isMediumTile = !isSmallTile && !isLargeTile;
 
-          // Font size classes
-          const codeFontSize = isLargeTile ? 'text-lg' : isMediumTile ? 'text-sm' : 'text-xs';
-          const infoFontSize = isLargeTile ? 'text-base' : isMediumTile ? 'text-sm' : 'text-xs';
-          const labelFontSize = isLargeTile ? 'text-sm' : 'text-xs';
+          // Font size classes - more dramatic differences for better visibility
+          const codeFontSize = isLargeTile ? 'text-2xl' : isMediumTile ? 'text-base' : 'text-xs';
+          const infoFontSize = isLargeTile ? 'text-xl' : isMediumTile ? 'text-sm' : 'text-xs';
+          const labelFontSize = isLargeTile ? 'text-base' : isMediumTile ? 'text-xs' : 'text-xs';
 
           // Create tooltip text
           const tooltipText = `${stock.code}\n${sizeDisplayLabel}: ${sizeDisplayValue}${showBothMetrics ? `\n${colorDisplayLabel}: ${colorDisplayValue}` : ''}`;
