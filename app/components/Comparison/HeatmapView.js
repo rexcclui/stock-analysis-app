@@ -277,27 +277,7 @@ export function HeatmapView({
     setLoadingTimeframe(prev => ({ ...prev, [stockCode]: true }));
 
     try {
-      // Determine the period based on timeframe
-      let period = '1mo';
-      let interval = '1d';
-
-      if (timeframe === '7') {
-        period = '7d';
-        interval = '1h';
-      } else if (timeframe === '30') {
-        period = '1mo';
-        interval = '1d';
-      } else if (timeframe === '90') {
-        period = '3mo';
-        interval = '1d';
-      } else if (timeframe === 'M') {
-        period = 'max';
-        interval = '1wk';
-      }
-
-      const response = await fetch(
-        `/api/stock-data?symbol=${stockCode}&period=${period}&interval=${interval}`
-      );
+      const response = await fetch(`/api/stock?symbol=${stockCode}`);
 
       if (!response.ok) {
         throw new Error('Failed to fetch data');
@@ -305,14 +285,25 @@ export function HeatmapView({
 
       const data = await response.json();
 
-      // Extract closing prices
-      const prices = data.chart?.result?.[0]?.indicators?.quote?.[0]?.close || [];
-      const timestamps = data.chart?.result?.[0]?.timestamp || [];
+      // Map timeframe to chart data key
+      let chartDataKey;
+      if (timeframe === '7') {
+        chartDataKey = '7D';
+      } else if (timeframe === '30') {
+        chartDataKey = '1M';
+      } else if (timeframe === '90') {
+        chartDataKey = '3M';
+      } else if (timeframe === 'M') {
+        chartDataKey = 'fullHistorical';
+      }
 
-      // Filter out null values
-      const validData = timestamps.map((ts, i) => ({
-        timestamp: ts,
-        price: prices[i]
+      // Get the data for the selected timeframe
+      const chartData = data.chartData?.[chartDataKey] || [];
+
+      // Convert to our format
+      const validData = chartData.map((d, i) => ({
+        index: i,
+        price: d.price
       })).filter(d => d.price !== null && d.price !== undefined);
 
       setStockTimeframes(prev => ({
