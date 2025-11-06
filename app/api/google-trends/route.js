@@ -18,48 +18,87 @@ export async function GET(request) {
   }
 
   try {
-    // Dynamically import the CommonJS module at runtime
-    const googleTrends = await import('google-trends-api').then(mod => mod.default || mod);
-
-    // Get trends data for the past 90 days
+    // Get trends data for the past 90 days using direct HTTP request
     const endDate = new Date();
     const startDate = new Date();
     startDate.setDate(startDate.getDate() - 90);
 
-    // Format dates as required by Google Trends API
+    // Format date as YYYY-MM-DD
     const formatDate = (date) => {
       return date.toISOString().split('T')[0];
     };
 
-    // Query Google Trends with the stock symbol and company name variations
-    // Google Trends works better with full company names, but we'll try with symbol
-    const trendsData = await googleTrends.interestOverTime({
-      keyword: symbol,
-      startTime: startDate,
-      endTime: endDate,
+    // Build Google Trends explore URL
+    // Google Trends uses a specific date format: YYYY-MM-DD YYYY-MM-DD
+    const timeRange = `${formatDate(startDate)} ${formatDate(endDate)}`;
+
+    // Encode the keyword
+    const keyword = encodeURIComponent(symbol);
+
+    // First, get the token from explore endpoint
+    const exploreUrl = `https://trends.google.com/trends/api/explore?hl=en-US&tz=0&req={"comparisonItem":[{"keyword":"${symbol}","geo":"","time":"today 3-m"}],"category":0,"property":""}`;
+
+    const exploreRes = await fetch(exploreUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+      }
     });
 
-    const parsedData = JSON.parse(trendsData);
-    console.log(`[GOOGLE TRENDS API] Received data for ${symbol}`);
+    if (!exploreRes.ok) {
+      throw new Error(`Google Trends explore request failed: ${exploreRes.status}`);
+    }
 
-    // Extract time series data
+    let exploreText = await exploreRes.text();
+    // Remove the leading )]}' from the response
+    exploreText = exploreText.substring(5);
+    const exploreData = JSON.parse(exploreText);
+
+    console.log(`[GOOGLE TRENDS API] Received explore data for ${symbol}`);
+
+    // Extract time series data from the explore response
     let trendTimeSeries = [];
 
-    if (parsedData?.default?.timelineData) {
-      trendTimeSeries = parsedData.default.timelineData.map(item => {
-        // Convert Google Trends timestamp to date
-        const timestamp = parseInt(item.time) * 1000;
-        const date = new Date(timestamp);
-        const dateStr = formatDate(date);
+    if (exploreData?.widgets) {
+      // Find the TIMESERIES widget
+      const timeseriesWidget = exploreData.widgets.find(w => w.id === 'TIMESERIES');
 
-        // Interest value is 0-100
-        const interest = item.value[0] || 0;
+      if (timeseriesWidget?.request) {
+        // Get the actual timeseries data
+        const token = timeseriesWidget.token;
+        const timeseriesReq = JSON.stringify(timeseriesWidget.request);
 
-        return {
-          date: dateStr,
-          interest: interest
-        };
-      });
+        const timeseriesUrl = `https://trends.google.com/trends/api/widgetdata/multiline?hl=en-US&tz=0&req=${encodeURIComponent(timeseriesReq)}&token=${token}`;
+
+        const timeseriesRes = await fetch(timeseriesUrl, {
+          headers: {
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36'
+          }
+        });
+
+        if (timeseriesRes.ok) {
+          let timeseriesText = await timeseriesRes.text();
+          // Remove the leading )]}' from the response
+          timeseriesText = timeseriesText.substring(5);
+          const timeseriesData = JSON.parse(timeseriesText);
+
+          if (timeseriesData?.default?.timelineData) {
+            trendTimeSeries = timeseriesData.default.timelineData.map(item => {
+              // Format timestamp to date string
+              const timestamp = parseInt(item.time) * 1000;
+              const date = new Date(timestamp);
+              const dateStr = formatDate(date);
+
+              // Interest value is 0-100
+              const interest = item.value && item.value[0] !== undefined ? item.value[0] : 0;
+
+              return {
+                date: dateStr,
+                interest: interest
+              };
+            });
+          }
+        }
+      }
     }
 
     // Calculate average interest for different periods
