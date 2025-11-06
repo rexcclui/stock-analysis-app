@@ -152,20 +152,13 @@ export function MAPerformanceMatrix({ simulationResults, onParametersSelect }) {
           <tbody>
             {longMAs.map(longMA => (
               <tr key={longMA}>
-                <td className="border border-blue-700 px-2 py-1 font-bold" style={{ color: '#a78bfa', backgroundColor: '#172554' }}>
-                  {longMA}
-                </td>
-                {shortMAs.map(shortMA => {
+                <td className="border border-blue-700 px-2 py-1 font-bold" style={{ color: '#a78bfa', backgroundColor: '#172554' }}>{longMA}</td>
+                {shortMAs.map((shortMA, colIdx) => {
                   const value = matrix[longMA]?.[shortMA];
                   const bCount = crossoverCounts[`${longMA}-${shortMA}`];
-                  
-                  // Check if skipped
                   const isSkipped = value === 'skip';
-                  
-                  // Handle NaN values - treat as no data
                   const displayValue = value !== null && value !== undefined && value !== 'skip' && !isNaN(value) ? value : null;
                   const isFiltered = displayValue === null && bCount !== undefined && !isSkipped;
-                  
                   return (
                     <td
                       key={`${longMA}-${shortMA}`}

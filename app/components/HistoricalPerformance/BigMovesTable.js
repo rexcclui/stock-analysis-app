@@ -104,9 +104,20 @@ export function BigMovesTable({ bigMoves }) {
           {bigMoves.map((move, index) => (
             <tr
               key={index}
-              className="border-b border-gray-700 hover:bg-gray-700/30 transition-colors"
+              className="border-b border-gray-700 transition-colors"
               style={{
-                backgroundColor: consecutiveIndices.has(index) ? "rgba(59, 130, 246, 0.2)" : "transparent"
+                backgroundColor: consecutiveIndices.has(index) ? "rgba(59, 130, 246, 0.2)" : "transparent",
+                cursor: 'pointer'
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = '#fde047';
+                e.currentTarget.style.color = '#2563eb';
+                Array.from(e.currentTarget.querySelectorAll('td')).forEach(td => { td.style.color = '#2563eb'; });
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = consecutiveIndices.has(index) ? "rgba(59, 130, 246, 0.2)" : "transparent";
+                e.currentTarget.style.color = '';
+                Array.from(e.currentTarget.querySelectorAll('td')).forEach(td => { td.style.color = ''; });
               }}
             >
               <td className="px-4 py-3 text-white font-medium">
@@ -115,10 +126,7 @@ export function BigMovesTable({ bigMoves }) {
               <td className="px-4 py-3 text-gray-300">
                 {move.date}
               </td>
-              <td
-                className="px-4 py-3 font-bold text-white"
-                style={{ backgroundColor: getColorForChange(move.before1Day, minChange, maxChange) }}
-              >
+              <td className="px-4 py-3 font-bold text-white">
                 {move.before1Day >= 0 ? "+" : ""}
                 {move.before1Day.toFixed(2)}%
               </td>

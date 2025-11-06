@@ -45,15 +45,23 @@ export function StatisticsTable({ statistics, title }) {
     return (
       <tr
         key={index}
-        className="border-b border-gray-700 hover:bg-gray-700/30 transition-colors"
+        className="border-b border-gray-700 transition-colors"
+        style={{ cursor: 'pointer' }}
+        onMouseEnter={e => {
+          e.currentTarget.style.backgroundColor = '#fde047';
+          e.currentTarget.style.color = '#2563eb';
+          Array.from(e.currentTarget.querySelectorAll('td')).forEach(td => { td.style.color = '#2563eb'; });
+        }}
+        onMouseLeave={e => {
+          e.currentTarget.style.backgroundColor = '';
+          e.currentTarget.style.color = '';
+          Array.from(e.currentTarget.querySelectorAll('td')).forEach(td => { td.style.color = ''; });
+        }}
       >
         <td className="px-4 py-3 text-gray-300 font-medium">
           {stat.label}
         </td>
-        <td
-          className="px-4 py-3 font-bold text-white"
-          style={{ backgroundColor: getColorForValue(stat.upAverage, minAvg, maxAvg) }}
-        >
+        <td className="px-4 py-3 font-bold text-white">
           {stat.upAverage > 0 ? "+" : ""}
           {stat.upAverage.toFixed(2)}%
         </td>

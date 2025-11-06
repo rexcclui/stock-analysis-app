@@ -381,7 +381,26 @@ export function MASimulation({ stockCode, onParametersSelect }) {
               </thead>
               <tbody>
                 {getSortedResults().map((result, idx) => (
-                  <tr key={idx} style={{ borderBottom: '1px solid #1e3a8a' }}>
+                  <tr
+                    key={idx}
+                    style={{ borderBottom: '1px solid #1e3a8a', cursor: 'pointer' }}
+                    onMouseEnter={e => {
+                      Array.from(e.currentTarget.children).forEach(td => {
+                        td.style.backgroundColor = '#fde047';
+                        td.style.color = '#2563eb';
+                      });
+                    }}
+                    onMouseLeave={e => {
+                      Array.from(e.currentTarget.children).forEach((td, i) => {
+                        td.style.backgroundColor = '';
+                        if (i === 0) td.style.color = '#60a5fa';
+                        else if (i === 1) td.style.color = '#60a5fa';
+                        else if (i === 2) td.style.color = '#a78bfa';
+                        else if (i >= 3 && i <= 6) td.style.color = result[['totalPerf3day','totalPerf7day','totalPerf14day','totalPerf30day'][i-3]] >= 0 ? '#22c55e' : '#ef4444';
+                        else td.style.color = '#d1d5db';
+                      });
+                    }}
+                  >
                     <td
                       className="py-2 px-3 cursor-pointer hover:underline font-semibold"
                       style={{ color: '#60a5fa' }}
@@ -405,6 +424,58 @@ export function MASimulation({ stockCode, onParametersSelect }) {
                       {result.totalPerf30day >= 0 ? '+' : ''}{result.totalPerf30day}%
                     </td>
                     <td className="text-center py-2 px-3" style={{ color: '#d1d5db' }}>{result.crossoverCount}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* Recent Crossovers Table */}
+      {simulationResults && simulationResults.recentCrossovers && simulationResults.recentCrossovers.length > 0 && (
+        <div className="p-4 rounded-lg mt-8" style={{ backgroundColor: 'rgba(59, 130, 246, 0.1)', borderLeft: '3px solid #f59e42' }}>
+          <h4 className="text-base font-bold mb-3" style={{ color: '#f59e42' }}>
+            Recent Crossovers
+          </h4>
+          <div className="overflow-x-auto">
+            <table className="w-full text-sm">
+              <thead>
+                <tr style={{ borderBottom: '1px solid #f59e42' }}>
+                  <th className="text-left py-2 px-3" style={{ color: '#f59e42' }}>Date</th>
+                  <th className="text-center py-2 px-3" style={{ color: '#f59e42' }}>Short MA</th>
+                  <th className="text-center py-2 px-3" style={{ color: '#f59e42' }}>Long MA</th>
+                  <th className="text-right py-2 px-3" style={{ color: '#f59e42' }}>Perf 3-Day</th>
+                  <th className="text-right py-2 px-3" style={{ color: '#f59e42' }}>Perf 7-Day</th>
+                  <th className="text-right py-2 px-3" style={{ color: '#f59e42' }}>Perf 14-Day</th>
+                  <th className="text-right py-2 px-3" style={{ color: '#f59e42' }}>Perf 30-Day</th>
+                </tr>
+              </thead>
+              <tbody>
+                {simulationResults.recentCrossovers.map((cross, idx) => (
+                  <tr
+                    key={idx}
+                    style={{ borderBottom: '1px solid #f59e42', cursor: 'pointer' }}
+                    onMouseEnter={e => {
+                      Array.from(e.currentTarget.children).forEach(td => {
+                        td.style.backgroundColor = '#fde047';
+                        td.style.color = '#2563eb';
+                      });
+                    }}
+                    onMouseLeave={e => {
+                      Array.from(e.currentTarget.children).forEach((td, i) => {
+                        td.style.backgroundColor = '';
+                        td.style.color = '#f59e42';
+                      });
+                    }}
+                  >
+                    <td className="py-2 px-3 font-semibold" style={{ color: '#f59e42' }}>{cross.date}</td>
+                    <td className="text-center py-2 px-3 font-semibold" style={{ color: '#f59e42' }}>{cross.short}d</td>
+                    <td className="text-center py-2 px-3 font-semibold" style={{ color: '#f59e42' }}>{cross.long}d</td>
+                    <td className="text-right py-2 px-3 font-bold" style={{ color: cross.perf3day >= 0 ? '#22c55e' : '#ef4444' }}>{cross.perf3day >= 0 ? '+' : ''}{cross.perf3day}%</td>
+                    <td className="text-right py-2 px-3 font-bold" style={{ color: cross.perf7day >= 0 ? '#22c55e' : '#ef4444' }}>{cross.perf7day >= 0 ? '+' : ''}{cross.perf7day}%</td>
+                    <td className="text-right py-2 px-3 font-bold" style={{ color: cross.perf14day >= 0 ? '#22c55e' : '#ef4444' }}>{cross.perf14day >= 0 ? '+' : ''}{cross.perf14day}%</td>
+                    <td className="text-right py-2 px-3 font-bold" style={{ color: cross.perf30day >= 0 ? '#22c55e' : '#ef4444' }}>{cross.perf30day >= 0 ? '+' : ''}{cross.perf30day}%</td>
                   </tr>
                 ))}
               </tbody>

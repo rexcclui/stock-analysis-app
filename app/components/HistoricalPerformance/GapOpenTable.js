@@ -98,9 +98,20 @@ export function GapOpenTable({ gapOpens }) {
           {gapOpens.map((gap, index) => (
             <tr
               key={index}
-              className="border-b border-gray-700 hover:bg-gray-700/30 transition-colors"
+              className="border-b border-gray-700 transition-colors"
               style={{
-                backgroundColor: consecutiveIndices.has(index) ? "rgba(59, 130, 246, 0.2)" : "transparent"
+                backgroundColor: consecutiveIndices.has(index) ? "rgba(59, 130, 246, 0.2)" : "transparent",
+                cursor: 'pointer'
+              }}
+              onMouseEnter={e => {
+                e.currentTarget.style.backgroundColor = '#fde047';
+                e.currentTarget.style.color = '#2563eb';
+                Array.from(e.currentTarget.querySelectorAll('td')).forEach(td => { td.style.color = '#2563eb'; });
+              }}
+              onMouseLeave={e => {
+                e.currentTarget.style.backgroundColor = consecutiveIndices.has(index) ? "rgba(59, 130, 246, 0.2)" : "transparent";
+                e.currentTarget.style.color = '';
+                Array.from(e.currentTarget.querySelectorAll('td')).forEach(td => { td.style.color = ''; });
               }}
             >
               <td className="px-4 py-3 text-white font-medium">
@@ -109,10 +120,7 @@ export function GapOpenTable({ gapOpens }) {
               <td className="px-4 py-3 text-gray-300">
                 {gap.date}
               </td>
-              <td
-                className="px-4 py-3 font-bold text-white"
-                style={{ backgroundColor: getColorForChange(gap.gapOpenPercent, minChange, maxChange) }}
-              >
+              <td className="px-4 py-3 font-bold text-white">
                 {gap.gapOpenPercent >= 0 ? "+" : ""}
                 {gap.gapOpenPercent.toFixed(2)}%
               </td>

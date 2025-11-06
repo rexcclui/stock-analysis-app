@@ -187,7 +187,18 @@ export function CorrelationTable({ symbol, relatedStocks, onSelectStock }) {
             {correlations.map((item, index) => (
               <tr
                 key={item.symbol}
-                className="border-b border-gray-700 hover:bg-gray-700/30 transition-colors"
+                className="border-b border-gray-700 transition-colors"
+                style={{ cursor: 'pointer' }}
+                onMouseEnter={e => {
+                  e.currentTarget.style.backgroundColor = '#fde047';
+                  e.currentTarget.style.color = '#2563eb';
+                  Array.from(e.currentTarget.querySelectorAll('td')).forEach(td => td.style.color = '#2563eb');
+                }}
+                onMouseLeave={e => {
+                  e.currentTarget.style.backgroundColor = '';
+                  e.currentTarget.style.color = '';
+                  Array.from(e.currentTarget.querySelectorAll('td')).forEach(td => td.style.color = '');
+                }}
               >
                 <td className="px-4 py-3 text-white font-medium">
                   #{index + 1}
