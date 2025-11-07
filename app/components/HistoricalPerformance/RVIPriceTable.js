@@ -35,17 +35,17 @@ export default function RVIPriceTable({ historicalData }) {
           // Calculate average volume for current period
           const currentAvgVolume = periodData.reduce((sum, d) => sum + (d.volume || 0), 0) / periodData.length;
 
-          // Calculate average volume for previous 2 periods (2N days before current)
+          // Calculate average volume for previous 5 periods (5N days before current)
           let rvi = 0;
           const prevStartIdx = (i + 1) * nDays;
-          const prevEndIdx = Math.min(prevStartIdx + (2 * nDays), sortedData.length);
+          const prevEndIdx = Math.min(prevStartIdx + (5 * nDays), sortedData.length);
 
           if (prevStartIdx < sortedData.length && prevEndIdx > prevStartIdx) {
             const prevPeriodData = sortedData.slice(prevStartIdx, prevEndIdx);
             if (prevPeriodData.length > 0) {
               const prevAvgVolume = prevPeriodData.reduce((sum, d) => sum + (d.volume || 0), 0) / prevPeriodData.length;
 
-              // RVI = (Average Volume in current slot) / (Average volume in last two slots)
+              // RVI = (Average Volume in current slot) / (Average volume in last 5 slots)
               rvi = prevAvgVolume > 0 ? (currentAvgVolume / prevAvgVolume) : 1;
             } else {
               rvi = 1; // No previous data, neutral RVI
@@ -71,7 +71,7 @@ export default function RVIPriceTable({ historicalData }) {
     return periods;
   }, [historicalData, nDays]);
 
-  // Define RVI ranges for rows (RVI is now a ratio: current avg volume / previous 2 periods avg volume)
+  // Define RVI ranges for rows (RVI is now a ratio: current avg volume / previous 5 periods avg volume)
   const rviRanges = [
     { label: "> 2.0 (Very High)", min: 2.0, max: Infinity },
     { label: "1.5 - 2.0 (High)", min: 1.5, max: 2.0 },
@@ -223,7 +223,7 @@ export default function RVIPriceTable({ historicalData }) {
           <li>• <strong>Columns:</strong> Time offset showing N-day periods (e.g., -10d = 10 days ago, -20d = 20 days ago)</li>
           <li>• <strong>Rows:</strong> RVI ranges indicate relative volume strength (High RVI = increased volume vs recent periods, Low RVI = decreased volume)</li>
           <li>• <strong>Cells:</strong> Show price % change during that period, colored from deep red (large decline) to deep green (large gain)</li>
-          <li>• <strong>RVI (Relative Volume Index):</strong> Ratio of average volume in current period divided by average volume in previous 2 periods (RVI = 1.0 means neutral, &gt;1.0 means higher volume, &lt;1.0 means lower volume)</li>
+          <li>• <strong>RVI (Relative Volume Index):</strong> Ratio of average volume in current period divided by average volume in previous 5 periods (RVI = 1.0 means neutral, &gt;1.0 means higher volume, &lt;1.0 means lower volume)</li>
         </ul>
       </div>
     </div>
