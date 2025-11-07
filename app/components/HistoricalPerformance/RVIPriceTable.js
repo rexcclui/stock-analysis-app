@@ -225,14 +225,6 @@ export default function RVIPriceTable({ historicalData }) {
                           <div className="text-xs opacity-75">
                             RVI: {period.rvi.toFixed(1)}
                           </div>
-                          <div className="text-xs opacity-60">
-                            {new Date(period.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
-                            {' → '}
-                            {new Date(period.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: '2-digit' })}
-                          </div>
-                          <div className="text-xs opacity-60">
-                            ${period.startPrice.toFixed(2)} → ${period.endPrice.toFixed(2)}
-                          </div>
                         </div>
                       ) : (
                         <span className="text-gray-600">—</span>
