@@ -73,11 +73,16 @@ export default function RVIPriceTable({ historicalData }) {
 
   // Define RVI ranges for rows (RVI is now a ratio: current avg volume / previous 5 periods avg volume)
   const rviRanges = [
-    { label: "> 2.0 (Very High)", min: 2.0, max: Infinity },
-    { label: "1.5 - 2.0 (High)", min: 1.5, max: 2.0 },
-    { label: "0.8 - 1.5 (Neutral)", min: 0.8, max: 1.5 },
-    { label: "0.5 - 0.8 (Low)", min: 0.5, max: 0.8 },
-    { label: "< 0.5 (Very Low)", min: 0, max: 0.5 }
+    { label: "> 3.0", min: 3.0, max: Infinity },
+    { label: "2.5 - 3.0", min: 2.5, max: 3.0 },
+    { label: "2.0 - 2.5", min: 2.0, max: 2.5 },
+    { label: "1.5 - 2.0", min: 1.5, max: 2.0 },
+    { label: "1.2 - 1.5", min: 1.2, max: 1.5 },
+    { label: "0.8 - 1.2", min: 0.8, max: 1.2 },
+    { label: "0.6 - 0.8", min: 0.6, max: 0.8 },
+    { label: "0.4 - 0.6", min: 0.4, max: 0.6 },
+    { label: "0.2 - 0.4", min: 0.2, max: 0.4 },
+    { label: "< 0.2", min: 0, max: 0.2 }
   ];
 
   // Group periods by RVI range
