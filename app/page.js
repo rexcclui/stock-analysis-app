@@ -169,6 +169,7 @@ export default function StockAnalysisDashboard() {
   const [bloombergNews, setBloombergNews] = useState([]);
   const [aiNewsAnalysis, setAiNewsAnalysis] = useState(null);
   const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
+  const [aiAnalysisError, setAiAnalysisError] = useState(null);
   // Detailed search history entries with day change for table (bounded by 3 rows dynamic columns)
   const [searchHistoryStocks, setSearchHistoryStocks] = useState([]); // array of { code, dayChange }
   const HISTORY_COL_WIDTH = 140; // approximate width for each cell
@@ -432,6 +433,7 @@ export default function StockAnalysisDashboard() {
   const fetchAINewsAnalysis = async (symbol, newsData) => {
     try {
       setAiAnalysisLoading(true);
+      setAiAnalysisError(null);
       console.log(`[AI Analysis] Fetching analysis for ${symbol}`);
 
       const response = await fetch('/api/analyze-news', {
@@ -450,13 +452,17 @@ export default function StockAnalysisDashboard() {
         const analysis = await response.json();
         console.log('[AI Analysis] Analysis received:', analysis);
         setAiNewsAnalysis(analysis);
+        setAiAnalysisError(null);
       } else {
-        console.error('[AI Analysis] API error:', response.status);
+        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
+        console.error('[AI Analysis] API error:', response.status, errorData);
         setAiNewsAnalysis(null);
+        setAiAnalysisError(errorData.error || `API error: ${response.status}`);
       }
     } catch (error) {
       console.error('[AI Analysis] Fetch error:', error);
       setAiNewsAnalysis(null);
+      setAiAnalysisError(error.message || 'Failed to connect to AI service');
     } finally {
       setAiAnalysisLoading(false);
     }
@@ -486,6 +492,7 @@ export default function StockAnalysisDashboard() {
     setYahooNews([]);
     setBloombergNews([]);
     setAiNewsAnalysis(null);
+    setAiAnalysisError(null);
     setComparisonStocks([]);
     setChartCompareStocks([]);
     
@@ -882,6 +889,7 @@ export default function StockAnalysisDashboard() {
               <AINewsSummary
                 analysis={aiNewsAnalysis}
                 loading={aiAnalysisLoading}
+                error={aiAnalysisError}
                 onAnalyze={handleAnalyzeNews}
                 hasNews={news.length > 0 || googleNews.length > 0 || yahooNews.length > 0 || bloombergNews.length > 0}
                 symbol={selectedStock.code}

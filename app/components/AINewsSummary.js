@@ -10,11 +10,12 @@ import { TrendingUp, TrendingDown, Minus, AlertCircle, Lightbulb, Target, Clock,
  * Props:
  * - analysis: AI analysis object from /api/analyze-news
  * - loading: boolean indicating if analysis is being generated
+ * - error: error message if analysis failed
  * - onAnalyze: function to trigger manual analysis
  * - hasNews: boolean indicating if news data is available
  * - symbol: stock symbol
  */
-export function AINewsSummary({ analysis, loading, onAnalyze, hasNews, symbol }) {
+export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, symbol }) {
   if (loading) {
     return (
       <div className="bg-gradient-to-br from-purple-900/40 to-blue-900/40 rounded-xl shadow-xl p-6 border border-purple-500/30 mb-6">
@@ -63,7 +64,30 @@ export function AINewsSummary({ analysis, loading, onAnalyze, hasNews, symbol })
           </button>
         </div>
 
-        {hasNews && (
+        {error && (
+          <div className="mt-4 p-4 bg-red-900/30 rounded-lg border border-red-500/50">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="text-red-400 flex-shrink-0 mt-0.5" size={20} />
+              <div>
+                <p className="text-red-400 font-semibold mb-1">Analysis Failed</p>
+                <p className="text-gray-300 text-sm">{error}</p>
+                {error.includes('OPENAI_API_KEY') && (
+                  <div className="mt-3 p-3 bg-red-900/20 rounded border border-red-500/30">
+                    <p className="text-xs text-gray-300 mb-2 font-semibold">How to fix:</p>
+                    <ol className="text-xs text-gray-400 space-y-1 ml-4 list-decimal">
+                      <li>Get your API key from <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">OpenAI Platform</a></li>
+                      <li>Create a <code className="bg-gray-800 px-1 rounded">.env.local</code> file in the project root</li>
+                      <li>Add: <code className="bg-gray-800 px-1 rounded">OPENAI_API_KEY=your_key_here</code></li>
+                      <li>Restart the development server</li>
+                    </ol>
+                  </div>
+                )}
+              </div>
+            </div>
+          </div>
+        )}
+
+        {hasNews && !error && (
           <div className="mt-4 p-3 bg-blue-900/20 rounded-lg border border-blue-500/30">
             <p className="text-xs text-gray-300 flex items-start gap-2">
               <Lightbulb size={16} className="text-blue-400 mt-0.5 flex-shrink-0" />
