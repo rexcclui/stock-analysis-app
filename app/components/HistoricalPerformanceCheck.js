@@ -17,7 +17,7 @@ import RVIPriceTable from "./HistoricalPerformance/RVIPriceTable";
 export function HistoricalPerformanceCheck({ stockCode }) {
   // Default expanded so the Historical Data Analysis section is open on initial render
   const [isExpanded, setIsExpanded] = useState(true);
-  const [selectedOption, setSelectedOption] = useState("top10");
+  const [selectedOptions, setSelectedOptions] = useState(new Set(["top10"]));
   const [trendType, setTrendType] = useState("up");
   const [trends, setTrends] = useState([]);
   const [bigMoves, setBigMoves] = useState([]);
@@ -401,59 +401,62 @@ export function HistoricalPerformanceCheck({ stockCode }) {
 
   // Auto-trigger analysis when mode is selected
   useEffect(() => {
-    if (selectedOption === "top10" && stockCode) {
+    if (selectedOptions.has("top10") && stockCode) {
       analyzeTrends();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedOption, trendType, stockCode]);
+  }, [selectedOptions, trendType, stockCode]);
 
   useEffect(() => {
-    if (selectedOption === "bigmoves" && stockCode) {
+    if (selectedOptions.has("bigmoves") && stockCode) {
       analyzeBigMoves();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedOption, bigMovesDirection, stockCode]);
+  }, [selectedOptions, bigMovesDirection, stockCode]);
 
   useEffect(() => {
-    if (selectedOption === "spycorr" && stockCode) {
+    if (selectedOptions.has("spycorr") && stockCode) {
       analyzeSpyCorrelation();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedOption, spyDirection, stockCode]);
+  }, [selectedOptions, spyDirection, stockCode]);
 
   useEffect(() => {
-    if (selectedOption === "gapopen" && stockCode) {
+    if (selectedOptions.has("gapopen") && stockCode) {
       analyzeGapOpens();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedOption, gapOpenDirection, stockCode]);
+  }, [selectedOptions, gapOpenDirection, stockCode]);
 
   // Auto-trigger cycle analysis when a cycle mode is selected
   useEffect(() => {
     const cycleAnalysisModes = ["seasonal", "peak-trough", "ma-crossover", "fourier", "support-resistance"];
-    if (cycleAnalysisModes.includes(selectedOption) && stockCode) {
-      analyzeCycles(selectedOption);
-    }
+    cycleAnalysisModes.forEach(mode => {
+      if (selectedOptions.has(mode) && stockCode) {
+        analyzeCycles(mode);
+      }
+    });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedOption, stockCode, maShort, maLong]);
+  }, [selectedOptions, stockCode, maShort, maLong]);
 
   // Auto-trigger statistics analysis when a statistics mode is selected
   useEffect(() => {
-    if (selectedOption === "gapopenstat" && stockCode) {
+    if (selectedOptions.has("gapopenstat") && stockCode) {
       analyzeGapOpenStats();
-    } else if (selectedOption === "intradaystat" && stockCode) {
+    }
+    if (selectedOptions.has("intradaystat") && stockCode) {
       analyzeIntradayStats();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedOption, stockCode]);
+  }, [selectedOptions, stockCode]);
 
   // Auto-trigger RVI price analysis when selected
   useEffect(() => {
-    if (selectedOption === "rvi-price" && stockCode) {
+    if (selectedOptions.has("rvi-price") && stockCode) {
       analyzeRviPrice();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [selectedOption, stockCode]);
+  }, [selectedOptions, stockCode]);
 
   return (
     <>
@@ -576,57 +579,34 @@ export function HistoricalPerformanceCheck({ stockCode }) {
               ].map(option => (
                 <label
                   key={option.value}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer border transition-all ${selectedOption === option.value ? 'bg-blue-700 border-blue-400 text-white' : 'bg-gray-700 border-gray-600 text-gray-300'}`}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer border transition-all ${selectedOptions.has(option.value) ? 'bg-blue-700 border-blue-400 text-white' : 'bg-gray-700 border-gray-600 text-gray-300'}`}
                   style={{ width: '100%' }}
                 >
                   <input
-                    type="radio"
+                    type="checkbox"
                     name="analysisType"
                     value={option.value}
-                    checked={selectedOption === option.value}
-                    onChange={() => {
-                      setSelectedOption(option.value);
-                      setTrends([]);
-                      setBigMoves([]);
-                      setSpyCorrelations([]);
-                      setGapOpens([]);
-                      setGapOpenStats(null);
-                      setIntradayStats(null);
-                      setCycleAnalysis(null);
-                      setHistoricalData([]);
-                      setError(null);
+                    checked={selectedOptions.has(option.value)}
+                    onChange={(e) => {
+                      const newSelectedOptions = new Set(selectedOptions);
+                      if (e.target.checked) {
+                        newSelectedOptions.add(option.value);
+                      } else {
+                        newSelectedOptions.delete(option.value);
+                      }
+                      setSelectedOptions(newSelectedOptions);
                     }}
-                    className="form-radio accent-blue-500 mr-2"
+                    className="form-checkbox accent-blue-500 mr-2"
                   />
                   {option.label}
                 </label>
               ))}
             </div>
-            {/* Subject Heading for selected analysis type */}
-        <div>
-          <div style={{ height: '1rem' }}></div>
-          <h3 className="text-lg font-bold" style={{ color: '#fde047' }}>
-            {[
-              { value: "top10", label: "Top 30 up/down consecutive daily change" },
-              { value: "bigmoves", label: "Big Single Day Up/Down" },
-              { value: "spycorr", label: "Top 30 up/down daily SPY change" },
-              { value: "gapopen", label: "Up/Down Gap Open" },
-              { value: "gapopenstat", label: "Market Open Statistic" },
-              { value: "intradaystat", label: "Intraday Statistic" },
-              { value: "rvi-price", label: "Relative Volume Index vs Price Change" },
-              { value: "stock-correlation", label: "Stock Correlation & Lead-Lag" },
-              { value: "seasonal", label: "Seasonal/Calendar Patterns" },
-              { value: "peak-trough", label: "Peak-to-Trough Cycles" },
-              { value: "ma-crossover", label: "Moving Average Crossovers" },
-              { value: "fourier", label: "Fourier/Spectral Analysis" },
-              { value: "support-resistance", label: "Support/Resistance Levels" }
-            ].find(option => option.value === selectedOption)?.label}
-          </h3>
-        </div>
+            {/* Subject Headings for selected analysis types - removed since multiple can be selected */}
           </div>
 
       {/* Trend Direction Selection - Only for top10 */}
-      {selectedOption === "top10" && (
+      {selectedOptions.has("top10") && (
         <div className="mb-6 flex gap-4">
           <button
             onClick={() => setTrendType("up")}
@@ -664,7 +644,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
           </button>
         </div>
       )}
-      {selectedOption === "bigmoves" && (
+      {selectedOptions.has("bigmoves") && (
         <div className="mb-6">
           <div className="flex gap-4 mb-4">
             <button
@@ -706,7 +686,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       )}
 
       {/* SPY Direction Selection - Only for spycorr */}
-      {selectedOption === "spycorr" && (
+      {selectedOptions.has("spycorr") && (
         <div className="mb-6">
           <div className="flex gap-4 mb-4">
             <button
@@ -748,7 +728,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       )}
 
       {/* Gap Open Direction Selection - Only for gapopen */}
-      {selectedOption === "gapopen" && (
+      {selectedOptions.has("gapopen") && (
         <div className="mb-6">
           <div className="flex gap-4 mb-4">
             <button
@@ -790,23 +770,23 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       )}
 
       {/* Loading indicator for cycle analysis modes (except ma-crossover) */}
-      {["seasonal", "peak-trough", "fourier", "support-resistance"].includes(selectedOption) && loading && (
+      {["seasonal", "peak-trough", "fourier", "support-resistance"].some(mode => selectedOptions.has(mode)) && loading && (
         <div className="flex items-center gap-2 text-blue-400 mb-6">
           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-400"></div>
-          <span>Analyzing {selectedOption.replace('-', ' ')}...</span>
+          <span>Analyzing cycle data...</span>
         </div>
       )}
 
       {/* Loading indicator for statistics modes */}
-      {["gapopenstat", "intradaystat"].includes(selectedOption) && loading && (
+      {["gapopenstat", "intradaystat"].some(mode => selectedOptions.has(mode)) && loading && (
         <div className="flex items-center gap-2 text-blue-400 mb-6">
           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-400"></div>
-          <span>Analyzing {selectedOption === "gapopenstat" ? "Market Open Statistics" : "Intraday Statistics"}...</span>
+          <span>Analyzing statistics...</span>
         </div>
       )}
 
       {/* Loading indicator for RVI mode */}
-      {selectedOption === "rvi-price" && loading && (
+      {selectedOptions.has("rvi-price") && loading && (
         <div className="flex items-center gap-2 text-blue-400 mb-6">
           <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-400"></div>
           <span>Analyzing Relative Volume Index vs Price Change...</span>
@@ -833,17 +813,17 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       <GapOpenTable gapOpens={gapOpens} />
 
       {/* Gap Open Statistics */}
-      {gapOpenStats && selectedOption === "gapopenstat" && (
+      {gapOpenStats && selectedOptions.has("gapopenstat") && (
         <StatisticsTable statistics={gapOpenStats} title="Market Open %" />
       )}
 
       {/* Intraday Statistics */}
-      {intradayStats && selectedOption === "intradaystat" && (
+      {intradayStats && selectedOptions.has("intradaystat") && (
         <StatisticsTable statistics={intradayStats} title="Intraday Change %" />
       )}
 
       {/* Moving Average Controls - Only for ma-crossover */}
-      {selectedOption === "ma-crossover" && (
+      {selectedOptions.has("ma-crossover") && (
         <div className="mb-6 p-4 rounded-lg border" style={{ backgroundColor: 'rgba(250, 204, 21, 0.2)', borderColor: '#facc15' }}>
           <div className="flex items-center">
             <div className="flex-1" style={{ marginRight: '0.3rem' }}>
@@ -891,42 +871,42 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       )}
 
       {/* Cycle Analysis Results */}
-      {cycleAnalysis && selectedOption === "seasonal" && (
+      {cycleAnalysis && selectedOptions.has("seasonal") && (
         <SeasonalAnalysis cycleAnalysis={cycleAnalysis} stockCode={stockCode} />
       )}
 
-      {cycleAnalysis && selectedOption === "peak-trough" && (
+      {cycleAnalysis && selectedOptions.has("peak-trough") && (
         <PeakTroughAnalysis cycleAnalysis={cycleAnalysis} />
       )}
 
-      {cycleAnalysis && selectedOption === "ma-crossover" && (
-        <MovingAverageCrossoverAnalysis 
-          cycleAnalysis={cycleAnalysis} 
-          maShort={maShort} 
-          maLong={maLong} 
-          loading={loading} 
-          onSimulate={{ 
+      {cycleAnalysis && selectedOptions.has("ma-crossover") && (
+        <MovingAverageCrossoverAnalysis
+          cycleAnalysis={cycleAnalysis}
+          maShort={maShort}
+          maLong={maLong}
+          loading={loading}
+          onSimulate={{
             stockCode,
             onParametersSelect: applySimulationParameters
-          }} 
+          }}
         />
       )}
 
-      {cycleAnalysis && selectedOption === "fourier" && (
+      {cycleAnalysis && selectedOptions.has("fourier") && (
         <FourierAnalysis cycleAnalysis={cycleAnalysis} />
       )}
 
-      {cycleAnalysis && selectedOption === "support-resistance" && (
+      {cycleAnalysis && selectedOptions.has("support-resistance") && (
         <SupportResistanceAnalysis cycleAnalysis={cycleAnalysis} />
       )}
 
       {/* Stock Correlation Analysis */}
-      {selectedOption === "stock-correlation" && stockCode && (
+      {selectedOptions.has("stock-correlation") && stockCode && (
         <StockCorrelationSection symbol={stockCode} />
       )}
 
       {/* RVI vs Price Change Analysis */}
-      {selectedOption === "rvi-price" && historicalData.length > 0 && (
+      {selectedOptions.has("rvi-price") && historicalData.length > 0 && (
         <RVIPriceTable historicalData={historicalData} />
       )}
 
