@@ -177,7 +177,7 @@ export default function RVIPriceTable({ historicalData }) {
                 RVI Range
               </th>
               {[...Array(maxPeriods)].map((_, idx) => (
-                <th key={idx} className="border border-gray-600 px-2 py-2 text-center font-semibold min-w-[50px]">
+                <th key={idx} className="border border-gray-600 px-1 py-2 text-center font-semibold min-w-[45px]">
                   <div className="text-sm font-bold text-gray-200">
                     -{(idx + 1) * nDays}d
                   </div>
