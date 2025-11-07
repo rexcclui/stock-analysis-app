@@ -86,13 +86,13 @@ export default function RVIPriceTable({ historicalData }) {
 
     const grouped = {};
     rviRanges.forEach(range => {
-      grouped[range.label] = [];
+      grouped[range.label] = {}; // Use object instead of array to preserve period numbers
     });
 
     processedData.forEach(period => {
       const range = rviRanges.find(r => period.rvi >= r.min && period.rvi < r.max)
                     || rviRanges[rviRanges.length - 1];
-      grouped[range.label].push(period);
+      grouped[range.label][period.periodNum] = period; // Use periodNum as key
     });
 
     return grouped;
