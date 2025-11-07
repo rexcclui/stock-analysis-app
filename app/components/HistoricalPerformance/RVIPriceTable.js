@@ -161,8 +161,8 @@ export default function RVIPriceTable({ historicalData }) {
                 RVI Range
               </th>
               {[...Array(maxPeriods)].map((_, idx) => (
-                <th key={idx} className="border border-gray-600 px-4 py-3 text-center font-semibold min-w-[200px]">
-                  <div className="text-base font-bold text-gray-200">
+                <th key={idx} className="border border-gray-600 px-2 py-2 text-center font-semibold min-w-[50px]">
+                  <div className="text-sm font-bold text-gray-200">
                     -{(idx + 1) * nDays}d
                   </div>
                 </th>
@@ -183,7 +183,7 @@ export default function RVIPriceTable({ historicalData }) {
                   return (
                     <td
                       key={periodIdx}
-                      className="border border-gray-600 px-4 py-3 text-center transition-colors cursor-pointer"
+                      className="border border-gray-600 px-1 py-2 text-center transition-colors cursor-pointer"
                       style={{
                         backgroundColor: isHovered
                           ? '#fde047'
@@ -196,12 +196,12 @@ export default function RVIPriceTable({ historicalData }) {
                       onMouseLeave={() => setHoveredCell(null)}
                     >
                       {period ? (
-                        <div className="space-y-1">
-                          <div className="font-bold text-base">
-                            {period.priceChange.toFixed(2)}%
+                        <div className="space-y-0.5">
+                          <div className="font-bold text-xs">
+                            {period.priceChange.toFixed(1)}%
                           </div>
-                          <div className="text-xs opacity-75">
-                            RVI: {period.rvi.toFixed(2)}
+                          <div className="text-[10px] opacity-75">
+                            {period.rvi.toFixed(2)}
                           </div>
                         </div>
                       ) : (
