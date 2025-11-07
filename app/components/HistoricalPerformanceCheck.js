@@ -12,6 +12,7 @@ import { MovingAverageCrossoverAnalysis } from "./HistoricalPerformance/CycleAna
 import { FourierAnalysis } from "./HistoricalPerformance/CycleAnalysis/FourierAnalysis";
 import { SupportResistanceAnalysis } from "./HistoricalPerformance/CycleAnalysis/SupportResistanceAnalysis";
 import { StockCorrelationSection } from "./HistoricalPerformance/StockCorrelation/StockCorrelationSection";
+import RVIPriceTable from "./HistoricalPerformance/RVIPriceTable";
 
 export function HistoricalPerformanceCheck({ stockCode }) {
   // Default expanded so the Historical Data Analysis section is open on initial render
@@ -35,6 +36,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
   const [relatedStocks, setRelatedStocks] = useState([]);
   const [relatedStocksExpanded, setRelatedStocksExpanded] = useState(false);
   const [loadingRelatedStocks, setLoadingRelatedStocks] = useState(false);
+  const [historicalData, setHistoricalData] = useState([]);
 
   const analyzeTrends = async () => {
     if (!stockCode) {
@@ -324,6 +326,46 @@ export function HistoricalPerformanceCheck({ stockCode }) {
     // The useEffect will automatically trigger analyzeCycles when maShort/maLong change
   };
 
+  const analyzeRviPrice = async () => {
+    if (!stockCode) {
+      setError("No stock selected");
+      return;
+    }
+
+    setLoading(true);
+    setError(null);
+
+    try {
+      // Track API call
+      const apiCounts = { historicalTrends: 1 };
+
+      // Fetch historical data with volume for RVI calculation
+      const response = await fetch(
+        `/api/historical-trends?symbol=${stockCode}&years=5&type=raw`
+      );
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch historical data");
+      }
+
+      const data = await response.json();
+      setHistoricalData(data.historicalData || []);
+
+      // Log API call to tracking endpoint
+      fetch('/api/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ counts: apiCounts })
+      }).catch(err => console.error('Failed to send tracking data:', err));
+
+    } catch (err) {
+      setError(err.message);
+      console.error("Error analyzing RVI vs Price:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchRelatedStocks = async () => {
     if (!stockCode) {
       return;
@@ -401,6 +443,14 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       analyzeGapOpenStats();
     } else if (selectedOption === "intradaystat" && stockCode) {
       analyzeIntradayStats();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [selectedOption, stockCode]);
+
+  // Auto-trigger RVI price analysis when selected
+  useEffect(() => {
+    if (selectedOption === "rvi-price" && stockCode) {
+      analyzeRviPrice();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedOption, stockCode]);
@@ -516,6 +566,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
                 { value: "gapopen", label: "Up/Down Gap Open" },
                 { value: "gapopenstat", label: "Market Open Statistic" },
                 { value: "intradaystat", label: "Intraday Statistic" },
+                { value: "rvi-price", label: "Relative Volume Index vs Price Change" },
                 { value: "stock-correlation", label: "Stock Correlation & Lead-Lag" },
                 { value: "seasonal", label: "Seasonal/Calendar Patterns" },
                 { value: "peak-trough", label: "Peak-to-Trough Cycles" },
@@ -542,6 +593,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
                       setGapOpenStats(null);
                       setIntradayStats(null);
                       setCycleAnalysis(null);
+                      setHistoricalData([]);
                       setError(null);
                     }}
                     className="form-radio accent-blue-500 mr-2"
@@ -561,6 +613,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
               { value: "gapopen", label: "Up/Down Gap Open" },
               { value: "gapopenstat", label: "Market Open Statistic" },
               { value: "intradaystat", label: "Intraday Statistic" },
+              { value: "rvi-price", label: "Relative Volume Index vs Price Change" },
               { value: "stock-correlation", label: "Stock Correlation & Lead-Lag" },
               { value: "seasonal", label: "Seasonal/Calendar Patterns" },
               { value: "peak-trough", label: "Peak-to-Trough Cycles" },
@@ -752,6 +805,14 @@ export function HistoricalPerformanceCheck({ stockCode }) {
         </div>
       )}
 
+      {/* Loading indicator for RVI mode */}
+      {selectedOption === "rvi-price" && loading && (
+        <div className="flex items-center gap-2 text-blue-400 mb-6">
+          <div className="animate-spin rounded-full h-5 w-5 border-b-2 border-blue-400"></div>
+          <span>Analyzing Relative Volume Index vs Price Change...</span>
+        </div>
+      )}
+
       {/* Error Display */}
       {error && (
         <div className="bg-red-900/30 border border-red-500 text-red-300 px-4 py-3 rounded-lg mb-6">
@@ -862,6 +923,11 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {/* Stock Correlation Analysis */}
       {selectedOption === "stock-correlation" && stockCode && (
         <StockCorrelationSection symbol={stockCode} />
+      )}
+
+      {/* RVI vs Price Change Analysis */}
+      {selectedOption === "rvi-price" && historicalData.length > 0 && (
+        <RVIPriceTable historicalData={historicalData} />
       )}
 
       {/* No Results */}

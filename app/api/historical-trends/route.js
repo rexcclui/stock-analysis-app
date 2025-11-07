@@ -159,7 +159,9 @@ export async function GET(request) {
       ? getCacheKey(`${type}-${direction}-${years}y`, symbol)
       : (type === "mixed")
         ? getCacheKey(`trends-mixed-${years}y`, symbol)
-        : getCacheKey(`trends-${type}-${years}y`, symbol);
+        : (type === "raw")
+          ? getCacheKey(`raw-${years}y`, symbol)
+          : getCacheKey(`trends-${type}-${years}y`, symbol);
     const cachedData = getCache(cacheKey);
     if (cachedData) {
       console.log(`[CACHE HIT] Historical trends for ${symbol} (${type}, ${years}y)`);
@@ -437,6 +439,21 @@ export async function GET(request) {
           dataPoints: historicalData.length,
         };
       }
+    } else if (type === "raw") {
+      // Return raw historical data for custom analysis (like RVI)
+      result = {
+        symbol,
+        type,
+        historicalData: historicalData.map(item => ({
+          date: item.date,
+          open: item.open,
+          high: item.high,
+          low: item.low,
+          close: item.close,
+          volume: item.volume
+        })),
+        dataPoints: historicalData.length,
+      };
     } else if (type === "gapopenstat" || type === "intradaystat") {
       // Calculate statistics grouped by time periods
       const stats = {
