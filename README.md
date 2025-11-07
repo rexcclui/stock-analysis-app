@@ -3,7 +3,7 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 ## Features
 
 ### AI-Powered News Analysis
-This application now includes an AI-powered news analysis feature that uses Anthropic's Claude to analyze news articles from multiple sources (NewsAPI, Google News, Yahoo Finance, and Bloomberg) and generate comprehensive summaries including:
+This application now includes an AI-powered news analysis feature that uses OpenAI's GPT-4o to analyze news articles from multiple sources (NewsAPI, Google News, Yahoo Finance, and Bloomberg) and generate comprehensive summaries including:
 
 - **Overall Sentiment Analysis**: Positive, negative, neutral, or mixed sentiment with confidence level
 - **Impact Analysis**: Detailed breakdown of positive and negative impacts
@@ -14,7 +14,7 @@ This application now includes an AI-powered news analysis feature that uses Anth
 - **AI Analyst Recommendation**: Buy, sell, or hold recommendation with reasoning
 
 **Requirements:**
-- Anthropic API key (configure in `.env.local` as `ANTHROPIC_API_KEY`)
+- OpenAI API key (configure in `.env.local` as `OPENAI_API_KEY`)
 - News data from at least one source (NewsAPI, Google News, Yahoo Finance, or Bloomberg)
 
 ### Page Load Tracking
@@ -39,7 +39,7 @@ For detailed documentation, see [IP_TRACKING.md](./IP_TRACKING.md)
    - `ALPHA_VANTAGE_KEY`: Get from [Alpha Vantage](https://www.alphavantage.co/support/#api-key)
    - `FMP_KEY`: Get from [Financial Modeling Prep](https://site.financialmodelingprep.com/developer/docs/)
    - `NEWS_API_KEY`: Get from [NewsAPI](https://newsapi.org/register)
-   - `ANTHROPIC_API_KEY`: Get from [Anthropic Console](https://console.anthropic.com/) (required for AI news analysis)
+   - `OPENAI_API_KEY`: Get from [OpenAI Platform](https://platform.openai.com/api-keys) (required for AI news analysis)
 
 3. **Install dependencies:**
    ```bash

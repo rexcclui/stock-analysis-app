@@ -1,9 +1,9 @@
 import { NextResponse } from 'next/server';
-import Anthropic from '@anthropic-ai/sdk';
+import OpenAI from 'openai';
 
-// Initialize Anthropic client
-const anthropic = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
+// Initialize OpenAI client
+const openai = new OpenAI({
+  apiKey: process.env.OPENAI_API_KEY,
 });
 
 /**
@@ -23,8 +23,8 @@ export async function POST(request) {
       return NextResponse.json({ error: 'Stock symbol is required' }, { status: 400 });
     }
 
-    if (!process.env.ANTHROPIC_API_KEY) {
-      return NextResponse.json({ error: 'ANTHROPIC_API_KEY not configured' }, { status: 500 });
+    if (!process.env.OPENAI_API_KEY) {
+      return NextResponse.json({ error: 'OPENAI_API_KEY not configured' }, { status: 500 });
     }
 
     // Combine all news sources
@@ -93,12 +93,17 @@ Provide ONLY the JSON response, no additional text.`;
 
     console.log(`[AI News Analysis] Analyzing ${allNews.length} articles for ${symbol}`);
 
-    // Call Anthropic API
-    const message = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+    // Call OpenAI API
+    const completion = await openai.chat.completions.create({
+      model: 'gpt-4o',
       max_tokens: 2000,
       temperature: 0.3,
+      response_format: { type: "json_object" },
       messages: [
+        {
+          role: 'system',
+          content: 'You are a financial analyst who provides analysis in JSON format.'
+        },
         {
           role: 'user',
           content: prompt
@@ -107,7 +112,7 @@ Provide ONLY the JSON response, no additional text.`;
     });
 
     // Extract and parse the response
-    const responseText = message.content[0].text;
+    const responseText = completion.choices[0].message.content;
     console.log('[AI News Analysis] Raw response:', responseText);
 
     // Parse JSON from response
