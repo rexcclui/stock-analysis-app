@@ -911,17 +911,9 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       )}
 
       {/* No Results */}
-      {!loading && trends.length === 0 && bigMoves.length === 0 && spyCorrelations.length === 0 && gapOpens.length === 0 && !gapOpenStats && !intradayStats && !cycleAnalysis && !error && stockCode && (
+      {!loading && trends.length === 0 && bigMoves.length === 0 && spyCorrelations.length === 0 && gapOpens.length === 0 && !gapOpenStats && !intradayStats && !cycleAnalysis && !error && stockCode && selectedOptions.size > 0 && (
         <div className="style={{ color: '#93c5fd' }} text-center py-8">
-          Click &quot;Analyze {
-            selectedOption === "top10" ? "Trends" :
-            selectedOption === "bigmoves" ? "Big Moves" :
-            selectedOption === "spycorr" ? "SPY Correlation" :
-            selectedOption === "gapopen" ? "Gap Opens" :
-            selectedOption === "gapopenstat" ? "" :
-            selectedOption === "intradaystat" ? "" :
-            "Cycles"
-          }&quot; to see historical performance data
+          Select one or more analysis types above to see historical performance data
         </div>
       )}
 
