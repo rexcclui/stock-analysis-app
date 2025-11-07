@@ -810,8 +810,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {/* Trends Table */}
       {selectedOptions.has("top10") && trends.length > 0 && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-xl font-bold text-yellow-400">Top 30 Up/Down Consecutive Daily Change</h3>
+          <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-2xl font-bold text-yellow-400">Top 30 Up/Down Consecutive Daily Change</h3>
             <button
               onClick={() => hideMode("top10")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -829,8 +829,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {/* Big Moves Table */}
       {selectedOptions.has("bigmoves") && bigMoves.length > 0 && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-xl font-bold text-yellow-400">Big Single Day Up/Down</h3>
+          <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-2xl font-bold text-yellow-400">Big Single Day Up/Down</h3>
             <button
               onClick={() => hideMode("bigmoves")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -848,8 +848,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {/* SPY Correlation Table */}
       {selectedOptions.has("spycorr") && spyCorrelations.length > 0 && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-xl font-bold text-yellow-400">Top 30 Up/Down Daily SPY Change</h3>
+          <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-2xl font-bold text-yellow-400">Top 30 Up/Down Daily SPY Change</h3>
             <button
               onClick={() => hideMode("spycorr")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -867,8 +867,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {/* Gap Open Table */}
       {selectedOptions.has("gapopen") && gapOpens.length > 0 && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-xl font-bold text-yellow-400">Up/Down Gap Open</h3>
+          <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-2xl font-bold text-yellow-400">Up/Down Gap Open</h3>
             <button
               onClick={() => hideMode("gapopen")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -886,8 +886,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {/* Gap Open Statistics */}
       {gapOpenStats && selectedOptions.has("gapopenstat") && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-xl font-bold text-yellow-400">Market Open Statistic</h3>
+          <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-2xl font-bold text-yellow-400">Market Open Statistic</h3>
             <button
               onClick={() => hideMode("gapopenstat")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -905,8 +905,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {/* Intraday Statistics */}
       {intradayStats && selectedOptions.has("intradaystat") && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-xl font-bold text-yellow-400">Intraday Statistic</h3>
+          <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-2xl font-bold text-yellow-400">Intraday Statistic</h3>
             <button
               onClick={() => hideMode("intradaystat")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -924,8 +924,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {/* Moving Average Controls & Analysis - Only for ma-crossover */}
       {selectedOptions.has("ma-crossover") && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-xl font-bold text-yellow-400">Moving Average Crossovers</h3>
+          <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-2xl font-bold text-yellow-400">Moving Average Crossovers</h3>
             <button
               onClick={() => hideMode("ma-crossover")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -983,8 +983,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {/* Cycle Analysis Results */}
       {cycleAnalysis && selectedOptions.has("seasonal") && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-xl font-bold text-yellow-400">Seasonal/Calendar Patterns</h3>
+          <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-2xl font-bold text-yellow-400">Seasonal/Calendar Patterns</h3>
             <button
               onClick={() => hideMode("seasonal")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -1001,8 +1001,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
 
       {cycleAnalysis && selectedOptions.has("peak-trough") && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-xl font-bold text-yellow-400">Peak-to-Trough Cycles</h3>
+          <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-2xl font-bold text-yellow-400">Peak-to-Trough Cycles</h3>
             <button
               onClick={() => hideMode("peak-trough")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -1035,8 +1035,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
 
       {cycleAnalysis && selectedOptions.has("fourier") && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-xl font-bold text-yellow-400">Fourier/Spectral Analysis</h3>
+          <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-2xl font-bold text-yellow-400">Fourier/Spectral Analysis</h3>
             <button
               onClick={() => hideMode("fourier")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -1053,8 +1053,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
 
       {cycleAnalysis && selectedOptions.has("support-resistance") && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-xl font-bold text-yellow-400">Support/Resistance Levels</h3>
+          <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-2xl font-bold text-yellow-400">Support/Resistance Levels</h3>
             <button
               onClick={() => hideMode("support-resistance")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -1072,8 +1072,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {/* Stock Correlation Analysis */}
       {selectedOptions.has("stock-correlation") && stockCode && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-xl font-bold text-yellow-400">Stock Correlation & Lead-Lag</h3>
+          <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-2xl font-bold text-yellow-400">Stock Correlation & Lead-Lag</h3>
             <button
               onClick={() => hideMode("stock-correlation")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -1091,8 +1091,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {/* RVI vs Price Change Analysis */}
       {selectedOptions.has("rvi-price") && historicalData.length > 0 && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
-          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-xl font-bold text-yellow-400">Relative Volume Index vs Price Change</h3>
+          <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-2xl font-bold text-yellow-400">Relative Volume Index vs Price Change</h3>
             <button
               onClick={() => hideMode("rvi-price")}
               className="text-gray-400 hover:text-red-400 transition-colors"
