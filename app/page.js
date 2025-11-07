@@ -462,6 +462,18 @@ export default function StockAnalysisDashboard() {
     }
   };
 
+  // Handler for manual AI analysis trigger
+  const handleAnalyzeNews = () => {
+    if (!selectedStock?.code) return;
+
+    fetchAINewsAnalysis(selectedStock.code, {
+      newsApiNews: news,
+      googleNews: googleNews,
+      yahooNews: yahooNews,
+      bloombergNews: bloombergNews
+    }).catch(err => console.error('[AI Analysis] Failed:', err));
+  };
+
   const handleSearch = async (overrideCode) => {
     setLoading(true);
     const stockCode = (overrideCode || searchInput).toUpperCase();
@@ -499,14 +511,6 @@ export default function StockAnalysisDashboard() {
       setBloombergNews(stockData.bloombergNews);
       setComparisonType(stockData.comparisonType || 'industry');
       addToSearchHistory(stockCode);
-
-      // Fetch AI news analysis (don't await - let it load in background)
-      fetchAINewsAnalysis(stockCode, {
-        newsApiNews: stockData.news,
-        googleNews: stockData.googleNews,
-        yahooNews: stockData.yahooNews,
-        bloombergNews: stockData.bloombergNews
-      }).catch(err => console.error('[AI Analysis] Failed:', err));
 
       // Always fetch SPY and QQQ for comparison (unless the selected stock is SPY or QQQ)
       const benchmarkCodes = ['SPY', 'QQQ'].filter(code => code !== stockCode);
@@ -875,7 +879,13 @@ export default function StockAnalysisDashboard() {
 
               <SentimentSection sentiment={selectedStock.sentiment} loading={loading} />
 
-              <AINewsSummary analysis={aiNewsAnalysis} loading={aiAnalysisLoading} />
+              <AINewsSummary
+                analysis={aiNewsAnalysis}
+                loading={aiAnalysisLoading}
+                onAnalyze={handleAnalyzeNews}
+                hasNews={news.length > 0 || googleNews.length > 0 || yahooNews.length > 0 || bloombergNews.length > 0}
+                symbol={selectedStock.code}
+              />
 
               <NewsSection newsApiNews={news} googleNews={googleNews} yahooNews={yahooNews} bloombergNews={bloombergNews} loading={loading} symbol={selectedStock.code} />
               </TabPanel>

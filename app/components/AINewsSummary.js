@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { TrendingUp, TrendingDown, Minus, AlertCircle, Lightbulb, Target, Clock, Calendar, Award, AlertTriangle } from 'lucide-react';
+import { TrendingUp, TrendingDown, Minus, AlertCircle, Lightbulb, Target, Clock, Calendar, Award, AlertTriangle, Sparkles } from 'lucide-react';
 
 /**
  * AINewsSummary Component
@@ -10,8 +10,11 @@ import { TrendingUp, TrendingDown, Minus, AlertCircle, Lightbulb, Target, Clock,
  * Props:
  * - analysis: AI analysis object from /api/analyze-news
  * - loading: boolean indicating if analysis is being generated
+ * - onAnalyze: function to trigger manual analysis
+ * - hasNews: boolean indicating if news data is available
+ * - symbol: stock symbol
  */
-export function AINewsSummary({ analysis, loading }) {
+export function AINewsSummary({ analysis, loading, onAnalyze, hasNews, symbol }) {
   if (loading) {
     return (
       <div className="bg-gradient-to-br from-purple-900/40 to-blue-900/40 rounded-xl shadow-xl p-6 border border-purple-500/30 mb-6">
@@ -29,8 +32,50 @@ export function AINewsSummary({ analysis, loading }) {
     );
   }
 
+  // Show button to trigger analysis when no analysis exists yet
   if (!analysis) {
-    return null;
+    return (
+      <div className="bg-gradient-to-br from-purple-900/40 to-blue-900/40 rounded-xl shadow-xl p-6 border border-purple-500/30 mb-6">
+        <div className="flex items-center justify-between flex-wrap gap-4">
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-purple-500/20 rounded-lg">
+              <Sparkles className="text-purple-400" size={24} />
+            </div>
+            <div>
+              <h3 className="text-xl font-bold text-white">AI News Analysis</h3>
+              <p className="text-sm text-gray-400">
+                Get AI-powered insights on market impact, sentiment, and recommendations
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={onAnalyze}
+            disabled={!hasNews}
+            className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
+              hasNews
+                ? 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
+                : 'bg-gray-700 text-gray-400 cursor-not-allowed'
+            }`}
+          >
+            <Sparkles size={20} />
+            {hasNews ? `Analyze ${symbol} News with AI` : 'No News Available'}
+          </button>
+        </div>
+
+        {hasNews && (
+          <div className="mt-4 p-3 bg-blue-900/20 rounded-lg border border-blue-500/30">
+            <p className="text-xs text-gray-300 flex items-start gap-2">
+              <Lightbulb size={16} className="text-blue-400 mt-0.5 flex-shrink-0" />
+              <span>
+                Click the button above to generate a comprehensive AI analysis including sentiment,
+                market expectations, short/long-term impact, risks, opportunities, and recommendations.
+              </span>
+            </p>
+          </div>
+        )}
+      </div>
+    );
   }
 
   // Helper to get sentiment color and icon
