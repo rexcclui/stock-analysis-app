@@ -12,6 +12,7 @@ import { MovingAverageCrossoverAnalysis } from "./HistoricalPerformance/CycleAna
 import { FourierAnalysis } from "./HistoricalPerformance/CycleAnalysis/FourierAnalysis";
 import { SupportResistanceAnalysis } from "./HistoricalPerformance/CycleAnalysis/SupportResistanceAnalysis";
 import { StockCorrelationSection } from "./HistoricalPerformance/StockCorrelation/StockCorrelationSection";
+import RelativeVolumeMatrix from "./HistoricalPerformance/RelativeVolumeMatrix";
 
 export function HistoricalPerformanceCheck({ stockCode }) {
   // Default expanded so the Historical Data Analysis section is open on initial render
@@ -521,7 +522,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
                 { value: "peak-trough", label: "Peak-to-Trough Cycles" },
                 { value: "ma-crossover", label: "Moving Average Crossovers" },
                 { value: "fourier", label: "Fourier/Spectral Analysis" },
-                { value: "support-resistance", label: "Support/Resistance Levels" }
+                { value: "support-resistance", label: "Support/Resistance Levels" },
+                { value: "relative-volume-matrix", label: "Relative Volume Matrix" }
               ].map(option => (
                 <label
                   key={option.value}
@@ -566,7 +568,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
               { value: "peak-trough", label: "Peak-to-Trough Cycles" },
               { value: "ma-crossover", label: "Moving Average Crossovers" },
               { value: "fourier", label: "Fourier/Spectral Analysis" },
-              { value: "support-resistance", label: "Support/Resistance Levels" }
+              { value: "support-resistance", label: "Support/Resistance Levels" },
+              { value: "relative-volume-matrix", label: "Relative Volume Matrix" }
             ].find(option => option.value === selectedOption)?.label}
           </h3>
         </div>
@@ -862,6 +865,11 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {/* Stock Correlation Analysis */}
       {selectedOption === "stock-correlation" && stockCode && (
         <StockCorrelationSection symbol={stockCode} />
+      )}
+
+      {/* Relative Volume Matrix */}
+      {selectedOption === "relative-volume-matrix" && stockCode && (
+        <RelativeVolumeMatrix symbol={stockCode} />
       )}
 
       {/* No Results */}
