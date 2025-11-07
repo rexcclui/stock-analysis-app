@@ -828,7 +828,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {selectedOptions.has("top10") && trends.length > 0 && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-2xl font-bold" style={{ color: modeColors["top10"] }}>Top 30 Up/Down Consecutive Daily Change</h3>
+            <h3 className="text-3xl font-bold" style={{ color: modeColors["top10"] }}>Top 30 Up/Down Consecutive Daily Change</h3>
             <button
               onClick={() => hideMode("top10")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -847,7 +847,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {selectedOptions.has("bigmoves") && bigMoves.length > 0 && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-2xl font-bold" style={{ color: modeColors["bigmoves"] }}>Big Single Day Up/Down</h3>
+            <h3 className="text-3xl font-bold" style={{ color: modeColors["bigmoves"] }}>Big Single Day Up/Down</h3>
             <button
               onClick={() => hideMode("bigmoves")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -866,7 +866,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {selectedOptions.has("spycorr") && spyCorrelations.length > 0 && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-2xl font-bold" style={{ color: modeColors["spycorr"] }}>Top 30 Up/Down Daily SPY Change</h3>
+            <h3 className="text-3xl font-bold" style={{ color: modeColors["spycorr"] }}>Top 30 Up/Down Daily SPY Change</h3>
             <button
               onClick={() => hideMode("spycorr")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -885,7 +885,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {selectedOptions.has("gapopen") && gapOpens.length > 0 && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-2xl font-bold" style={{ color: modeColors["gapopen"] }}>Up/Down Gap Open</h3>
+            <h3 className="text-3xl font-bold" style={{ color: modeColors["gapopen"] }}>Up/Down Gap Open</h3>
             <button
               onClick={() => hideMode("gapopen")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -904,7 +904,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {gapOpenStats && selectedOptions.has("gapopenstat") && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-2xl font-bold" style={{ color: modeColors["gapopenstat"] }}>Market Open Statistic</h3>
+            <h3 className="text-3xl font-bold" style={{ color: modeColors["gapopenstat"] }}>Market Open Statistic</h3>
             <button
               onClick={() => hideMode("gapopenstat")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -923,7 +923,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {intradayStats && selectedOptions.has("intradaystat") && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-2xl font-bold" style={{ color: modeColors["intradaystat"] }}>Intraday Statistic</h3>
+            <h3 className="text-3xl font-bold" style={{ color: modeColors["intradaystat"] }}>Intraday Statistic</h3>
             <button
               onClick={() => hideMode("intradaystat")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -942,7 +942,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {selectedOptions.has("ma-crossover") && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-2xl font-bold" style={{ color: modeColors["ma-crossover"] }}>Moving Average Crossovers</h3>
+            <h3 className="text-3xl font-bold" style={{ color: modeColors["ma-crossover"] }}>Moving Average Crossovers</h3>
             <button
               onClick={() => hideMode("ma-crossover")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -1001,7 +1001,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {cycleAnalysis && selectedOptions.has("seasonal") && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-2xl font-bold" style={{ color: modeColors["seasonal"] }}>Seasonal/Calendar Patterns</h3>
+            <h3 className="text-3xl font-bold" style={{ color: modeColors["seasonal"] }}>Seasonal/Calendar Patterns</h3>
             <button
               onClick={() => hideMode("seasonal")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -1019,7 +1019,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {cycleAnalysis && selectedOptions.has("peak-trough") && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-2xl font-bold" style={{ color: modeColors["peak-trough"] }}>Peak-to-Trough Cycles</h3>
+            <h3 className="text-3xl font-bold" style={{ color: modeColors["peak-trough"] }}>Peak-to-Trough Cycles</h3>
             <button
               onClick={() => hideMode("peak-trough")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -1053,7 +1053,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {cycleAnalysis && selectedOptions.has("fourier") && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-2xl font-bold" style={{ color: modeColors["fourier"] }}>Fourier/Spectral Analysis</h3>
+            <h3 className="text-3xl font-bold" style={{ color: modeColors["fourier"] }}>Fourier/Spectral Analysis</h3>
             <button
               onClick={() => hideMode("fourier")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -1071,7 +1071,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {cycleAnalysis && selectedOptions.has("support-resistance") && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-2xl font-bold" style={{ color: modeColors["support-resistance"] }}>Support/Resistance Levels</h3>
+            <h3 className="text-3xl font-bold" style={{ color: modeColors["support-resistance"] }}>Support/Resistance Levels</h3>
             <button
               onClick={() => hideMode("support-resistance")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -1090,7 +1090,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {selectedOptions.has("stock-correlation") && stockCode && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-2xl font-bold" style={{ color: modeColors["stock-correlation"] }}>Stock Correlation & Lead-Lag</h3>
+            <h3 className="text-3xl font-bold" style={{ color: modeColors["stock-correlation"] }}>Stock Correlation & Lead-Lag</h3>
             <button
               onClick={() => hideMode("stock-correlation")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -1109,7 +1109,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {selectedOptions.has("rvi-price") && historicalData.length > 0 && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-2xl font-bold" style={{ color: modeColors["rvi-price"] }}>Relative Volume Index vs Price Change</h3>
+            <h3 className="text-3xl font-bold" style={{ color: modeColors["rvi-price"] }}>Relative Volume Index vs Price Change</h3>
             <button
               onClick={() => hideMode("rvi-price")}
               className="text-gray-400 hover:text-red-400 transition-colors"
