@@ -86,17 +86,30 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
                 )}
 
                 {/* Rate Limit / Quota Exceeded */}
-                {(error.includes('429') || error.includes('quota') || error.includes('rate limit') || error.includes('RateLimitError')) && (
+                {(error.includes('429') || error.includes('quota') || error.includes('rate limit') || error.includes('RateLimitError') || error.includes('insufficient_quota')) && (
                   <div className="mt-3 p-3 bg-red-900/20 rounded border border-red-500/30">
                     <p className="text-xs text-gray-300 mb-2 font-semibold">⚠️ OpenAI API Quota Exceeded</p>
                     <p className="text-xs text-gray-400 mb-3">Your OpenAI account has run out of credits or hit the rate limit.</p>
+
+                    {error.includes('insufficient_quota') && (
+                      <div className="mb-3 p-2 bg-orange-900/20 rounded border border-orange-500/30">
+                        <p className="text-xs text-orange-300 font-semibold mb-2">📌 Already added credits but still seeing this?</p>
+                        <ul className="text-xs text-gray-400 space-y-1 ml-4 list-disc">
+                          <li><strong>Wait 2-5 minutes</strong> - Billing updates can take time to propagate</li>
+                          <li><strong>Check organization</strong> - Your API key might be from a different org than where you added credits</li>
+                          <li><strong>Verify the API key</strong> - Go to <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">API Keys</a> and check which organization owns your key</li>
+                          <li><strong>Check usage limits</strong> - You may have set a monthly budget limit that's been reached</li>
+                        </ul>
+                      </div>
+                    )}
+
                     <p className="text-xs text-gray-300 mb-2 font-semibold">Solutions:</p>
                     <ol className="text-xs text-gray-400 space-y-1 ml-4 list-decimal">
                       <li>Check your usage at <a href="https://platform.openai.com/usage" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">OpenAI Usage Dashboard</a></li>
                       <li>Add payment method at <a href="https://platform.openai.com/settings/organization/billing/overview" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Billing Settings</a></li>
-                      <li>If on free tier: Add $5-10 credit to continue</li>
-                      <li>Check if you have any billing limits set</li>
-                      <li>Wait a few minutes if you hit the rate limit (requests per minute)</li>
+                      <li>Verify API key organization at <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">API Keys page</a></li>
+                      <li>Check usage limits at <a href="https://platform.openai.com/settings/organization/limits" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Limits page</a></li>
+                      <li>If just added credits: <strong>Wait 5 minutes and try again</strong></li>
                     </ol>
                     <div className="mt-2 p-2 bg-yellow-900/20 rounded border border-yellow-500/30">
                       <p className="text-xs text-yellow-300">💡 <strong>Tip:</strong> OpenAI charges per token. Each analysis costs approximately $0.01-0.05 depending on the number of news articles.</p>
