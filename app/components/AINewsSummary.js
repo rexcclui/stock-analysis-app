@@ -68,9 +68,11 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
           <div className="mt-4 p-4 bg-red-900/30 rounded-lg border border-red-500/50">
             <div className="flex items-start gap-3">
               <AlertCircle className="text-red-400 flex-shrink-0 mt-0.5" size={20} />
-              <div>
+              <div className="flex-1">
                 <p className="text-red-400 font-semibold mb-1">Analysis Failed</p>
                 <p className="text-gray-300 text-sm">{error}</p>
+
+                {/* API Key not configured */}
                 {error.includes('OPENAI_API_KEY') && (
                   <div className="mt-3 p-3 bg-red-900/20 rounded border border-red-500/30">
                     <p className="text-xs text-gray-300 mb-2 font-semibold">How to fix:</p>
@@ -80,6 +82,25 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
                       <li>Add: <code className="bg-gray-800 px-1 rounded">OPENAI_API_KEY=your_key_here</code></li>
                       <li>Restart the development server</li>
                     </ol>
+                  </div>
+                )}
+
+                {/* Rate Limit / Quota Exceeded */}
+                {(error.includes('429') || error.includes('quota') || error.includes('rate limit') || error.includes('RateLimitError')) && (
+                  <div className="mt-3 p-3 bg-red-900/20 rounded border border-red-500/30">
+                    <p className="text-xs text-gray-300 mb-2 font-semibold">⚠️ OpenAI API Quota Exceeded</p>
+                    <p className="text-xs text-gray-400 mb-3">Your OpenAI account has run out of credits or hit the rate limit.</p>
+                    <p className="text-xs text-gray-300 mb-2 font-semibold">Solutions:</p>
+                    <ol className="text-xs text-gray-400 space-y-1 ml-4 list-decimal">
+                      <li>Check your usage at <a href="https://platform.openai.com/usage" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">OpenAI Usage Dashboard</a></li>
+                      <li>Add payment method at <a href="https://platform.openai.com/settings/organization/billing/overview" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">Billing Settings</a></li>
+                      <li>If on free tier: Add $5-10 credit to continue</li>
+                      <li>Check if you have any billing limits set</li>
+                      <li>Wait a few minutes if you hit the rate limit (requests per minute)</li>
+                    </ol>
+                    <div className="mt-2 p-2 bg-yellow-900/20 rounded border border-yellow-500/30">
+                      <p className="text-xs text-yellow-300">💡 <strong>Tip:</strong> OpenAI charges per token. Each analysis costs approximately $0.01-0.05 depending on the number of news articles.</p>
+                    </div>
                   </div>
                 )}
               </div>

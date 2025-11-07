@@ -153,10 +153,24 @@ Provide ONLY the JSON response, no additional text.`;
 
   } catch (error) {
     console.error('[AI News Analysis] Error:', error);
+
+    // Check for specific OpenAI errors
+    const errorMessage = error.message || 'Failed to analyze news';
+    const statusCode = error.status || 500;
+
+    // For rate limit errors, return more specific message
+    if (error.status === 429 || errorMessage.includes('quota') || errorMessage.includes('rate limit')) {
+      return NextResponse.json({
+        error: `OpenAI API Error: ${errorMessage}`,
+        type: 'rate_limit',
+        details: error.message
+      }, { status: 429 });
+    }
+
     return NextResponse.json({
-      error: 'Failed to analyze news',
+      error: errorMessage,
       details: error.message
-    }, { status: 500 });
+    }, { status: statusCode });
   }
 }
 
