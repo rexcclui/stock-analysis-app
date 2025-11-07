@@ -144,14 +144,25 @@ export default function RVIPriceTable({ historicalData }) {
       {/* Control for N days */}
       <div className="flex items-center gap-4">
         <label className="text-gray-300 font-medium">Period Length (N days):</label>
-        <input
-          type="number"
-          min="1"
-          max="60"
-          value={nDays}
-          onChange={(e) => setNDays(Math.max(1, parseInt(e.target.value) || 1))}
-          className="bg-gray-700 text-white px-3 py-2 rounded border border-gray-600 w-24"
-        />
+        <div className="flex items-center gap-3 flex-1 max-w-md">
+          <span className="text-gray-400 text-sm">3</span>
+          <input
+            type="range"
+            min="3"
+            max="60"
+            step="1"
+            value={nDays}
+            onChange={(e) => setNDays(parseInt(e.target.value))}
+            className="flex-1 h-2 bg-gray-700 rounded-lg appearance-none cursor-pointer slider"
+            style={{
+              background: `linear-gradient(to right, #10b981 0%, #10b981 ${((nDays - 3) / (60 - 3)) * 100}%, #374151 ${((nDays - 3) / (60 - 3)) * 100}%, #374151 100%)`
+            }}
+          />
+          <span className="text-gray-400 text-sm">60</span>
+          <span className="text-green-400 font-bold text-lg min-w-[3rem] text-center">
+            {nDays}d
+          </span>
+        </div>
         <span className="text-gray-400 text-sm">
           ({processedData.length} periods available)
         </span>
