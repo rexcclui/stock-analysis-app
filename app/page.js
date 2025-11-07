@@ -12,6 +12,7 @@ import { StockResultCard } from './components/StockResultCard';
 import { HistoricalPerformanceCheck } from './components/HistoricalPerformanceCheck';
 import { LoadingState } from './components/LoadingState';
 import { Tabs, TabPanel } from './components/Tabs';
+import { AINewsSummary } from './components/AINewsSummary';
 
 // Helper function to fetch with timeout
 const fetchWithTimeout = (url, timeout = 10000) => {
@@ -166,6 +167,8 @@ export default function StockAnalysisDashboard() {
   const [googleNews, setGoogleNews] = useState([]);
   const [yahooNews, setYahooNews] = useState([]);
   const [bloombergNews, setBloombergNews] = useState([]);
+  const [aiNewsAnalysis, setAiNewsAnalysis] = useState(null);
+  const [aiAnalysisLoading, setAiAnalysisLoading] = useState(false);
   // Detailed search history entries with day change for table (bounded by 3 rows dynamic columns)
   const [searchHistoryStocks, setSearchHistoryStocks] = useState([]); // array of { code, dayChange }
   const HISTORY_COL_WIDTH = 140; // approximate width for each cell
@@ -425,6 +428,40 @@ export default function StockAnalysisDashboard() {
     localStorage.setItem('stockSearchHistory', JSON.stringify(updated));
   };
 
+  // Fetch AI news analysis
+  const fetchAINewsAnalysis = async (symbol, newsData) => {
+    try {
+      setAiAnalysisLoading(true);
+      console.log(`[AI Analysis] Fetching analysis for ${symbol}`);
+
+      const response = await fetch('/api/analyze-news', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol,
+          newsApiNews: newsData.newsApiNews || [],
+          googleNews: newsData.googleNews || [],
+          yahooNews: newsData.yahooNews || [],
+          bloombergNews: newsData.bloombergNews || []
+        })
+      });
+
+      if (response.ok) {
+        const analysis = await response.json();
+        console.log('[AI Analysis] Analysis received:', analysis);
+        setAiNewsAnalysis(analysis);
+      } else {
+        console.error('[AI Analysis] API error:', response.status);
+        setAiNewsAnalysis(null);
+      }
+    } catch (error) {
+      console.error('[AI Analysis] Fetch error:', error);
+      setAiNewsAnalysis(null);
+    } finally {
+      setAiAnalysisLoading(false);
+    }
+  };
+
   const handleSearch = async (overrideCode) => {
     setLoading(true);
     const stockCode = (overrideCode || searchInput).toUpperCase();
@@ -436,6 +473,7 @@ export default function StockAnalysisDashboard() {
     setGoogleNews([]);
     setYahooNews([]);
     setBloombergNews([]);
+    setAiNewsAnalysis(null);
     setComparisonStocks([]);
     setChartCompareStocks([]);
     
@@ -461,7 +499,15 @@ export default function StockAnalysisDashboard() {
       setBloombergNews(stockData.bloombergNews);
       setComparisonType(stockData.comparisonType || 'industry');
       addToSearchHistory(stockCode);
-      
+
+      // Fetch AI news analysis (don't await - let it load in background)
+      fetchAINewsAnalysis(stockCode, {
+        newsApiNews: stockData.news,
+        googleNews: stockData.googleNews,
+        yahooNews: stockData.yahooNews,
+        bloombergNews: stockData.bloombergNews
+      }).catch(err => console.error('[AI Analysis] Failed:', err));
+
       // Always fetch SPY and QQQ for comparison (unless the selected stock is SPY or QQQ)
       const benchmarkCodes = ['SPY', 'QQQ'].filter(code => code !== stockCode);
       const benchmarkPromises = benchmarkCodes.map(code => fetchCompleteStockData(code, apiCounts));
@@ -828,6 +874,8 @@ export default function StockAnalysisDashboard() {
               />
 
               <SentimentSection sentiment={selectedStock.sentiment} loading={loading} />
+
+              <AINewsSummary analysis={aiNewsAnalysis} loading={aiAnalysisLoading} />
 
               <NewsSection newsApiNews={news} googleNews={googleNews} yahooNews={yahooNews} bloombergNews={bloombergNews} loading={loading} symbol={selectedStock.code} />
               </TabPanel>

@@ -2,6 +2,21 @@ This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-
 
 ## Features
 
+### AI-Powered News Analysis
+This application now includes an AI-powered news analysis feature that uses Anthropic's Claude to analyze news articles from multiple sources (NewsAPI, Google News, Yahoo Finance, and Bloomberg) and generate comprehensive summaries including:
+
+- **Overall Sentiment Analysis**: Positive, negative, neutral, or mixed sentiment with confidence level
+- **Impact Analysis**: Detailed breakdown of positive and negative impacts
+- **Market Expectation Alignment**: Whether the news exceeds, meets, or falls below market expectations
+- **Short-term Impact**: Expected market reaction in days to weeks
+- **Long-term Impact**: Expected fundamental impact in months to years
+- **Key Risks & Opportunities**: Identified risks and opportunities based on the news
+- **AI Analyst Recommendation**: Buy, sell, or hold recommendation with reasoning
+
+**Requirements:**
+- Anthropic API key (configure in `.env.local` as `ANTHROPIC_API_KEY`)
+- News data from at least one source (NewsAPI, Google News, Yahoo Finance, or Bloomberg)
+
 ### Page Load Tracking
 This application tracks page loads from each IP address. Every time someone visits the main page (`/`), it's recorded. You can view real-time statistics about unique visitors and page load counts.
 
@@ -13,11 +28,29 @@ For detailed documentation, see [IP_TRACKING.md](./IP_TRACKING.md)
 
 ## Getting Started
 
+### Environment Setup
+
+1. **Copy the environment template:**
+   ```bash
+   cp .env.local.example .env.local
+   ```
+
+2. **Add your API keys to `.env.local`:**
+   - `ALPHA_VANTAGE_KEY`: Get from [Alpha Vantage](https://www.alphavantage.co/support/#api-key)
+   - `FMP_KEY`: Get from [Financial Modeling Prep](https://site.financialmodelingprep.com/developer/docs/)
+   - `NEWS_API_KEY`: Get from [NewsAPI](https://newsapi.org/register)
+   - `ANTHROPIC_API_KEY`: Get from [Anthropic Console](https://console.anthropic.com/) (required for AI news analysis)
+
+3. **Install dependencies:**
+   ```bash
+   npm install
+   ```
+
 ### Repository branches
 
 The active development branch in this repository is now `main`. If you previously looked for a branch named `work`, use `git checkout main` to access the latest changes.
 
-First, run the development server:
+### Run the Development Server
 
 ```bash
 npm run dev
