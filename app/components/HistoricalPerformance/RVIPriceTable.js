@@ -58,35 +58,36 @@ export default function RVIPriceTable({ historicalData }) {
     const rviData = calculateRVI(sortedData.reverse(), 14);
     rviData.reverse(); // Back to newest first
 
-    // Create periods
+    // Create periods - always show 20 periods
     const periods = [];
-    const numPeriods = Math.floor(rviData.length / nDays);
+    const maxPeriodCount = 20;
 
-    for (let i = 0; i < numPeriods; i++) {
+    for (let i = 0; i < maxPeriodCount; i++) {
       const startIdx = i * nDays;
       const endIdx = Math.min(startIdx + nDays, rviData.length);
 
-      if (endIdx - startIdx < nDays && i > 0) break; // Skip incomplete periods except the first
+      // Only create period if we have enough data
+      if (startIdx < rviData.length) {
+        const periodData = rviData.slice(startIdx, endIdx);
 
-      const periodData = rviData.slice(startIdx, endIdx);
+        if (periodData.length > 0) {
+          const startPrice = periodData[periodData.length - 1].close;
+          const endPrice = periodData[0].close;
+          const priceChange = ((endPrice - startPrice) / startPrice) * 100;
 
-      if (periodData.length > 0) {
-        const startPrice = periodData[periodData.length - 1].close;
-        const endPrice = periodData[0].close;
-        const priceChange = ((endPrice - startPrice) / startPrice) * 100;
+          // Average RVI for the period
+          const avgRVI = periodData.reduce((sum, d) => sum + d.rvi, 0) / periodData.length;
 
-        // Average RVI for the period
-        const avgRVI = periodData.reduce((sum, d) => sum + d.rvi, 0) / periodData.length;
-
-        periods.push({
-          periodNum: i,
-          startDate: periodData[periodData.length - 1].date,
-          endDate: periodData[0].date,
-          priceChange: priceChange,
-          rvi: avgRVI,
-          startPrice: startPrice,
-          endPrice: endPrice
-        });
+          periods.push({
+            periodNum: i,
+            startDate: periodData[periodData.length - 1].date,
+            endDate: periodData[0].date,
+            priceChange: priceChange,
+            rvi: avgRVI,
+            startPrice: startPrice,
+            endPrice: endPrice
+          });
+        }
       }
     }
 
@@ -154,7 +155,7 @@ export default function RVIPriceTable({ historicalData }) {
     return <div className="text-gray-400">No data available for analysis.</div>;
   }
 
-  const maxPeriods = Math.max(...Object.values(groupedData).map(arr => arr.length));
+  const maxPeriods = 20; // Always show 20 columns
 
   return (
     <div className="space-y-4">
