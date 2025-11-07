@@ -184,12 +184,8 @@ export default function RVIPriceTable({ historicalData }) {
               </th>
               {[...Array(maxPeriods)].map((_, idx) => (
                 <th key={idx} className="border border-gray-600 px-4 py-3 text-center font-semibold min-w-[200px]">
-                  <div className="text-xs text-gray-300 mb-1">Period {idx + 1}</div>
-                  <div className="text-xs text-gray-400">
-                    {idx === 0
-                      ? `Today - ${nDays}d ago`
-                      : `${idx * nDays}d - ${(idx + 1) * nDays}d ago`
-                    }
+                  <div className="text-base font-bold text-gray-200">
+                    -{(idx + 1) * nDays}d
                   </div>
                 </th>
               ))}
