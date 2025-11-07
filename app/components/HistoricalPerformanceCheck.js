@@ -18,6 +18,23 @@ export function HistoricalPerformanceCheck({ stockCode }) {
   // Default expanded so the Historical Data Analysis section is open on initial render
   const [isExpanded, setIsExpanded] = useState(true);
   const [selectedOptions, setSelectedOptions] = useState(new Set(["top10"]));
+
+  // Color mapping for each analysis type
+  const modeColors = {
+    "top10": "text-orange-400",
+    "bigmoves": "text-red-400",
+    "spycorr": "text-purple-400",
+    "gapopen": "text-cyan-400",
+    "gapopenstat": "text-teal-400",
+    "intradaystat": "text-lime-400",
+    "rvi-price": "text-pink-400",
+    "stock-correlation": "text-indigo-400",
+    "seasonal": "text-yellow-400",
+    "peak-trough": "text-green-400",
+    "ma-crossover": "text-blue-400",
+    "fourier": "text-violet-400",
+    "support-resistance": "text-rose-400"
+  };
   const [trendType, setTrendType] = useState("up");
   const [trends, setTrends] = useState([]);
   const [bigMoves, setBigMoves] = useState([]);
@@ -586,7 +603,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
               ].map(option => (
                 <label
                   key={option.value}
-                  className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer border transition-all ${selectedOptions.has(option.value) ? 'bg-blue-700 border-blue-400 text-white' : 'bg-gray-700 border-gray-600 text-gray-300'}`}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-lg cursor-pointer border transition-all ${selectedOptions.has(option.value) ? 'bg-gray-700 border-gray-500' : 'bg-gray-700 border-gray-600'}`}
                   style={{ width: '100%' }}
                 >
                   <input
@@ -605,7 +622,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
                     }}
                     className="form-checkbox accent-blue-500 mr-2"
                   />
-                  {option.label}
+                  <span className={modeColors[option.value]}>{option.label}</span>
                 </label>
               ))}
             </div>
@@ -811,7 +828,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {selectedOptions.has("top10") && trends.length > 0 && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-2xl font-bold text-yellow-400">Top 30 Up/Down Consecutive Daily Change</h3>
+            <h3 className="text-2xl font-bold text-orange-400">Top 30 Up/Down Consecutive Daily Change</h3>
             <button
               onClick={() => hideMode("top10")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -830,7 +847,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {selectedOptions.has("bigmoves") && bigMoves.length > 0 && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-2xl font-bold text-yellow-400">Big Single Day Up/Down</h3>
+            <h3 className="text-2xl font-bold text-red-400">Big Single Day Up/Down</h3>
             <button
               onClick={() => hideMode("bigmoves")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -849,7 +866,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {selectedOptions.has("spycorr") && spyCorrelations.length > 0 && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-2xl font-bold text-yellow-400">Top 30 Up/Down Daily SPY Change</h3>
+            <h3 className="text-2xl font-bold text-purple-400">Top 30 Up/Down Daily SPY Change</h3>
             <button
               onClick={() => hideMode("spycorr")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -868,7 +885,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {selectedOptions.has("gapopen") && gapOpens.length > 0 && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-2xl font-bold text-yellow-400">Up/Down Gap Open</h3>
+            <h3 className="text-2xl font-bold text-cyan-400">Up/Down Gap Open</h3>
             <button
               onClick={() => hideMode("gapopen")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -887,7 +904,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {gapOpenStats && selectedOptions.has("gapopenstat") && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-2xl font-bold text-yellow-400">Market Open Statistic</h3>
+            <h3 className="text-2xl font-bold text-teal-400">Market Open Statistic</h3>
             <button
               onClick={() => hideMode("gapopenstat")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -906,7 +923,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {intradayStats && selectedOptions.has("intradaystat") && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-2xl font-bold text-yellow-400">Intraday Statistic</h3>
+            <h3 className="text-2xl font-bold text-lime-400">Intraday Statistic</h3>
             <button
               onClick={() => hideMode("intradaystat")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -925,7 +942,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {selectedOptions.has("ma-crossover") && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-2xl font-bold text-yellow-400">Moving Average Crossovers</h3>
+            <h3 className="text-2xl font-bold text-blue-400">Moving Average Crossovers</h3>
             <button
               onClick={() => hideMode("ma-crossover")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -1002,7 +1019,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {cycleAnalysis && selectedOptions.has("peak-trough") && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-2xl font-bold text-yellow-400">Peak-to-Trough Cycles</h3>
+            <h3 className="text-2xl font-bold text-green-400">Peak-to-Trough Cycles</h3>
             <button
               onClick={() => hideMode("peak-trough")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -1036,7 +1053,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {cycleAnalysis && selectedOptions.has("fourier") && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-2xl font-bold text-yellow-400">Fourier/Spectral Analysis</h3>
+            <h3 className="text-2xl font-bold text-violet-400">Fourier/Spectral Analysis</h3>
             <button
               onClick={() => hideMode("fourier")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -1054,7 +1071,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {cycleAnalysis && selectedOptions.has("support-resistance") && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-2xl font-bold text-yellow-400">Support/Resistance Levels</h3>
+            <h3 className="text-2xl font-bold text-rose-400">Support/Resistance Levels</h3>
             <button
               onClick={() => hideMode("support-resistance")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -1073,7 +1090,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {selectedOptions.has("stock-correlation") && stockCode && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-2xl font-bold text-yellow-400">Stock Correlation & Lead-Lag</h3>
+            <h3 className="text-2xl font-bold text-indigo-400">Stock Correlation & Lead-Lag</h3>
             <button
               onClick={() => hideMode("stock-correlation")}
               className="text-gray-400 hover:text-red-400 transition-colors"
@@ -1092,7 +1109,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       {selectedOptions.has("rvi-price") && historicalData.length > 0 && (
         <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
           <div className="flex items-center justify-between px-4 py-5 bg-gray-700 border-b border-gray-600">
-            <h3 className="text-2xl font-bold text-yellow-400">Relative Volume Index vs Price Change</h3>
+            <h3 className="text-2xl font-bold text-pink-400">Relative Volume Index vs Price Change</h3>
             <button
               onClick={() => hideMode("rvi-price")}
               className="text-gray-400 hover:text-red-400 transition-colors"
