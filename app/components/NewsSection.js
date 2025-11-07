@@ -58,6 +58,7 @@ export function NewsSection({ newsApiNews = [], googleNews = [], yahooNews = [],
   });
   
   const newsLinks = symbol ? [
+    { name: 'Google Trends', url: `https://trends.google.com/trends/explore?q=${encodeURIComponent(symbol)}`, color: 'bg-red-600 hover:bg-red-700', logo: 'https://www.google.com/favicon.ico' },
     { name: 'Google', url: `https://news.google.com/search?q=${encodeURIComponent(symbol + ' stock')}`, color: 'bg-blue-600 hover:bg-blue-700', logo: 'https://www.google.com/favicon.ico' },
     { name: 'Yahoo Finance', url: `https://finance.yahoo.com/quote/${symbol}/news`, color: 'bg-purple-600 hover:bg-purple-700', logo: 'https://finance.yahoo.com/favicon.ico' },
     { name: 'MarketWatch', url: `https://www.marketwatch.com/investing/stock/${symbol.toLowerCase()}`, color: 'bg-green-600 hover:bg-green-700', logo: 'https://www.marketwatch.com/favicon.ico' },
