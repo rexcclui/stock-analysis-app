@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { TrendingUp, TrendingDown, ChevronDown, ChevronUp, BarChart3 } from "lucide-react";
+import { TrendingUp, TrendingDown, ChevronDown, ChevronUp, BarChart3, X } from "lucide-react";
 import { TrendsTable } from "./HistoricalPerformance/TrendsTable";
 import { BigMovesTable } from "./HistoricalPerformance/BigMovesTable";
 import { SpyCorrelationTable } from "./HistoricalPerformance/SpyCorrelationTable";
@@ -389,6 +389,13 @@ export function HistoricalPerformanceCheck({ stockCode }) {
     } finally {
       setLoadingRelatedStocks(false);
     }
+  };
+
+  // Helper function to hide a mode (uncheck and hide results)
+  const hideMode = (modeValue) => {
+    const newSelectedOptions = new Set(selectedOptions);
+    newSelectedOptions.delete(modeValue);
+    setSelectedOptions(newSelectedOptions);
   };
 
   // Auto-fetch related stocks when stock changes
@@ -801,113 +808,303 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       )}
 
       {/* Trends Table */}
-      <TrendsTable trends={trends} />
-
-      {/* Big Moves Table */}
-      <BigMovesTable bigMoves={bigMoves} />
-
-      {/* SPY Correlation Table */}
-      <SpyCorrelationTable correlations={spyCorrelations} />
-
-      {/* Gap Open Table */}
-      <GapOpenTable gapOpens={gapOpens} />
-
-      {/* Gap Open Statistics */}
-      {gapOpenStats && selectedOptions.has("gapopenstat") && (
-        <StatisticsTable statistics={gapOpenStats} title="Market Open %" />
-      )}
-
-      {/* Intraday Statistics */}
-      {intradayStats && selectedOptions.has("intradaystat") && (
-        <StatisticsTable statistics={intradayStats} title="Intraday Change %" />
-      )}
-
-      {/* Moving Average Controls - Only for ma-crossover */}
-      {selectedOptions.has("ma-crossover") && (
-        <div className="mb-6 p-4 rounded-lg border" style={{ backgroundColor: 'rgba(250, 204, 21, 0.2)', borderColor: '#facc15' }}>
-          <div className="flex items-center">
-            <div className="flex-1" style={{ marginRight: '0.3rem' }}>
-              <div className="flex justify-between items-center mb-2">
-                <label className="text-sm font-medium text-gray-300">Short MA</label>
-                <span className="text-base font-bold" style={{ color: '#22c55e' }}>{maShort}D</span>
-              </div>
-              <input
-                type="range"
-                min="5"
-                max="100"
-                step="5"
-                value={maShort}
-                onChange={(e) => setMaShort(parseInt(e.target.value))}
-                className="w-full h-2 rounded-lg appearance-none cursor-pointer ma-range"
-                style={{ backgroundColor: '#facc15', accentColor: '#facc15' }}
-              />
-              <div className="flex justify-between text-xs text-gray-400 mt-1">
-                <span>5</span>
-                <span>100</span>
-              </div>
-            </div>
-            <div className="flex-1" style={{ marginLeft: '0.3rem' }}>
-              <div className="flex justify-between items-center mb-2">
-                <label className="text-sm font-medium text-gray-300">Long MA</label>
-                <span className="text-base font-bold" style={{ color: '#22c55e' }}>{maLong}D</span>
-              </div>
-              <input
-                type="range"
-                min="50"
-                max="300"
-                step="10"
-                value={maLong}
-                onChange={(e) => setMaLong(parseInt(e.target.value))}
-                className="w-full h-2 rounded-lg appearance-none cursor-pointer ma-range"
-                style={{ backgroundColor: '#facc15', accentColor: '#facc15' }}
-              />
-              <div className="flex justify-between text-xs text-gray-400 mt-1">
-                <span>50</span>
-                <span>300</span>
-              </div>
-            </div>
+      {selectedOptions.has("top10") && trends.length > 0 && (
+        <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-lg font-semibold text-white">Top 30 Up/Down Consecutive Daily Change</h3>
+            <button
+              onClick={() => hideMode("top10")}
+              className="text-gray-400 hover:text-red-400 transition-colors"
+              title="Hide this section"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div className="p-4">
+            <TrendsTable trends={trends} />
           </div>
         </div>
       )}
 
+      {/* Big Moves Table */}
+      {selectedOptions.has("bigmoves") && bigMoves.length > 0 && (
+        <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-lg font-semibold text-white">Big Single Day Up/Down</h3>
+            <button
+              onClick={() => hideMode("bigmoves")}
+              className="text-gray-400 hover:text-red-400 transition-colors"
+              title="Hide this section"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div className="p-4">
+            <BigMovesTable bigMoves={bigMoves} />
+          </div>
+        </div>
+      )}
+
+      {/* SPY Correlation Table */}
+      {selectedOptions.has("spycorr") && spyCorrelations.length > 0 && (
+        <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-lg font-semibold text-white">Top 30 Up/Down Daily SPY Change</h3>
+            <button
+              onClick={() => hideMode("spycorr")}
+              className="text-gray-400 hover:text-red-400 transition-colors"
+              title="Hide this section"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div className="p-4">
+            <SpyCorrelationTable correlations={spyCorrelations} />
+          </div>
+        </div>
+      )}
+
+      {/* Gap Open Table */}
+      {selectedOptions.has("gapopen") && gapOpens.length > 0 && (
+        <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-lg font-semibold text-white">Up/Down Gap Open</h3>
+            <button
+              onClick={() => hideMode("gapopen")}
+              className="text-gray-400 hover:text-red-400 transition-colors"
+              title="Hide this section"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div className="p-4">
+            <GapOpenTable gapOpens={gapOpens} />
+          </div>
+        </div>
+      )}
+
+      {/* Gap Open Statistics */}
+      {gapOpenStats && selectedOptions.has("gapopenstat") && (
+        <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-lg font-semibold text-white">Market Open Statistic</h3>
+            <button
+              onClick={() => hideMode("gapopenstat")}
+              className="text-gray-400 hover:text-red-400 transition-colors"
+              title="Hide this section"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div className="p-4">
+            <StatisticsTable statistics={gapOpenStats} title="Market Open %" />
+          </div>
+        </div>
+      )}
+
+      {/* Intraday Statistics */}
+      {intradayStats && selectedOptions.has("intradaystat") && (
+        <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-lg font-semibold text-white">Intraday Statistic</h3>
+            <button
+              onClick={() => hideMode("intradaystat")}
+              className="text-gray-400 hover:text-red-400 transition-colors"
+              title="Hide this section"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div className="p-4">
+            <StatisticsTable statistics={intradayStats} title="Intraday Change %" />
+          </div>
+        </div>
+      )}
+
+      {/* Moving Average Controls & Analysis - Only for ma-crossover */}
+      {selectedOptions.has("ma-crossover") && (
+        <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-lg font-semibold text-white">Moving Average Crossovers</h3>
+            <button
+              onClick={() => hideMode("ma-crossover")}
+              className="text-gray-400 hover:text-red-400 transition-colors"
+              title="Hide this section"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div className="p-4">
+            <div className="mb-6 p-4 rounded-lg border" style={{ backgroundColor: 'rgba(250, 204, 21, 0.2)', borderColor: '#facc15' }}>
+              <div className="flex items-center">
+                <div className="flex-1" style={{ marginRight: '0.3rem' }}>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-sm font-medium text-gray-300">Short MA</label>
+                    <span className="text-base font-bold" style={{ color: '#22c55e' }}>{maShort}D</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="5"
+                    max="100"
+                    step="5"
+                    value={maShort}
+                    onChange={(e) => setMaShort(parseInt(e.target.value))}
+                    className="w-full h-2 rounded-lg appearance-none cursor-pointer ma-range"
+                    style={{ backgroundColor: '#facc15', accentColor: '#facc15' }}
+                  />
+                  <div className="flex justify-between text-xs text-gray-400 mt-1">
+                    <span>5</span>
+                    <span>100</span>
+                  </div>
+                </div>
+                <div className="flex-1" style={{ marginLeft: '0.3rem' }}>
+                  <div className="flex justify-between items-center mb-2">
+                    <label className="text-sm font-medium text-gray-300">Long MA</label>
+                    <span className="text-base font-bold" style={{ color: '#22c55e' }}>{maLong}D</span>
+                  </div>
+                  <input
+                    type="range"
+                    min="50"
+                    max="300"
+                    step="10"
+                    value={maLong}
+                    onChange={(e) => setMaLong(parseInt(e.target.value))}
+                    className="w-full h-2 rounded-lg appearance-none cursor-pointer ma-range"
+                    style={{ backgroundColor: '#facc15', accentColor: '#facc15' }}
+                  />
+                  <div className="flex justify-between text-xs text-gray-400 mt-1">
+                    <span>50</span>
+                    <span>300</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
       {/* Cycle Analysis Results */}
       {cycleAnalysis && selectedOptions.has("seasonal") && (
-        <SeasonalAnalysis cycleAnalysis={cycleAnalysis} stockCode={stockCode} />
+        <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-lg font-semibold text-white">Seasonal/Calendar Patterns</h3>
+            <button
+              onClick={() => hideMode("seasonal")}
+              className="text-gray-400 hover:text-red-400 transition-colors"
+              title="Hide this section"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div className="p-4">
+            <SeasonalAnalysis cycleAnalysis={cycleAnalysis} stockCode={stockCode} />
+          </div>
+        </div>
       )}
 
       {cycleAnalysis && selectedOptions.has("peak-trough") && (
-        <PeakTroughAnalysis cycleAnalysis={cycleAnalysis} />
+        <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-lg font-semibold text-white">Peak-to-Trough Cycles</h3>
+            <button
+              onClick={() => hideMode("peak-trough")}
+              className="text-gray-400 hover:text-red-400 transition-colors"
+              title="Hide this section"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div className="p-4">
+            <PeakTroughAnalysis cycleAnalysis={cycleAnalysis} />
+          </div>
+        </div>
       )}
 
-      {cycleAnalysis && selectedOptions.has("ma-crossover") && (
-        <MovingAverageCrossoverAnalysis
-          cycleAnalysis={cycleAnalysis}
-          maShort={maShort}
-          maLong={maLong}
-          loading={loading}
-          onSimulate={{
-            stockCode,
-            onParametersSelect: applySimulationParameters
-          }}
-        />
+            {cycleAnalysis && (
+              <MovingAverageCrossoverAnalysis
+                cycleAnalysis={cycleAnalysis}
+                maShort={maShort}
+                maLong={maLong}
+                loading={loading}
+                onSimulate={{
+                  stockCode,
+                  onParametersSelect: applySimulationParameters
+                }}
+              />
+            )}
+          </div>
+        </div>
       )}
 
       {cycleAnalysis && selectedOptions.has("fourier") && (
-        <FourierAnalysis cycleAnalysis={cycleAnalysis} />
+        <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-lg font-semibold text-white">Fourier/Spectral Analysis</h3>
+            <button
+              onClick={() => hideMode("fourier")}
+              className="text-gray-400 hover:text-red-400 transition-colors"
+              title="Hide this section"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div className="p-4">
+            <FourierAnalysis cycleAnalysis={cycleAnalysis} />
+          </div>
+        </div>
       )}
 
       {cycleAnalysis && selectedOptions.has("support-resistance") && (
-        <SupportResistanceAnalysis cycleAnalysis={cycleAnalysis} />
+        <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-lg font-semibold text-white">Support/Resistance Levels</h3>
+            <button
+              onClick={() => hideMode("support-resistance")}
+              className="text-gray-400 hover:text-red-400 transition-colors"
+              title="Hide this section"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div className="p-4">
+            <SupportResistanceAnalysis cycleAnalysis={cycleAnalysis} />
+          </div>
+        </div>
       )}
 
       {/* Stock Correlation Analysis */}
       {selectedOptions.has("stock-correlation") && stockCode && (
-        <StockCorrelationSection symbol={stockCode} />
+        <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-lg font-semibold text-white">Stock Correlation & Lead-Lag</h3>
+            <button
+              onClick={() => hideMode("stock-correlation")}
+              className="text-gray-400 hover:text-red-400 transition-colors"
+              title="Hide this section"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div className="p-4">
+            <StockCorrelationSection symbol={stockCode} />
+          </div>
+        </div>
       )}
 
       {/* RVI vs Price Change Analysis */}
       {selectedOptions.has("rvi-price") && historicalData.length > 0 && (
-        <RVIPriceTable historicalData={historicalData} />
+        <div className="mb-6 bg-gray-750 rounded-lg border border-gray-600 overflow-hidden">
+          <div className="flex items-center justify-between px-4 py-3 bg-gray-700 border-b border-gray-600">
+            <h3 className="text-lg font-semibold text-white">Relative Volume Index vs Price Change</h3>
+            <button
+              onClick={() => hideMode("rvi-price")}
+              className="text-gray-400 hover:text-red-400 transition-colors"
+              title="Hide this section"
+            >
+              <X size={20} />
+            </button>
+          </div>
+          <div className="p-4">
+            <RVIPriceTable historicalData={historicalData} />
+          </div>
+        </div>
       )}
 
       {/* No Results */}
