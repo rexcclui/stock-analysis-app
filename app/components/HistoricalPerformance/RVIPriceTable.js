@@ -6,45 +6,6 @@ export default function RVIPriceTable({ historicalData }) {
   const [nDays, setNDays] = useState(10);
   const [hoveredCell, setHoveredCell] = useState(null);
 
-  // Calculate Relative Volume Index (RVI)
-  // RVI is similar to RSI but uses volume: measures volume strength on up vs down days
-  const calculateRVI = (data, period = 14) => {
-    if (!data || data.length < period + 1) return [];
-
-    const rviValues = [];
-
-    for (let i = period; i < data.length; i++) {
-      let upVolume = 0;
-      let downVolume = 0;
-
-      // Look back over the period
-      for (let j = 0; j < period; j++) {
-        const idx = i - j;
-        if (idx > 0) {
-          const priceChange = data[idx].close - data[idx - 1].close;
-          if (priceChange > 0) {
-            upVolume += data[idx].volume || 0;
-          } else if (priceChange < 0) {
-            downVolume += data[idx].volume || 0;
-          }
-        }
-      }
-
-      // Calculate RVI (0-100 scale)
-      const totalVolume = upVolume + downVolume;
-      const rvi = totalVolume > 0 ? (upVolume / totalVolume) * 100 : 50;
-
-      rviValues.push({
-        date: data[i].date,
-        rvi: rvi,
-        close: data[i].close,
-        volume: data[i].volume
-      });
-    }
-
-    return rviValues;
-  };
-
   // Process data into periods
   const processedData = useMemo(() => {
     if (!historicalData || historicalData.length === 0) return null;
@@ -54,38 +15,54 @@ export default function RVIPriceTable({ historicalData }) {
       new Date(b.date) - new Date(a.date)
     );
 
-    // Calculate RVI for all data points
-    const rviData = calculateRVI(sortedData.reverse(), 14);
-    rviData.reverse(); // Back to newest first
-
     // Create periods - always show 20 periods
     const periods = [];
     const maxPeriodCount = 20;
 
     for (let i = 0; i < maxPeriodCount; i++) {
       const startIdx = i * nDays;
-      const endIdx = Math.min(startIdx + nDays, rviData.length);
+      const endIdx = Math.min(startIdx + nDays, sortedData.length);
 
       // Only create period if we have enough data
-      if (startIdx < rviData.length) {
-        const periodData = rviData.slice(startIdx, endIdx);
+      if (startIdx < sortedData.length && endIdx > startIdx) {
+        const periodData = sortedData.slice(startIdx, endIdx);
 
         if (periodData.length > 0) {
           const startPrice = periodData[periodData.length - 1].close;
           const endPrice = periodData[0].close;
           const priceChange = ((endPrice - startPrice) / startPrice) * 100;
 
-          // Average RVI for the period
-          const avgRVI = periodData.reduce((sum, d) => sum + d.rvi, 0) / periodData.length;
+          // Calculate average volume for current period
+          const currentAvgVolume = periodData.reduce((sum, d) => sum + (d.volume || 0), 0) / periodData.length;
+
+          // Calculate average volume for previous 2 periods (2N days before current)
+          let rvi = 0;
+          const prevStartIdx = (i + 1) * nDays;
+          const prevEndIdx = Math.min(prevStartIdx + (2 * nDays), sortedData.length);
+
+          if (prevStartIdx < sortedData.length && prevEndIdx > prevStartIdx) {
+            const prevPeriodData = sortedData.slice(prevStartIdx, prevEndIdx);
+            if (prevPeriodData.length > 0) {
+              const prevAvgVolume = prevPeriodData.reduce((sum, d) => sum + (d.volume || 0), 0) / prevPeriodData.length;
+
+              // RVI = (Average Volume in current slot) / (Average volume in last two slots)
+              rvi = prevAvgVolume > 0 ? (currentAvgVolume / prevAvgVolume) : 1;
+            } else {
+              rvi = 1; // No previous data, neutral RVI
+            }
+          } else {
+            rvi = 1; // Not enough previous data, neutral RVI
+          }
 
           periods.push({
             periodNum: i,
             startDate: periodData[periodData.length - 1].date,
             endDate: periodData[0].date,
             priceChange: priceChange,
-            rvi: avgRVI,
+            rvi: rvi, // Now a ratio, typically 0.5 to 2.0
             startPrice: startPrice,
-            endPrice: endPrice
+            endPrice: endPrice,
+            avgVolume: currentAvgVolume
           });
         }
       }
@@ -94,13 +71,13 @@ export default function RVIPriceTable({ historicalData }) {
     return periods;
   }, [historicalData, nDays]);
 
-  // Define RVI ranges for rows
+  // Define RVI ranges for rows (RVI is now a ratio: current avg volume / previous 2 periods avg volume)
   const rviRanges = [
-    { label: "80-100 (Very High)", min: 80, max: 100 },
-    { label: "60-80 (High)", min: 60, max: 80 },
-    { label: "40-60 (Neutral)", min: 40, max: 60 },
-    { label: "20-40 (Low)", min: 20, max: 40 },
-    { label: "0-20 (Very Low)", min: 0, max: 20 }
+    { label: "> 2.0 (Very High)", min: 2.0, max: Infinity },
+    { label: "1.5 - 2.0 (High)", min: 1.5, max: 2.0 },
+    { label: "0.8 - 1.5 (Neutral)", min: 0.8, max: 1.5 },
+    { label: "0.5 - 0.8 (Low)", min: 0.5, max: 0.8 },
+    { label: "< 0.5 (Very Low)", min: 0, max: 0.5 }
   ];
 
   // Group periods by RVI range
@@ -224,7 +201,7 @@ export default function RVIPriceTable({ historicalData }) {
                             {period.priceChange.toFixed(2)}%
                           </div>
                           <div className="text-xs opacity-75">
-                            RVI: {period.rvi.toFixed(1)}
+                            RVI: {period.rvi.toFixed(2)}
                           </div>
                         </div>
                       ) : (
@@ -243,10 +220,10 @@ export default function RVIPriceTable({ historicalData }) {
       <div className="mt-4 p-4 bg-gray-800 rounded border border-gray-700">
         <h3 className="text-white font-semibold mb-2">Understanding the Table:</h3>
         <ul className="text-gray-300 text-sm space-y-1">
-          <li>• <strong>Columns:</strong> Each column represents an N-day period (Period 1 = most recent, Period 2 = N days before, etc.)</li>
-          <li>• <strong>Rows:</strong> RVI ranges indicate volume strength (High RVI = strong buying volume, Low RVI = strong selling volume)</li>
+          <li>• <strong>Columns:</strong> Time offset showing N-day periods (e.g., -10d = 10 days ago, -20d = 20 days ago)</li>
+          <li>• <strong>Rows:</strong> RVI ranges indicate relative volume strength (High RVI = increased volume vs recent periods, Low RVI = decreased volume)</li>
           <li>• <strong>Cells:</strong> Show price % change during that period, colored from deep red (large decline) to deep green (large gain)</li>
-          <li>• <strong>RVI (Relative Volume Index):</strong> Measures the ratio of up-volume to total volume over 14 days (0-100 scale)</li>
+          <li>• <strong>RVI (Relative Volume Index):</strong> Ratio of average volume in current period divided by average volume in previous 2 periods (RVI = 1.0 means neutral, &gt;1.0 means higher volume, &lt;1.0 means lower volume)</li>
         </ul>
       </div>
     </div>
