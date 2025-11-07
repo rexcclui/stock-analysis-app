@@ -9,14 +9,14 @@ export const Tabs = ({ activeTab, onTabChange, tabs }) => {
         <button
           key={tab.id}
           onClick={() => onTabChange(tab.id)}
-          className={`flex-1 px-6 py-3 rounded-lg text-sm font-semibold transition-all duration-300 flex items-center justify-center gap-2 ${
+          className={`flex-1 px-10 py-6 rounded-lg text-6xl font-black transition-all duration-300 flex items-center justify-center gap-4 ${
             activeTab === tab.id
               ? ''
               : 'text-gray-300 hover:text-white hover:bg-gray-600 hover:scale-102'
           }`}
           style={activeTab === tab.id ? { backgroundColor: '#FBBF24', color: '#0ea5ff', boxShadow: '0 6px 18px rgba(0,0,0,0.08)', transform: 'scale(1.03)' } : undefined}
         >
-          {tab.icon && <tab.icon size={18} />}
+          {tab.icon && <tab.icon size={40} />}
           {tab.label}
         </button>
       ))}

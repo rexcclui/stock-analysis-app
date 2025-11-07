@@ -84,31 +84,34 @@ export function NewsSection({ newsApiNews = [], googleNews = [], yahooNews = [],
     }
 
     return (
-      <div className="space-y-3">
+      <div className="w-full">
+        <div className="grid grid-cols-[120px_180px_auto] gap-2 font-semibold text-white border-b border-gray-600 pb-2 mb-2 text-lg">
+          <div>Date</div>
+          <div>Source</div>
+          <div>Subject</div>
+        </div>
         {articles.map((article, idx) => (
-          <div key={idx} className="flex items-start gap-3 p-3 bg-gray-700/40 rounded-lg border border-gray-600">
-            {article.sentiment === 'positive' ? (
-              <TrendingUp className="text-green-400 mt-1" size={20} />
-            ) : (
-              <TrendingDown className="text-red-400 mt-1" size={20} />
-            )}
-            <div className="flex-1">
+          <div
+            key={idx}
+            className="grid grid-cols-[120px_180px_auto] gap-2 items-center p-3 bg-gray-700/40 rounded-lg border border-gray-600 mb-2"
+          >
+            <div className="text-sm" style={{ color: '#facc15' }}>{article.date}</div>
+            <div className="text-sm" style={{ color: '#3b82f6', paddingRight: '18px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{article.source || '-'}</div>
+            <div className="flex items-center gap-2" style={{ wordBreak: 'break-word' }}>
+              {article.sentiment === 'positive' && <TrendingUp className="text-green-400" size={20} />}
+              {article.sentiment === 'negative' && <TrendingDown className="text-red-400" size={20} />}
               {article.url ? (
                 <a
                   href={article.url}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="font-medium text-white hover:text-blue-400 transition-colors cursor-pointer"
+                  style={{ fontWeight: 500, color: '#fff', textDecoration: 'underline' }}
                 >
-                  {article.title}
+                  {article.subject || article.title}
                 </a>
               ) : (
-                <div className="font-medium text-white">{article.title}</div>
+                <span style={{ fontWeight: 500 }}>{article.subject || article.title}</span>
               )}
-              <div className="text-sm text-gray-400">
-                {article.date}
-                {article.source && <span className="ml-2">• {article.source}</span>}
-              </div>
             </div>
           </div>
         ))}
