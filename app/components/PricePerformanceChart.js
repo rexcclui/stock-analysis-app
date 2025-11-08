@@ -584,8 +584,8 @@ export function PricePerformanceChart({
                 {/* AI Cycle Analysis - Vertical boundary markers and price ranges */}
                 {showCycleAnalysis && cycleAnalysis && chartCompareStocks.length === 0 && cycleAnalysis.cycles && multiData.length > 0 && (
                   <>
-                    {/* Vertical lines marking cycle boundaries */}
-                    {cycleAnalysis.cycles.flatMap((cycle, idx) => {
+                    {/* Vertical lines marking cycle boundaries - only show on daily periods (not 3Y/5Y) */}
+                    {!['3Y', '5Y'].includes(chartPeriod) && cycleAnalysis.cycles.flatMap((cycle, idx) => {
                       // Find matching dates
                       const findClosestDate = (originalDate) => {
                         const targetTime = new Date(originalDate).getTime();
