@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceDot, Scatter } from 'recharts';
 import { LoadingState } from './LoadingState';
+import { Sparkles, TrendingUp, TrendingDown, Target } from 'lucide-react';
 
 /**
  * PricePerformanceChart
@@ -36,6 +37,12 @@ export function PricePerformanceChart({
   const fullHistoricalData = useMemo(() => selectedStock?.chartData?.fullHistorical || [], [selectedStock]);
   const [dataOffset, setDataOffset] = useState(0); // Offset in days from most recent
 
+  // AI Analysis state
+  const [aiAnalysis, setAiAnalysis] = useState(null);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiError, setAiError] = useState(null);
+  const [showAiAnalysis, setShowAiAnalysis] = useState(false);
+
   // Don't return early here; render decisions happen after hooks are declared to keep hooks order stable.
   const shouldShowLoading = !selectedStock && loading;
 
@@ -59,6 +66,51 @@ export function PricePerformanceChart({
   useEffect(() => {
     setDataOffset(0);
   }, [chartPeriod]);
+
+  // Reset AI analysis when stock changes
+  useEffect(() => {
+    setAiAnalysis(null);
+    setAiError(null);
+    setShowAiAnalysis(false);
+  }, [selectedStock?.code]);
+
+  // Handle AI price analysis
+  const handleAiAnalysis = async (forceReload = false) => {
+    if (!selectedStock || !fullHistoricalData || fullHistoricalData.length === 0) {
+      setAiError('No price data available for analysis');
+      return;
+    }
+
+    setAiLoading(true);
+    setAiError(null);
+
+    try {
+      const response = await fetch('/api/analyze-price', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol: selectedStock.code,
+          priceData: fullHistoricalData,
+          currentPrice: selectedStock.price,
+          forceReload
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to analyze price');
+      }
+
+      setAiAnalysis(data);
+      setShowAiAnalysis(true);
+    } catch (error) {
+      console.error('AI Analysis Error:', error);
+      setAiError(error.message);
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   // Helper to get period size in days
   const getPeriodDays = (period) => {
@@ -275,6 +327,41 @@ export function PricePerformanceChart({
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3 w-full">
           <h3 className="text-xl font-bold text-center" style={{ color: '#3B82F6' }}>Price Chart</h3>
+
+          {/* AI Analysis Button */}
+          <button
+            onClick={() => handleAiAnalysis(false)}
+            disabled={aiLoading || !selectedStock || chartCompareStocks.length > 0}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all text-sm ${
+              aiLoading || !selectedStock || chartCompareStocks.length > 0
+                ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                : 'bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
+            }`}
+            title={chartCompareStocks.length > 0 ? 'AI analysis only available for single stock view' : 'Analyze price trend with AI'}
+          >
+            {aiLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-purple-500"></div>
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <Sparkles size={16} />
+                AI Analysis
+              </>
+            )}
+          </button>
+
+          {/* Toggle AI Analysis Display */}
+          {aiAnalysis && !aiLoading && (
+            <button
+              onClick={() => setShowAiAnalysis(!showAiAnalysis)}
+              className="px-3 py-2 bg-blue-700 hover:bg-blue-600 text-white rounded-lg text-xs font-medium transition"
+              title={showAiAnalysis ? 'Hide AI markers' : 'Show AI markers'}
+            >
+              {showAiAnalysis ? 'Hide AI Markers' : 'Show AI Markers'}
+            </button>
+          )}
           <div className="flex items-center" style={{ marginLeft: '12px' }}>
             <input
               type="text"
@@ -457,22 +544,114 @@ export function PricePerformanceChart({
                 <Legend wrapperStyle={{ paddingTop: '0px', marginTop: '0px', marginLeft: '0px', paddingLeft: '0px', width: 'auto' }} layout="vertical" verticalAlign="top" height={30} />
                 {chartCompareStocks.length === 0 && selectedStock?.resistance && (
                   <>
-                    <ReferenceLine 
-                      y={selectedStock.resistance} 
-                      stroke="#ef4444" 
-                      strokeDasharray="5 5" 
-                      label={{ value: `Resistance: $${selectedStock.resistance.toFixed(2)}`, position: 'right', fill: '#ef4444', fontSize: 12 }} 
+                    <ReferenceLine
+                      y={selectedStock.resistance}
+                      stroke="#ef4444"
+                      strokeDasharray="5 5"
+                      label={{ value: `Resistance: $${selectedStock.resistance.toFixed(2)}`, position: 'right', fill: '#ef4444', fontSize: 12 }}
                     />
                     {selectedStock?.support && (
-                      <ReferenceLine 
-                        y={selectedStock.support} 
-                        stroke="#10b981" 
-                        strokeDasharray="5 5" 
-                        label={{ value: `Support: $${selectedStock.support.toFixed(2)}`, position: 'right', fill: '#10b981', fontSize: 12 }} 
+                      <ReferenceLine
+                        y={selectedStock.support}
+                        stroke="#10b981"
+                        strokeDasharray="5 5"
+                        label={{ value: `Support: $${selectedStock.support.toFixed(2)}`, position: 'right', fill: '#10b981', fontSize: 12 }}
                       />
                     )}
                   </>
                 )}
+
+                {/* AI Analysis - Resistance Levels */}
+                {chartCompareStocks.length === 0 && showAiAnalysis && aiAnalysis?.resistanceLevels && aiAnalysis.resistanceLevels.map((level, idx) => (
+                  <ReferenceLine
+                    key={`resistance-${idx}`}
+                    y={level.price}
+                    stroke="#ef4444"
+                    strokeDasharray="3 3"
+                    strokeWidth={level.strength === 'strong' ? 2 : 1}
+                    label={{
+                      value: `AI Resistance: $${level.price.toFixed(2)}`,
+                      position: idx % 2 === 0 ? 'right' : 'left',
+                      fill: '#ef4444',
+                      fontSize: 10
+                    }}
+                  />
+                ))}
+
+                {/* AI Analysis - Support Levels */}
+                {chartCompareStocks.length === 0 && showAiAnalysis && aiAnalysis?.supportLevels && aiAnalysis.supportLevels.map((level, idx) => (
+                  <ReferenceLine
+                    key={`support-${idx}`}
+                    y={level.price}
+                    stroke="#10b981"
+                    strokeDasharray="3 3"
+                    strokeWidth={level.strength === 'strong' ? 2 : 1}
+                    label={{
+                      value: `AI Support: $${level.price.toFixed(2)}`,
+                      position: idx % 2 === 0 ? 'right' : 'left',
+                      fill: '#10b981',
+                      fontSize: 10
+                    }}
+                  />
+                ))}
+
+                {/* AI Analysis - Buy Signals */}
+                {chartCompareStocks.length === 0 && showAiAnalysis && aiAnalysis?.buySignals && aiAnalysis.buySignals.map((signal, idx) => {
+                  // Find the closest data point to this price
+                  const closestPoint = multiData.reduce((closest, point) => {
+                    const currentDiff = Math.abs(point.price - signal.price);
+                    const closestDiff = Math.abs(closest.price - signal.price);
+                    return currentDiff < closestDiff ? point : closest;
+                  }, multiData[0]);
+
+                  return closestPoint ? (
+                    <ReferenceDot
+                      key={`buy-${idx}`}
+                      x={closestPoint.date}
+                      y={signal.price}
+                      r={6}
+                      fill="#10b981"
+                      stroke="#ffffff"
+                      strokeWidth={2}
+                      label={{
+                        value: `BUY $${signal.price.toFixed(2)}`,
+                        position: 'top',
+                        fill: '#10b981',
+                        fontSize: 9,
+                        fontWeight: 'bold'
+                      }}
+                    />
+                  ) : null;
+                })}
+
+                {/* AI Analysis - Sell Signals */}
+                {chartCompareStocks.length === 0 && showAiAnalysis && aiAnalysis?.sellSignals && aiAnalysis.sellSignals.map((signal, idx) => {
+                  // Find the closest data point to this price
+                  const closestPoint = multiData.reduce((closest, point) => {
+                    const currentDiff = Math.abs(point.price - signal.price);
+                    const closestDiff = Math.abs(closest.price - signal.price);
+                    return currentDiff < closestDiff ? point : closest;
+                  }, multiData[0]);
+
+                  return closestPoint ? (
+                    <ReferenceDot
+                      key={`sell-${idx}`}
+                      x={closestPoint.date}
+                      y={signal.price}
+                      r={6}
+                      fill="#ef4444"
+                      stroke="#ffffff"
+                      strokeWidth={2}
+                      label={{
+                        value: `SELL $${signal.price.toFixed(2)}`,
+                        position: 'bottom',
+                        fill: '#ef4444',
+                        fontSize: 9,
+                        fontWeight: 'bold'
+                      }}
+                    />
+                  ) : null;
+                })}
                 {chartCompareStocks.length === 0 ? (
                   <Line type="monotone" dataKey="price" name={`${selectedStock?.code || ''} Price`} stroke="#3B82F6" strokeWidth={2} dot={false} />
                 ) : (
@@ -497,6 +676,196 @@ export function PricePerformanceChart({
         </ResponsiveContainer>
         </div>
       </div>
+
+      {/* AI Analysis Summary Panel */}
+      {aiAnalysis && showAiAnalysis && !aiLoading && (
+        <div className="mt-4 bg-gradient-to-br from-purple-900/40 to-blue-900/40 rounded-xl shadow-xl p-4 border border-purple-500/30">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-purple-500/20 rounded-lg">
+                <Target className="text-purple-400" size={20} />
+              </div>
+              <div>
+                <h4 className="text-lg font-bold text-blue-400">AI Price Analysis</h4>
+                <p className="text-xs text-gray-400">
+                  {aiAnalysis.fromCache ? '📦 Cached: ' : '🆕 Generated: '}
+                  {new Date(aiAnalysis.analyzedAt).toLocaleString()}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => handleAiAnalysis(true)}
+              className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs transition"
+              title="Force reload analysis"
+            >
+              Refresh
+            </button>
+          </div>
+
+          {/* Trend Analysis */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
+              <h5 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
+                {aiAnalysis.trendAnalysis?.direction === 'uptrend' ? <TrendingUp className="text-green-400" size={16} /> :
+                 aiAnalysis.trendAnalysis?.direction === 'downtrend' ? <TrendingDown className="text-red-400" size={16} /> :
+                 <Target className="text-gray-400" size={16} />}
+                Trend: {aiAnalysis.trendAnalysis?.direction?.toUpperCase() || 'N/A'}
+              </h5>
+              <p className="text-xs text-gray-300">
+                Strength: <span className="font-semibold">{aiAnalysis.trendAnalysis?.strength}</span>
+              </p>
+              <p className="text-xs text-gray-400 mt-1">{aiAnalysis.trendAnalysis?.description}</p>
+            </div>
+
+            <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
+              <h5 className="text-sm font-semibold text-white mb-2">Recommendation</h5>
+              <p className="text-lg font-bold" style={{
+                color: aiAnalysis.recommendation?.action?.includes('buy') ? '#10b981' :
+                       aiAnalysis.recommendation?.action?.includes('sell') ? '#ef4444' : '#fbbf24'
+              }}>
+                {aiAnalysis.recommendation?.action?.toUpperCase() || 'N/A'}
+              </p>
+              <p className="text-xs text-gray-400">
+                Confidence: <span className="font-semibold">{aiAnalysis.recommendation?.confidence}</span> |
+                Timeframe: <span className="font-semibold">{aiAnalysis.recommendation?.timeframe}</span>
+              </p>
+              <p className="text-xs text-gray-300 mt-1">{aiAnalysis.recommendation?.reasoning}</p>
+            </div>
+          </div>
+
+          {/* Buy Signals */}
+          {aiAnalysis.buySignals && aiAnalysis.buySignals.length > 0 && (
+            <div className="bg-green-900/20 rounded-lg p-3 border border-green-500/30 mb-3">
+              <h5 className="text-sm font-semibold text-green-400 mb-2 flex items-center gap-2">
+                <TrendingUp size={16} />
+                Buy Signals
+              </h5>
+              <div className="space-y-2">
+                {aiAnalysis.buySignals.map((signal, idx) => (
+                  <div key={idx} className="text-xs">
+                    <p className="text-white font-medium">
+                      💚 ${signal.price.toFixed(2)} ({signal.type}) - {signal.confidence} confidence
+                    </p>
+                    <p className="text-gray-300 ml-4">→ {signal.reasoning}</p>
+                    {signal.stopLoss && signal.targetPrice && (
+                      <p className="text-gray-400 ml-4 text-xs">
+                        Stop Loss: ${signal.stopLoss.toFixed(2)} | Target: ${signal.targetPrice.toFixed(2)}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Sell Signals */}
+          {aiAnalysis.sellSignals && aiAnalysis.sellSignals.length > 0 && (
+            <div className="bg-red-900/20 rounded-lg p-3 border border-red-500/30 mb-3">
+              <h5 className="text-sm font-semibold text-red-400 mb-2 flex items-center gap-2">
+                <TrendingDown size={16} />
+                Sell Signals
+              </h5>
+              <div className="space-y-2">
+                {aiAnalysis.sellSignals.map((signal, idx) => (
+                  <div key={idx} className="text-xs">
+                    <p className="text-white font-medium">
+                      ❤️ ${signal.price.toFixed(2)} ({signal.type}) - {signal.confidence} confidence
+                    </p>
+                    <p className="text-gray-300 ml-4">→ {signal.reasoning}</p>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Support & Resistance Levels */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+            {aiAnalysis.supportLevels && aiAnalysis.supportLevels.length > 0 && (
+              <div className="bg-green-900/20 rounded-lg p-3 border border-green-500/30">
+                <h5 className="text-sm font-semibold text-green-400 mb-2">Support Levels</h5>
+                <div className="space-y-1">
+                  {aiAnalysis.supportLevels.map((level, idx) => (
+                    <div key={idx} className="text-xs">
+                      <p className="text-white font-medium">
+                        ${level.price.toFixed(2)} ({level.strength})
+                      </p>
+                      <p className="text-gray-400 ml-2">{level.reasoning}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {aiAnalysis.resistanceLevels && aiAnalysis.resistanceLevels.length > 0 && (
+              <div className="bg-red-900/20 rounded-lg p-3 border border-red-500/30">
+                <h5 className="text-sm font-semibold text-red-400 mb-2">Resistance Levels</h5>
+                <div className="space-y-1">
+                  {aiAnalysis.resistanceLevels.map((level, idx) => (
+                    <div key={idx} className="text-xs">
+                      <p className="text-white font-medium">
+                        ${level.price.toFixed(2)} ({level.strength})
+                      </p>
+                      <p className="text-gray-400 ml-2">{level.reasoning}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Key Levels and Risks */}
+          {(aiAnalysis.keyLevelsToWatch || aiAnalysis.riskFactors) && (
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              {aiAnalysis.keyLevelsToWatch && aiAnalysis.keyLevelsToWatch.length > 0 && (
+                <div className="bg-blue-900/20 rounded-lg p-3 border border-blue-500/30">
+                  <h5 className="text-sm font-semibold text-blue-400 mb-2">Key Levels to Watch</h5>
+                  <ul className="text-xs text-gray-300 space-y-1">
+                    {aiAnalysis.keyLevelsToWatch.map((level, idx) => (
+                      <li key={idx}>• {level}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+
+              {aiAnalysis.riskFactors && aiAnalysis.riskFactors.length > 0 && (
+                <div className="bg-orange-900/20 rounded-lg p-3 border border-orange-500/30">
+                  <h5 className="text-sm font-semibold text-orange-400 mb-2">Risk Factors</h5>
+                  <ul className="text-xs text-gray-300 space-y-1">
+                    {aiAnalysis.riskFactors.map((risk, idx) => (
+                      <li key={idx}>• {risk}</li>
+                    ))}
+                  </ul>
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Disclaimer */}
+          <div className="mt-3 p-2 bg-gray-900/50 rounded border border-gray-700">
+            <p className="text-xs text-gray-400 text-center">
+              ⚠️ This AI analysis is for informational purposes only. Not financial advice. Always do your own research.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* AI Error Display */}
+      {aiError && (
+        <div className="mt-4 p-4 bg-red-900/30 rounded-lg border border-red-500/50">
+          <div className="flex items-start gap-3">
+            <div className="text-red-400 flex-shrink-0 mt-0.5">⚠️</div>
+            <div className="flex-1">
+              <p className="text-red-400 font-semibold mb-1">AI Analysis Failed</p>
+              <p className="text-gray-300 text-sm">{aiError}</p>
+              {aiError.includes('OPENAI_API_KEY') && (
+                <p className="text-xs text-gray-400 mt-2">
+                  Please configure your OpenAI API key in the .env.local file
+                </p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
