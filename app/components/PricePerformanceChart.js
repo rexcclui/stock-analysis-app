@@ -546,6 +546,12 @@ export function PricePerformanceChart({
                         return currentDiff < closestDiff ? point : closest;
                       }, multiData[0]);
 
+                      console.log('Buy Signal:', {
+                        signalPrice: signal.price,
+                        closestPoint,
+                        multiDataSample: multiData.slice(0, 3)
+                      });
+
                       return closestPoint && closestPoint.price ? (
                         <ReferenceDot
                           key={`ai-buy-${idx}`}
@@ -574,6 +580,12 @@ export function PricePerformanceChart({
                         const closestDiff = Math.abs(closest.price - signal.price);
                         return currentDiff < closestDiff ? point : closest;
                       }, multiData[0]);
+
+                      console.log('Sell Signal:', {
+                        signalPrice: signal.price,
+                        closestPoint,
+                        multiDataSample: multiData.slice(0, 3)
+                      });
 
                       return closestPoint && closestPoint.price ? (
                         <ReferenceDot
