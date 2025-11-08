@@ -529,7 +529,11 @@ export function PricePerformanceChart({
 
                 {/* AI Cycle Analysis Overlay - Cycle Zones */}
                 {showCycleAnalysis && cycleAnalysis && chartCompareStocks.length === 0 && cycleAnalysis.cycles && multiData.length > 0 && (() => {
+                  console.log('=== CYCLE DEBUGGING ===');
                   console.log('Rendering cycles:', cycleAnalysis.cycles.length, 'Data points:', multiData.length);
+                  console.log('Chart period:', chartPeriod);
+                  console.log('Sample chart dates:', multiData.slice(0, 5).map(d => d.date));
+                  console.log('Cycles:', cycleAnalysis.cycles.map(c => ({ type: c.type, start: c.startDate, end: c.endDate })));
                   return true;
                 })() && (
                   <>
@@ -602,6 +606,33 @@ export function PricePerformanceChart({
                             fontWeight: 'bold'
                           }}
                         />
+                      );
+                    })}
+
+                    {/* Show cycle boundaries as vertical reference lines */}
+                    {cycleAnalysis.cycles.map((cycle, idx) => {
+                      const formattedStartDate = formatChartDate(cycle.startDate, chartPeriod);
+                      const formattedEndDate = formatChartDate(cycle.endDate, chartPeriod);
+
+                      const strokeColor = cycle.type === 'bull' ? '#22c55e' :
+                                         cycle.type === 'bear' ? '#ef4444' :
+                                         '#eab308';
+
+                      return (
+                        <React.Fragment key={`cycle-boundary-${idx}`}>
+                          <ReferenceLine
+                            x={formattedStartDate}
+                            stroke={strokeColor}
+                            strokeDasharray="3 3"
+                            strokeWidth={2}
+                            label={{
+                              value: `${cycle.type.toUpperCase()} START`,
+                              position: 'top',
+                              fill: strokeColor,
+                              fontSize: 9
+                            }}
+                          />
+                        </React.Fragment>
                       );
                     })}
 
