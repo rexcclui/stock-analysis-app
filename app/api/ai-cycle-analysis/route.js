@@ -1,6 +1,6 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
-import { cache } from '../../../lib/cache';
+import { getCache, setCache } from '../../../lib/cache';
 
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY
@@ -20,7 +20,7 @@ export async function POST(request) {
     // Check cache (30 minute TTL)
     const cacheKey = `ai-cycle-${symbol}-${priceData.length}`;
     if (!forceReload) {
-      const cached = cache.get(cacheKey);
+      const cached = getCache(cacheKey);
       if (cached) {
         console.log(`AI Cycle Analysis: Using cached result for ${symbol}`);
         return NextResponse.json(cached);
@@ -168,7 +168,7 @@ Please analyze this data to identify trend cycles, their characteristics, and pr
     };
 
     // Cache the result (30 minutes)
-    cache.set(cacheKey, result, 30);
+    setCache(cacheKey, result, 30);
 
     return NextResponse.json(result);
 
