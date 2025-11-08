@@ -3,7 +3,6 @@ import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, Responsi
 import { LoadingState } from './LoadingState';
 import { useAIPriceAnalysis } from '../hooks/useAIPriceAnalysis';
 import { AIPriceAnalysisButton } from './ai/AIPriceAnalysisButton';
-import { AIChartOverlay } from './ai/AIChartOverlay';
 import { AIPriceAnalysisPanel } from './ai/AIPriceAnalysisPanel';
 
 /**
@@ -502,23 +501,101 @@ export function PricePerformanceChart({
                 )}
 
                 {/* AI Analysis Overlay - Buy/Sell Signals and Support/Resistance */}
-                {(() => {
-                  console.log('About to render AIChartOverlay with props:', {
-                    aiAnalysis: !!aiAnalysis,
-                    showAiAnalysis,
-                    chartDataLength: multiData?.length,
-                    isCompareMode: chartCompareStocks.length > 0,
-                    aiAnalysisData: aiAnalysis
-                  });
-                  return (
-                    <AIChartOverlay
-                      aiAnalysis={aiAnalysis}
-                      showAiAnalysis={showAiAnalysis}
-                      chartData={multiData}
-                      isCompareMode={chartCompareStocks.length > 0}
-                    />
-                  );
-                })()}
+                {showAiAnalysis && aiAnalysis && chartCompareStocks.length === 0 && (
+                  <>
+                    {/* AI Resistance Levels */}
+                    {aiAnalysis.resistanceLevels && aiAnalysis.resistanceLevels.length > 0 && aiAnalysis.resistanceLevels.map((level, idx) => (
+                      <ReferenceLine
+                        key={`ai-resistance-${idx}`}
+                        y={level.price}
+                        stroke="#ef4444"
+                        strokeDasharray="3 3"
+                        strokeWidth={level.strength === 'strong' ? 2 : 1}
+                        label={{
+                          value: `AI Resistance: $${level.price.toFixed(2)}`,
+                          position: idx % 2 === 0 ? 'right' : 'left',
+                          fill: '#ef4444',
+                          fontSize: 10
+                        }}
+                      />
+                    ))}
+
+                    {/* AI Support Levels */}
+                    {aiAnalysis.supportLevels && aiAnalysis.supportLevels.length > 0 && aiAnalysis.supportLevels.map((level, idx) => (
+                      <ReferenceLine
+                        key={`ai-support-${idx}`}
+                        y={level.price}
+                        stroke="#10b981"
+                        strokeDasharray="3 3"
+                        strokeWidth={level.strength === 'strong' ? 2 : 1}
+                        label={{
+                          value: `AI Support: $${level.price.toFixed(2)}`,
+                          position: idx % 2 === 0 ? 'right' : 'left',
+                          fill: '#10b981',
+                          fontSize: 10
+                        }}
+                      />
+                    ))}
+
+                    {/* AI Buy Signals */}
+                    {aiAnalysis.buySignals && aiAnalysis.buySignals.length > 0 && multiData.length > 0 && aiAnalysis.buySignals.map((signal, idx) => {
+                      const closestPoint = multiData.reduce((closest, point) => {
+                        if (!point.price || !closest.price) return closest;
+                        const currentDiff = Math.abs(point.price - signal.price);
+                        const closestDiff = Math.abs(closest.price - signal.price);
+                        return currentDiff < closestDiff ? point : closest;
+                      }, multiData[0]);
+
+                      return closestPoint && closestPoint.price ? (
+                        <ReferenceDot
+                          key={`ai-buy-${idx}`}
+                          x={closestPoint.date}
+                          y={signal.price}
+                          r={6}
+                          fill="#10b981"
+                          stroke="#ffffff"
+                          strokeWidth={2}
+                          label={{
+                            value: `BUY $${signal.price.toFixed(2)}`,
+                            position: 'top',
+                            fill: '#10b981',
+                            fontSize: 9,
+                            fontWeight: 'bold'
+                          }}
+                        />
+                      ) : null;
+                    })}
+
+                    {/* AI Sell Signals */}
+                    {aiAnalysis.sellSignals && aiAnalysis.sellSignals.length > 0 && multiData.length > 0 && aiAnalysis.sellSignals.map((signal, idx) => {
+                      const closestPoint = multiData.reduce((closest, point) => {
+                        if (!point.price || !closest.price) return closest;
+                        const currentDiff = Math.abs(point.price - signal.price);
+                        const closestDiff = Math.abs(closest.price - signal.price);
+                        return currentDiff < closestDiff ? point : closest;
+                      }, multiData[0]);
+
+                      return closestPoint && closestPoint.price ? (
+                        <ReferenceDot
+                          key={`ai-sell-${idx}`}
+                          x={closestPoint.date}
+                          y={signal.price}
+                          r={6}
+                          fill="#ef4444"
+                          stroke="#ffffff"
+                          strokeWidth={2}
+                          label={{
+                            value: `SELL $${signal.price.toFixed(2)}`,
+                            position: 'bottom',
+                            fill: '#ef4444',
+                            fontSize: 9,
+                            fontWeight: 'bold'
+                          }}
+                        />
+                      ) : null;
+                    })}
+                  </>
+                )}
                 {chartCompareStocks.length === 0 ? (
                   <Line type="monotone" dataKey="price" name={`${selectedStock?.code || ''} Price`} stroke="#3B82F6" strokeWidth={2} dot={false} />
                 ) : (
