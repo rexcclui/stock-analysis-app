@@ -165,7 +165,12 @@ export function NewsSection({ newsApiNews = [], googleNews = [], yahooNews = [],
       </TabPanel>
 
       <TabPanel activeTab={activeTab} tabId="google">
-        {renderNewsList(validGoogleNews, false)}
+        {renderNewsList(
+          validGoogleNews
+            .slice() // copy array
+            .sort((a, b) => new Date(b.date) - new Date(a.date)),
+          false
+        )}
       </TabPanel>
 
       <TabPanel activeTab={activeTab} tabId="yahoo">
