@@ -420,33 +420,48 @@ export function PricePerformanceChart({
           if (visibleCycles.length === 0) return null;
 
           return (
-            <div className="mb-2 px-4">
-              <div className="text-xs text-gray-400 mb-1">
-                Cycle Timeline ({visibleCycles.length} of {cycleAnalysis.cycles.length} visible):
+            <div className="mb-3 px-4">
+              <div className="flex items-center justify-between mb-1">
+                <div className="text-xs font-semibold text-green-400">
+                  📊 AI Cycle Timeline ({visibleCycles.length} of {cycleAnalysis.cycles.length} visible)
+                </div>
+                <div className="text-xs text-gray-400">
+                  Cycles shown proportionally by duration
+                </div>
               </div>
-              <div className="relative h-6 bg-gray-700 rounded flex items-center overflow-hidden">
+              <div className="relative h-10 bg-gray-900 rounded-lg flex items-center overflow-hidden shadow-lg border-2 border-green-600/30">
                 {visibleCycles.map((cycle, idx) => {
                   const cycleColor = cycle.type === 'bull' ? 'bg-green-500' :
                                     cycle.type === 'bear' ? 'bg-red-500' :
                                     'bg-yellow-500';
+                  const textColor = cycle.type === 'bull' ? 'text-green-50' :
+                                   cycle.type === 'bear' ? 'text-red-50' :
+                                   'text-yellow-50';
 
                   return (
                     <div
                       key={`timeline-${idx}`}
-                      className={`h-4 ${cycleColor} border-l border-white flex items-center justify-center text-white font-bold overflow-hidden`}
+                      className={`h-8 ${cycleColor} border-l-2 border-white flex flex-col items-center justify-center ${textColor} font-bold overflow-hidden hover:brightness-110 transition-all cursor-pointer`}
                       style={{
                         flex: cycle.duration,
-                        fontSize: '9px',
-                        padding: '0 2px'
+                        fontSize: '10px',
+                        padding: '0 3px',
+                        boxShadow: 'inset 0 2px 4px rgba(255,255,255,0.2)'
                       }}
-                      title={`${cycle.type.toUpperCase()} cycle: ${cycle.startDate} to ${cycle.endDate} (${cycle.duration} days)`}
+                      title={`${cycle.type.toUpperCase()} Cycle #${idx + 1}\n${cycle.startDate} → ${cycle.endDate}\nDuration: ${cycle.duration} days\nPrice: $${cycle.priceRange.low.toFixed(2)} - $${cycle.priceRange.high.toFixed(2)}\nChange: ${cycle.priceRange.percentChange >= 0 ? '+' : ''}${cycle.priceRange.percentChange.toFixed(1)}%`}
                     >
-                      <span className="whitespace-nowrap overflow-hidden text-ellipsis">
-                        {cycle.type.toUpperCase().slice(0, 4)} #{idx + 1}
+                      <span className="whitespace-nowrap overflow-hidden text-ellipsis leading-tight">
+                        {cycle.type.charAt(0).toUpperCase()}{idx + 1}
+                      </span>
+                      <span className="text-[8px] opacity-90 whitespace-nowrap overflow-hidden text-ellipsis">
+                        {cycle.duration}d
                       </span>
                     </div>
                   );
                 })}
+              </div>
+              <div className="text-[10px] text-gray-500 mt-1 text-center italic">
+                Note: Vertical cycle markers cannot be displayed on the chart due to Recharts limitations with categorical X-axes
               </div>
             </div>
           );
@@ -593,129 +608,9 @@ export function PricePerformanceChart({
                   </>
                 )}
 
-                {/* AI Cycle Analysis - Vertical boundary markers and price ranges */}
-                {showCycleAnalysis && cycleAnalysis && chartCompareStocks.length === 0 && cycleAnalysis.cycles && multiData.length > 0 && (() => {
-                  const shouldShowVerticalLines = !['3Y', '5Y'].includes(chartPeriod);
-                  console.log('=== CYCLE VERTICAL LINES DEBUG ===');
-                  console.log('Current period:', chartPeriod);
-                  console.log('Should show vertical lines:', shouldShowVerticalLines);
-                  console.log('Sample chart dates:', multiData.slice(0, 3).map(d => d.date));
-                  return true;
-                })() && (
+                {/* AI Cycle Analysis - Horizontal price range lines only (Recharts doesn't support vertical lines on categorical X-axes) */}
+                {showCycleAnalysis && cycleAnalysis && chartCompareStocks.length === 0 && (
                   <>
-                    {/* Vertical lines marking cycle boundaries */}
-                    {cycleAnalysis.cycles.flatMap((cycle, idx) => {
-                      // Check if cycle is within visible chart range
-                      const cycleStart = new Date(cycle.startDate).getTime();
-                      const cycleEnd = new Date(cycle.endDate).getTime();
-
-                      // Get visible chart range - handle both YY-MM-DD and YYYY-MM formats
-                      const firstDate = multiData[0].date;
-                      const lastDate = multiData[multiData.length - 1].date;
-
-                      let chartStart, chartEnd;
-                      if (firstDate.match(/^\d{4}-\d{2}$/)) {
-                        // YYYY-MM format (3Y/5Y periods)
-                        chartStart = new Date(firstDate + '-01').getTime();
-                        chartEnd = new Date(lastDate + '-01').getTime();
-                      } else {
-                        // YY-MM-DD format (1D-1Y periods)
-                        chartStart = new Date(firstDate.replace(/^(\d{2})-/, '20$1-')).getTime();
-                        chartEnd = new Date(lastDate.replace(/^(\d{2})-/, '20$1-')).getTime();
-                      }
-
-                      // Skip cycles completely outside visible range
-                      if (cycleEnd < chartStart || cycleStart > chartEnd) {
-                        console.log(`Skipping cycle ${idx + 1} - outside visible range:`, {
-                          cycle: `${cycle.startDate} to ${cycle.endDate}`,
-                          chart: `${multiData[0].date} to ${multiData[multiData.length - 1].date}`
-                        });
-                        return [];
-                      }
-
-                      // Find matching dates
-                      const findClosestDate = (originalDate) => {
-                        const targetTime = new Date(originalDate).getTime();
-                        let closest = multiData[0];
-                        let closestDiff = Infinity;
-
-                        // Check if we're in monthly format (YYYY-MM)
-                        const isMonthlyFormat = multiData[0].date.match(/^\d{4}-\d{2}$/);
-
-                        multiData.forEach(d => {
-                          if (!d.date) return;
-                          let dateStr = d.date;
-
-                          if (isMonthlyFormat) {
-                            // YYYY-MM format: append -01 to make valid date
-                            dateStr = dateStr + '-01';
-                          } else {
-                            // YY-MM-DD format: convert to 20YY-MM-DD
-                            if (dateStr.includes('-')) {
-                              const parts = dateStr.split('-');
-                              if (parts[0].length === 2) {
-                                dateStr = `20${parts[0]}-${parts[1]}-${parts[2]}`;
-                              }
-                            }
-                          }
-
-                          const time = new Date(dateStr).getTime();
-                          if (isNaN(time)) return;
-                          const diff = Math.abs(time - targetTime);
-                          if (diff < closestDiff) {
-                            closestDiff = diff;
-                            closest = d;
-                          }
-                        });
-                        return closest;
-                      };
-
-                      const startDateObj = findClosestDate(cycle.startDate);
-                      const endDateObj = findClosestDate(cycle.endDate);
-                      const startDate = startDateObj.date;
-                      const endDate = endDateObj.date;
-
-                      const strokeColor = cycle.type === 'bull' ? '#22c55e' :
-                                         cycle.type === 'bear' ? '#ef4444' :
-                                         '#eab308';
-
-                      console.log(`Rendering vertical lines for cycle ${idx + 1}:`, {
-                        type: cycle.type,
-                        original: `${cycle.startDate} to ${cycle.endDate}`,
-                        matched: `${startDate} to ${endDate}`,
-                        color: strokeColor
-                      });
-
-                      return [
-                        <ReferenceLine
-                          key={`cycle-start-${idx}`}
-                          x={startDate}
-                          stroke={strokeColor}
-                          strokeWidth={2}
-                          label={{
-                            value: `${cycle.type.toUpperCase()} ${idx + 1}`,
-                            position: 'top',
-                            fill: strokeColor,
-                            fontSize: 10,
-                            fontWeight: 'bold'
-                          }}
-                        />,
-                        <ReferenceLine
-                          key={`cycle-end-${idx}`}
-                          x={endDate}
-                          stroke={strokeColor}
-                          strokeWidth={2}
-                          strokeDasharray="5 5"
-                          label={{
-                            value: `END`,
-                            position: 'bottom',
-                            fill: strokeColor,
-                            fontSize: 10,
-                            fontWeight: 'bold'
-                          }}
-                        />
-                      ];
-                    })}
 
                     {/* Horizontal price range lines for current cycle */}
                     {cycleAnalysis.currentCycle && (
