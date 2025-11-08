@@ -74,7 +74,7 @@ export function NewsSection({ newsApiNews = [], googleNews = [], yahooNews = [],
   ];
 
   // Helper function to render news articles
-  const renderNewsList = (articles) => {
+  const renderNewsList = (articles, showSource = true) => {
     if (!articles || articles.length === 0) {
       return (
         <div className="text-gray-400 text-center py-8">
@@ -85,18 +85,20 @@ export function NewsSection({ newsApiNews = [], googleNews = [], yahooNews = [],
 
     return (
       <div className="w-full">
-        <div className="grid grid-cols-[120px_180px_auto] gap-2 font-semibold text-white border-b border-gray-600 pb-2 mb-2 text-lg">
+        <div className={`grid ${showSource ? 'grid-cols-[120px_180px_auto]' : 'grid-cols-[120px_auto]'} gap-2 font-semibold text-white border-b border-gray-600 pb-2 mb-2 text-lg`}>
           <div>Date</div>
-          <div>Source</div>
+          {showSource && <div>Source</div>}
           <div>Subject</div>
         </div>
         {articles.map((article, idx) => (
           <div
             key={idx}
-            className="grid grid-cols-[120px_180px_auto] gap-2 items-center p-3 bg-gray-700/40 rounded-lg border border-gray-600 mb-2"
+            className={`grid ${showSource ? 'grid-cols-[120px_180px_auto]' : 'grid-cols-[120px_auto]'} gap-2 items-center p-3 bg-gray-700/40 rounded-lg border border-gray-600 mb-2`}
           >
             <div className="text-sm" style={{ color: '#facc15' }}>{article.date}</div>
-            <div className="text-sm" style={{ color: '#3b82f6', paddingRight: '18px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{article.source || '-'}</div>
+            {showSource && (
+              <div className="text-sm" style={{ color: '#3b82f6', paddingRight: '18px', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{article.source || '-'}</div>
+            )}
             <div className="flex items-center gap-2" style={{ wordBreak: 'break-word' }}>
               {article.sentiment === 'positive' && <TrendingUp className="text-green-400" size={20} />}
               {article.sentiment === 'negative' && <TrendingDown className="text-red-400" size={20} />}
@@ -111,6 +113,12 @@ export function NewsSection({ newsApiNews = [], googleNews = [], yahooNews = [],
                 </a>
               ) : (
                 <span style={{ fontWeight: 500 }}>{article.subject || article.title}</span>
+              )}
+              {/* Show source info in blue at end for showSource=false */}
+              {!showSource && article.source && (
+                <span className="text-xs font-semibold" style={{ color: '#3b82f6', marginLeft: '8px' }}>
+                  {article.source}
+                </span>
               )}
             </div>
           </div>
@@ -153,19 +161,19 @@ export function NewsSection({ newsApiNews = [], googleNews = [], yahooNews = [],
 
       {/* Tab Panels */}
       <TabPanel activeTab={activeTab} tabId="newsapi">
-        {renderNewsList(validNewsApi)}
+        {renderNewsList(validNewsApi, true)}
       </TabPanel>
 
       <TabPanel activeTab={activeTab} tabId="google">
-        {renderNewsList(validGoogleNews)}
+        {renderNewsList(validGoogleNews, false)}
       </TabPanel>
 
       <TabPanel activeTab={activeTab} tabId="yahoo">
-        {renderNewsList(validYahooNews)}
+        {renderNewsList(validYahooNews, false)}
       </TabPanel>
 
       <TabPanel activeTab={activeTab} tabId="bloomberg">
-        {renderNewsList(validBloombergNews)}
+        {renderNewsList(validBloombergNews, false)}
       </TabPanel>
     </div>
   );
