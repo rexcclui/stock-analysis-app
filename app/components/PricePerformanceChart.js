@@ -400,15 +400,18 @@ export function PricePerformanceChart({
         )}
         {/* Cycle Timeline Visualization */}
         {showCycleAnalysis && cycleAnalysis && cycleAnalysis.cycles && (() => {
+          // Get current visible data slice
+          const visibleData = getCurrentDataSlice();
+
           // Filter cycles that overlap with visible date range
           const visibleCycles = cycleAnalysis.cycles.filter(cycle => {
             const cycleStart = new Date(cycle.startDate).getTime();
             const cycleEnd = new Date(cycle.endDate).getTime();
 
             // Get visible date range from chart data
-            if (currentData.length === 0) return false;
-            const chartStart = new Date(currentData[0].date || currentData[0].rawDate).getTime();
-            const chartEnd = new Date(currentData[currentData.length - 1].date || currentData[currentData.length - 1].rawDate).getTime();
+            if (visibleData.length === 0) return false;
+            const chartStart = new Date(visibleData[0].date || visibleData[0].rawDate).getTime();
+            const chartEnd = new Date(visibleData[visibleData.length - 1].date || visibleData[visibleData.length - 1].rawDate).getTime();
 
             // Check if cycle overlaps with visible range
             return cycleEnd >= chartStart && cycleStart <= chartEnd;
