@@ -47,7 +47,6 @@ export function useAIPriceAnalysis(selectedStock, fullHistoricalData) {
         throw new Error(data.error || 'Failed to analyze price');
       }
 
-      console.log('AI Analysis received:', data);
       setAiAnalysis(data);
       setShowAiAnalysis(true);
     } catch (error) {

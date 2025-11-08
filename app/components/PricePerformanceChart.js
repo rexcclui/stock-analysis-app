@@ -52,11 +52,6 @@ export function PricePerformanceChart({
   // Don't return early here; render decisions happen after hooks are declared to keep hooks order stable.
   const shouldShowLoading = !selectedStock && loading;
 
-  // Debug: Log fullHistoricalData availability
-  useEffect(() => {
-    console.log('fullHistoricalData length:', fullHistoricalData.length);
-    console.log('chartData keys:', Object.keys(selectedStock?.chartData || {}));
-  }, [fullHistoricalData, selectedStock]);
   const [zoomDomain, setZoomDomain] = useState({ start: 0, end: 100 });
   const zoomDomainRef = useRef({ start: 0, end: 100 });
   const chartContainerRef = useRef(null);
@@ -546,12 +541,6 @@ export function PricePerformanceChart({
                         return currentDiff < closestDiff ? point : closest;
                       }, multiData[0]);
 
-                      console.log('Buy Signal:', {
-                        signalPrice: signal.price,
-                        closestPoint,
-                        multiDataSample: multiData.slice(0, 3)
-                      });
-
                       return closestPoint && closestPoint.price ? (
                         <ReferenceDot
                           key={`ai-buy-${idx}`}
@@ -580,12 +569,6 @@ export function PricePerformanceChart({
                         const closestDiff = Math.abs(closest.price - signal.price);
                         return currentDiff < closestDiff ? point : closest;
                       }, multiData[0]);
-
-                      console.log('Sell Signal:', {
-                        signalPrice: signal.price,
-                        closestPoint,
-                        multiDataSample: multiData.slice(0, 3)
-                      });
 
                       return closestPoint && closestPoint.price ? (
                         <ReferenceDot
