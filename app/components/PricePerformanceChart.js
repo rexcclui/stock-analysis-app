@@ -424,7 +424,7 @@ export function PricePerformanceChart({
               <div className="text-xs text-gray-400 mb-1">
                 Cycle Timeline ({visibleCycles.length} of {cycleAnalysis.cycles.length} visible):
               </div>
-              <div className="relative h-8 bg-gray-700 rounded flex items-center overflow-hidden">
+              <div className="relative h-6 bg-gray-700 rounded flex items-center overflow-hidden">
                 {visibleCycles.map((cycle, idx) => {
                   const cycleColor = cycle.type === 'bull' ? 'bg-green-500' :
                                     cycle.type === 'bear' ? 'bg-red-500' :
@@ -433,11 +433,11 @@ export function PricePerformanceChart({
                   return (
                     <div
                       key={`timeline-${idx}`}
-                      className={`h-6 ${cycleColor} border-l-2 border-white flex items-center justify-center text-white font-bold overflow-hidden`}
+                      className={`h-4 ${cycleColor} border-l border-white flex items-center justify-center text-white font-bold overflow-hidden`}
                       style={{
                         flex: cycle.duration,
-                        fontSize: '10px',
-                        padding: '0 4px'
+                        fontSize: '9px',
+                        padding: '0 2px'
                       }}
                       title={`${cycle.type.toUpperCase()} cycle: ${cycle.startDate} to ${cycle.endDate} (${cycle.duration} days)`}
                     >
@@ -581,224 +581,35 @@ export function PricePerformanceChart({
                   </>
                 )}
 
-                {/* AI Cycle Analysis Overlay - Cycle Zones */}
-                {showCycleAnalysis && cycleAnalysis && chartCompareStocks.length === 0 && cycleAnalysis.cycles && multiData.length > 0 && (() => {
-                  console.log('=== CYCLE DEBUGGING ===');
-                  console.log('Rendering cycles:', cycleAnalysis.cycles.length, 'Data points:', multiData.length);
-                  console.log('Chart period:', chartPeriod);
-                  console.log('Sample chart dates:', multiData.slice(0, 5).map(d => d.date));
-                  console.log('Cycles:', cycleAnalysis.cycles.map(c => ({ type: c.type, start: c.startDate, end: c.endDate })));
-                  return true;
-                })() && (
+                {/* AI Cycle Analysis - Show current cycle price ranges */}
+                {showCycleAnalysis && cycleAnalysis && chartCompareStocks.length === 0 && cycleAnalysis.currentCycle && (
                   <>
-                    {cycleAnalysis.cycles.map((cycle, idx) => {
-                      // Find matching dates by comparing timestamps
-                      const findClosestDate = (originalDate) => {
-                        const targetTime = new Date(originalDate).getTime();
-                        let closest = multiData[0];
-                        let closestDiff = Infinity;
-
-                        multiData.forEach(d => {
-                          if (!d.date) return;
-
-                          // Parse the chart date to timestamp
-                          let dateStr = d.date;
-                          // Handle different formats: "25-01-15" (YY-MM-DD) or "2025-01" (YYYY-MM)
-                          if (dateStr.includes('-')) {
-                            const parts = dateStr.split('-');
-                            if (parts[0].length === 2) {
-                              // YY-MM-DD format
-                              dateStr = `20${parts[0]}-${parts[1]}-${parts[2]}`;
-                            } else if (parts.length === 2) {
-                              // YYYY-MM format - use first day of month
-                              dateStr = `${parts[0]}-${parts[1]}-01`;
-                            }
-                          }
-
-                          const time = new Date(dateStr).getTime();
-                          if (isNaN(time)) return;
-
-                          const diff = Math.abs(time - targetTime);
-                          if (diff < closestDiff) {
-                            closestDiff = diff;
-                            closest = d;
-                          }
-                        });
-
-                        return closest.date;
-                      };
-
-                      const startDate = findClosestDate(cycle.startDate);
-                      const endDate = findClosestDate(cycle.endDate);
-
-                      // Verify dates exist in data
-                      const startExists = multiData.some(d => d.date === startDate);
-                      const endExists = multiData.some(d => d.date === endDate);
-
-                      console.log(`Cycle ${idx + 1} (${cycle.type}):`, {
-                        original: `${cycle.startDate} to ${cycle.endDate}`,
-                        matched: `${startDate} to ${endDate}`,
-                        startExists,
-                        endExists,
-                        willRender: startExists && endExists
-                      });
-
-                      // Only render if both dates exist in the data
-                      if (!startExists || !endExists) {
-                        console.warn(`Skipping cycle ${idx + 1} - dates not found in chart data`);
-                        return null;
-                      }
-
-                      // Determine color based on cycle type
-                      const fillColor = cycle.type === 'bull' ? 'rgba(34, 197, 94, 0.3)' :
-                                       cycle.type === 'bear' ? 'rgba(239, 68, 68, 0.3)' :
-                                       'rgba(234, 179, 8, 0.3)';
-                      const strokeColor = cycle.type === 'bull' ? '#22c55e' :
-                                         cycle.type === 'bear' ? '#ef4444' :
-                                         '#eab308';
-
-                      console.log(`Rendering ReferenceArea with x1="${startDate}" x2="${endDate}" fill="${fillColor}"`);
-
-                      return (
-                        <ReferenceArea
-                          key={`cycle-${cycle.id || idx}`}
-                          x1={startDate}
-                          x2={endDate}
-                          y1="auto"
-                          y2="auto"
-                          fill={fillColor}
-                          stroke={strokeColor}
-                          strokeWidth={3}
-                          strokeOpacity={1}
-                          fillOpacity={1}
-                          isFront={false}
-                        />
-                      );
-                    })}
-
-                    {/* Show cycle boundaries as THICK vertical lines AND dots */}
-                    {cycleAnalysis.cycles.flatMap((cycle, idx) => {
-                      // Find matching dates
-                      const findClosestDate = (originalDate) => {
-                        const targetTime = new Date(originalDate).getTime();
-                        let closest = multiData[0];
-                        let closestDiff = Infinity;
-
-                        multiData.forEach(d => {
-                          if (!d.date) return;
-                          let dateStr = d.date;
-                          if (dateStr.includes('-')) {
-                            const parts = dateStr.split('-');
-                            if (parts[0].length === 2) {
-                              dateStr = `20${parts[0]}-${parts[1]}-${parts[2]}`;
-                            } else if (parts.length === 2) {
-                              dateStr = `${parts[0]}-${parts[1]}-01`;
-                            }
-                          }
-                          const time = new Date(dateStr).getTime();
-                          if (isNaN(time)) return;
-                          const diff = Math.abs(time - targetTime);
-                          if (diff < closestDiff) {
-                            closestDiff = diff;
-                            closest = d;
-                          }
-                        });
-                        return closest;
-                      };
-
-                      const startDateObj = findClosestDate(cycle.startDate);
-                      const endDateObj = findClosestDate(cycle.endDate);
-                      const startDate = startDateObj.date;
-                      const endDate = endDateObj.date;
-                      const startPrice = startDateObj.price;
-                      const endPrice = endDateObj.price;
-
-                      const strokeColor = cycle.type === 'bull' ? '#22c55e' :
-                                         cycle.type === 'bear' ? '#ef4444' :
-                                         '#eab308';
-
-                      console.log(`Creating markers for cycle ${idx + 1}: start=${startDate} (${startPrice}), end=${endDate} (${endPrice})`);
-
-                      return [
-                        <ReferenceLine
-                          key={`cycle-line-start-${idx}`}
-                          x={startDate}
-                          stroke={strokeColor}
-                          strokeWidth={5}
-                          label={{
-                            value: `${cycle.type.toUpperCase()} ${idx + 1} START`,
-                            position: 'top',
-                            fill: strokeColor,
-                            fontSize: 13,
-                            fontWeight: 'bold'
-                          }}
-                        />,
-                        <ReferenceLine
-                          key={`cycle-line-end-${idx}`}
-                          x={endDate}
-                          stroke={strokeColor}
-                          strokeWidth={5}
-                          strokeDasharray="5 5"
-                          label={{
-                            value: `${cycle.type.toUpperCase()} ${idx + 1} END`,
-                            position: 'bottom',
-                            fill: strokeColor,
-                            fontSize: 13,
-                            fontWeight: 'bold'
-                          }}
-                        />,
-                        <ReferenceDot
-                          key={`cycle-dot-start-${idx}`}
-                          x={startDate}
-                          y={startPrice}
-                          r={10}
-                          fill={strokeColor}
-                          stroke="#ffffff"
-                          strokeWidth={3}
-                        />,
-                        <ReferenceDot
-                          key={`cycle-dot-end-${idx}`}
-                          x={endDate}
-                          y={endPrice}
-                          r={10}
-                          fill={strokeColor}
-                          stroke="#000000"
-                          strokeWidth={3}
-                        />
-                      ];
-                    })}
-
-                    {/* Show cycle price ranges as reference lines */}
-                    {cycleAnalysis.currentCycle && (
-                      <>
-                        <ReferenceLine
-                          y={cycleAnalysis.currentCycle.priceRange.high}
-                          stroke="#22c55e"
-                          strokeDasharray="5 5"
-                          strokeWidth={2}
-                          label={{
-                            value: `Cycle High: $${cycleAnalysis.currentCycle.priceRange.high?.toFixed(2)}`,
-                            position: 'right',
-                            fill: '#22c55e',
-                            fontSize: 11,
-                            fontWeight: 'bold'
-                          }}
-                        />
-                        <ReferenceLine
-                          y={cycleAnalysis.currentCycle.priceRange.low}
-                          stroke="#ef4444"
-                          strokeDasharray="5 5"
-                          strokeWidth={2}
-                          label={{
-                            value: `Cycle Low: $${cycleAnalysis.currentCycle.priceRange.low?.toFixed(2)}`,
-                            position: 'right',
-                            fill: '#ef4444',
-                            fontSize: 11,
-                            fontWeight: 'bold'
-                          }}
-                        />
-                      </>
-                    )}
+                    <ReferenceLine
+                      y={cycleAnalysis.currentCycle.priceRange.high}
+                      stroke="#22c55e"
+                      strokeDasharray="5 5"
+                      strokeWidth={2}
+                      label={{
+                        value: `Cycle High: $${cycleAnalysis.currentCycle.priceRange.high?.toFixed(2)}`,
+                        position: 'right',
+                        fill: '#22c55e',
+                        fontSize: 11,
+                        fontWeight: 'bold'
+                      }}
+                    />
+                    <ReferenceLine
+                      y={cycleAnalysis.currentCycle.priceRange.low}
+                      stroke="#ef4444"
+                      strokeDasharray="5 5"
+                      strokeWidth={2}
+                      label={{
+                        value: `Cycle Low: $${cycleAnalysis.currentCycle.priceRange.low?.toFixed(2)}`,
+                        position: 'right',
+                        fill: '#ef4444',
+                        fontSize: 11,
+                        fontWeight: 'bold'
+                      }}
+                    />
                   </>
                 )}
 
