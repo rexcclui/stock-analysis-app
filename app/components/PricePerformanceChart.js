@@ -2,9 +2,9 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceDot, Scatter } from 'recharts';
 import { LoadingState } from './LoadingState';
 import { useAIPriceAnalysis } from '../hooks/useAIPriceAnalysis';
-import { AIPriceAnalysisButton } from './AIPriceAnalysisButton';
-import { AIChartOverlay } from './AIChartOverlay';
-import { AIPriceAnalysisPanel } from './AIPriceAnalysisPanel';
+import { AIPriceAnalysisButton } from './ai/AIPriceAnalysisButton';
+import { AIChartOverlay } from './ai/AIChartOverlay';
+import { AIPriceAnalysisPanel } from './ai/AIPriceAnalysisPanel';
 
 /**
  * PricePerformanceChart
