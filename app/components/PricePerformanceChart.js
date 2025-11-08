@@ -461,7 +461,9 @@ export function PricePerformanceChart({
                 })}
               </div>
               <div className="text-[10px] text-gray-500 mt-1 text-center italic">
-                Note: Vertical cycle markers cannot be displayed on the chart due to Recharts limitations with categorical X-axes
+                {['3Y', '5Y'].includes(chartPeriod)
+                  ? 'Note: Vertical cycle markers cannot be displayed on 3Y/5Y periods due to Recharts limitations with monthly date format'
+                  : 'Vertical cycle markers are also shown on the chart below'}
               </div>
             </div>
           );
@@ -608,9 +610,90 @@ export function PricePerformanceChart({
                   </>
                 )}
 
-                {/* AI Cycle Analysis - Horizontal price range lines only (Recharts doesn't support vertical lines on categorical X-axes) */}
-                {showCycleAnalysis && cycleAnalysis && chartCompareStocks.length === 0 && (
+                {/* AI Cycle Analysis - Vertical boundary markers (only for 1D-1Y) and horizontal price ranges */}
+                {showCycleAnalysis && cycleAnalysis && chartCompareStocks.length === 0 && cycleAnalysis.cycles && multiData.length > 0 && (
                   <>
+                    {/* Vertical lines marking cycle boundaries - only for 1D-1Y periods (YY-MM-DD format works) */}
+                    {!['3Y', '5Y'].includes(chartPeriod) && cycleAnalysis.cycles.flatMap((cycle, idx) => {
+                      // Check if cycle is within visible chart range
+                      const cycleStart = new Date(cycle.startDate).getTime();
+                      const cycleEnd = new Date(cycle.endDate).getTime();
+
+                      // Get visible chart range - YY-MM-DD format
+                      const firstDate = multiData[0].date;
+                      const lastDate = multiData[multiData.length - 1].date;
+
+                      // Convert YY-MM-DD to full date for comparison
+                      const chartStart = new Date(firstDate.replace(/^(\d{2})-/, '20$1-')).getTime();
+                      const chartEnd = new Date(lastDate.replace(/^(\d{2})-/, '20$1-')).getTime();
+
+                      // Skip cycles completely outside visible range
+                      if (cycleEnd < chartStart || cycleStart > chartEnd) {
+                        return [];
+                      }
+
+                      // Find matching dates in chart data
+                      const findClosestDate = (originalDate) => {
+                        const targetTime = new Date(originalDate).getTime();
+                        let closest = multiData[0];
+                        let closestDiff = Infinity;
+
+                        multiData.forEach(d => {
+                          if (!d.date) return;
+                          // Convert YY-MM-DD to 20YY-MM-DD
+                          const parts = d.date.split('-');
+                          const dateStr = parts[0].length === 2 ? `20${parts[0]}-${parts[1]}-${parts[2]}` : d.date;
+
+                          const time = new Date(dateStr).getTime();
+                          if (isNaN(time)) return;
+                          const diff = Math.abs(time - targetTime);
+                          if (diff < closestDiff) {
+                            closestDiff = diff;
+                            closest = d;
+                          }
+                        });
+                        return closest;
+                      };
+
+                      const startDateObj = findClosestDate(cycle.startDate);
+                      const endDateObj = findClosestDate(cycle.endDate);
+                      const startDate = startDateObj.date;
+                      const endDate = endDateObj.date;
+
+                      const strokeColor = cycle.type === 'bull' ? '#22c55e' :
+                                         cycle.type === 'bear' ? '#ef4444' :
+                                         '#eab308';
+
+                      return [
+                        <ReferenceLine
+                          key={`cycle-start-${idx}`}
+                          x={startDate}
+                          stroke={strokeColor}
+                          strokeWidth={2}
+                          label={{
+                            value: `${cycle.type.toUpperCase()} ${idx + 1}`,
+                            position: 'top',
+                            fill: strokeColor,
+                            fontSize: 10,
+                            fontWeight: 'bold'
+                          }}
+                        />,
+                        <ReferenceLine
+                          key={`cycle-end-${idx}`}
+                          x={endDate}
+                          stroke={strokeColor}
+                          strokeWidth={2}
+                          strokeDasharray="5 5"
+                          label={{
+                            value: `END`,
+                            position: 'bottom',
+                            fill: strokeColor,
+                            fontSize: 10,
+                            fontWeight: 'bold'
+                          }}
+                        />
+                      ];
+                    })}
 
                     {/* Horizontal price range lines for current cycle */}
                     {cycleAnalysis.currentCycle && (
