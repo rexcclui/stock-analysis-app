@@ -603,15 +603,26 @@ export function PricePerformanceChart({
                   return true;
                 })() && (
                   <>
-                    {/* Vertical lines marking cycle boundaries - only show on daily periods (not 3Y/5Y) */}
-                    {!['3Y', '5Y'].includes(chartPeriod) && cycleAnalysis.cycles.flatMap((cycle, idx) => {
+                    {/* Vertical lines marking cycle boundaries */}
+                    {cycleAnalysis.cycles.flatMap((cycle, idx) => {
                       // Check if cycle is within visible chart range
                       const cycleStart = new Date(cycle.startDate).getTime();
                       const cycleEnd = new Date(cycle.endDate).getTime();
 
-                      // Get visible chart range
-                      const chartStart = new Date(multiData[0].date.replace(/^(\d{2})-/, '20$1-')).getTime();
-                      const chartEnd = new Date(multiData[multiData.length - 1].date.replace(/^(\d{2})-/, '20$1-')).getTime();
+                      // Get visible chart range - handle both YY-MM-DD and YYYY-MM formats
+                      const firstDate = multiData[0].date;
+                      const lastDate = multiData[multiData.length - 1].date;
+
+                      let chartStart, chartEnd;
+                      if (firstDate.match(/^\d{4}-\d{2}$/)) {
+                        // YYYY-MM format (3Y/5Y periods)
+                        chartStart = new Date(firstDate + '-01').getTime();
+                        chartEnd = new Date(lastDate + '-01').getTime();
+                      } else {
+                        // YY-MM-DD format (1D-1Y periods)
+                        chartStart = new Date(firstDate.replace(/^(\d{2})-/, '20$1-')).getTime();
+                        chartEnd = new Date(lastDate.replace(/^(\d{2})-/, '20$1-')).getTime();
+                      }
 
                       // Skip cycles completely outside visible range
                       if (cycleEnd < chartStart || cycleStart > chartEnd) {
@@ -628,17 +639,26 @@ export function PricePerformanceChart({
                         let closest = multiData[0];
                         let closestDiff = Infinity;
 
+                        // Check if we're in monthly format (YYYY-MM)
+                        const isMonthlyFormat = multiData[0].date.match(/^\d{4}-\d{2}$/);
+
                         multiData.forEach(d => {
                           if (!d.date) return;
                           let dateStr = d.date;
-                          if (dateStr.includes('-')) {
-                            const parts = dateStr.split('-');
-                            if (parts[0].length === 2) {
-                              dateStr = `20${parts[0]}-${parts[1]}-${parts[2]}`;
-                            } else if (parts.length === 2) {
-                              dateStr = `${parts[0]}-${parts[1]}-01`;
+
+                          if (isMonthlyFormat) {
+                            // YYYY-MM format: append -01 to make valid date
+                            dateStr = dateStr + '-01';
+                          } else {
+                            // YY-MM-DD format: convert to 20YY-MM-DD
+                            if (dateStr.includes('-')) {
+                              const parts = dateStr.split('-');
+                              if (parts[0].length === 2) {
+                                dateStr = `20${parts[0]}-${parts[1]}-${parts[2]}`;
+                              }
                             }
                           }
+
                           const time = new Date(dateStr).getTime();
                           if (isNaN(time)) return;
                           const diff = Math.abs(time - targetTime);
