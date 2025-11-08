@@ -24,7 +24,7 @@ export function AIChartOverlay({
   return (
     <>
       {/* AI Analysis - Resistance Levels */}
-      {aiAnalysis.resistanceLevels && aiAnalysis.resistanceLevels.map((level, idx) => (
+      {aiAnalysis.resistanceLevels && aiAnalysis.resistanceLevels.length > 0 && aiAnalysis.resistanceLevels.map((level, idx) => (
         <ReferenceLine
           key={`resistance-${idx}`}
           y={level.price}
@@ -41,7 +41,7 @@ export function AIChartOverlay({
       ))}
 
       {/* AI Analysis - Support Levels */}
-      {aiAnalysis.supportLevels && aiAnalysis.supportLevels.map((level, idx) => (
+      {aiAnalysis.supportLevels && aiAnalysis.supportLevels.length > 0 && aiAnalysis.supportLevels.map((level, idx) => (
         <ReferenceLine
           key={`support-${idx}`}
           y={level.price}
@@ -58,15 +58,16 @@ export function AIChartOverlay({
       ))}
 
       {/* AI Analysis - Buy Signals */}
-      {aiAnalysis.buySignals && aiAnalysis.buySignals.map((signal, idx) => {
+      {aiAnalysis.buySignals && aiAnalysis.buySignals.length > 0 && chartData.length > 0 && aiAnalysis.buySignals.map((signal, idx) => {
         // Find the closest data point to this price
         const closestPoint = chartData.reduce((closest, point) => {
+          if (!point.price || !closest.price) return closest;
           const currentDiff = Math.abs(point.price - signal.price);
           const closestDiff = Math.abs(closest.price - signal.price);
           return currentDiff < closestDiff ? point : closest;
         }, chartData[0]);
 
-        return closestPoint ? (
+        return closestPoint && closestPoint.price ? (
           <ReferenceDot
             key={`buy-${idx}`}
             x={closestPoint.date}
@@ -87,15 +88,16 @@ export function AIChartOverlay({
       })}
 
       {/* AI Analysis - Sell Signals */}
-      {aiAnalysis.sellSignals && aiAnalysis.sellSignals.map((signal, idx) => {
+      {aiAnalysis.sellSignals && aiAnalysis.sellSignals.length > 0 && chartData.length > 0 && aiAnalysis.sellSignals.map((signal, idx) => {
         // Find the closest data point to this price
         const closestPoint = chartData.reduce((closest, point) => {
+          if (!point.price || !closest.price) return closest;
           const currentDiff = Math.abs(point.price - signal.price);
           const closestDiff = Math.abs(closest.price - signal.price);
           return currentDiff < closestDiff ? point : closest;
         }, chartData[0]);
 
-        return closestPoint ? (
+        return closestPoint && closestPoint.price ? (
           <ReferenceDot
             key={`sell-${idx}`}
             x={closestPoint.date}
