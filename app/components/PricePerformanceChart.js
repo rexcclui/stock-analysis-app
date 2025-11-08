@@ -90,17 +90,11 @@ export function PricePerformanceChart({
   // Helper to format date based on period
   const formatChartDate = (dateStr, period) => {
     const d = new Date(dateStr);
-    const isLongPeriod = period === '3Y' || period === '5Y';
-    if (isLongPeriod) {
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      return `${yyyy}-${mm}`;
-    } else {
-      const yy = String(d.getFullYear()).slice(-2);
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const dd = String(d.getDate()).padStart(2, '0');
-      return `${yy}-${mm}-${dd}`;
-    }
+    // Use consistent YY-MM-DD format for all periods (enables vertical cycle lines on all periods)
+    const yy = String(d.getFullYear()).slice(-2);
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yy}-${mm}-${dd}`;
   };
 
   // Get current data slice based on offset and period
@@ -461,9 +455,7 @@ export function PricePerformanceChart({
                 })}
               </div>
               <div className="text-[10px] text-gray-500 mt-1 text-center italic">
-                {['3Y', '5Y'].includes(chartPeriod)
-                  ? 'Note: Vertical cycle markers cannot be displayed on 3Y/5Y periods due to Recharts limitations with monthly date format'
-                  : 'Vertical cycle markers are also shown on the chart below'}
+                Vertical cycle boundary markers are also shown on the chart below
               </div>
             </div>
           );
@@ -610,20 +602,20 @@ export function PricePerformanceChart({
                   </>
                 )}
 
-                {/* AI Cycle Analysis - Vertical boundary markers (only for 1D-1Y) and horizontal price ranges */}
+                {/* AI Cycle Analysis - Vertical boundary markers and horizontal price ranges */}
                 {showCycleAnalysis && cycleAnalysis && chartCompareStocks.length === 0 && cycleAnalysis.cycles && multiData.length > 0 && (
                   <>
-                    {/* Vertical lines marking cycle boundaries - only for 1D-1Y periods (YY-MM-DD format works) */}
-                    {!['3Y', '5Y'].includes(chartPeriod) && cycleAnalysis.cycles.flatMap((cycle, idx) => {
+                    {/* Vertical lines marking cycle boundaries - all periods use YY-MM-DD format */}
+                    {cycleAnalysis.cycles.flatMap((cycle, idx) => {
                       // Check if cycle is within visible chart range
                       const cycleStart = new Date(cycle.startDate).getTime();
                       const cycleEnd = new Date(cycle.endDate).getTime();
 
-                      // Get visible chart range - YY-MM-DD format
+                      // Get visible chart range - all periods now use YY-MM-DD format
                       const firstDate = multiData[0].date;
                       const lastDate = multiData[multiData.length - 1].date;
 
-                      // Convert YY-MM-DD to full date for comparison
+                      // Convert YY-MM-DD to 20YY-MM-DD for comparison
                       const chartStart = new Date(firstDate.replace(/^(\d{2})-/, '20$1-')).getTime();
                       const chartEnd = new Date(lastDate.replace(/^(\d{2})-/, '20$1-')).getTime();
 
