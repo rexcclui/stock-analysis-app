@@ -1,7 +1,7 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
 import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceDot, Scatter } from 'recharts';
 import { LoadingState } from './LoadingState';
-import { Sparkles, TrendingUp, TrendingDown, Target } from 'lucide-react';
+import { Sparkles, TrendingUp, TrendingDown, Target, Activity, DollarSign } from 'lucide-react';
 
 /**
  * PricePerformanceChart
@@ -43,6 +43,12 @@ export function PricePerformanceChart({
   const [aiError, setAiError] = useState(null);
   const [showAiAnalysis, setShowAiAnalysis] = useState(false);
 
+  // Trading Signals state
+  const [tradingSignals, setTradingSignals] = useState(null);
+  const [signalsLoading, setSignalsLoading] = useState(false);
+  const [signalsError, setSignalsError] = useState(null);
+  const [showTradingSignals, setShowTradingSignals] = useState(false);
+
   // Don't return early here; render decisions happen after hooks are declared to keep hooks order stable.
   const shouldShowLoading = !selectedStock && loading;
 
@@ -72,6 +78,9 @@ export function PricePerformanceChart({
     setAiAnalysis(null);
     setAiError(null);
     setShowAiAnalysis(false);
+    setTradingSignals(null);
+    setSignalsError(null);
+    setShowTradingSignals(false);
   }, [selectedStock?.code]);
 
   // Handle AI price analysis
@@ -109,6 +118,43 @@ export function PricePerformanceChart({
       setAiError(error.message);
     } finally {
       setAiLoading(false);
+    }
+  };
+
+  // Handle Trading Signals Analysis
+  const handleTradingSignals = async (forceReload = false) => {
+    if (!selectedStock || !fullHistoricalData || fullHistoricalData.length === 0) {
+      setSignalsError('No price data available for analysis');
+      return;
+    }
+
+    setSignalsLoading(true);
+    setSignalsError(null);
+
+    try {
+      const response = await fetch('/api/trading-signals', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol: selectedStock.code,
+          historicalData: fullHistoricalData,
+          forceReload
+        })
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || 'Failed to generate trading signals');
+      }
+
+      setTradingSignals(data);
+      setShowTradingSignals(true);
+    } catch (error) {
+      console.error('Trading Signals Error:', error);
+      setSignalsError(error.message);
+    } finally {
+      setSignalsLoading(false);
     }
   };
 
@@ -354,6 +400,41 @@ export function PricePerformanceChart({
               title={showAiAnalysis ? 'Hide AI markers' : 'Show AI markers'}
             >
               {showAiAnalysis ? 'Hide AI Markers' : 'Show AI Markers'}
+            </button>
+          )}
+
+          {/* Trading Signals Button */}
+          <button
+            onClick={() => handleTradingSignals(false)}
+            disabled={signalsLoading || !selectedStock || chartCompareStocks.length > 0}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg font-semibold transition-all text-sm ${
+              signalsLoading || !selectedStock || chartCompareStocks.length > 0
+                ? 'bg-gray-700 text-gray-400 cursor-not-allowed'
+                : 'bg-gradient-to-r from-green-600 to-teal-600 hover:from-green-700 hover:to-teal-700 text-white shadow-lg hover:shadow-xl transform hover:scale-105'
+            }`}
+            title={chartCompareStocks.length > 0 ? 'Trading signals only available for single stock view' : 'Generate trading signals with backtesting'}
+          >
+            {signalsLoading ? (
+              <>
+                <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-500"></div>
+                Analyzing...
+              </>
+            ) : (
+              <>
+                <Activity size={16} />
+                Trading Signals
+              </>
+            )}
+          </button>
+
+          {/* Toggle Trading Signals Display */}
+          {tradingSignals && !signalsLoading && (
+            <button
+              onClick={() => setShowTradingSignals(!showTradingSignals)}
+              className="px-3 py-2 bg-green-700 hover:bg-green-600 text-white rounded-lg text-xs font-medium transition"
+              title={showTradingSignals ? 'Hide trading signals' : 'Show trading signals'}
+            >
+              {showTradingSignals ? 'Hide Signals' : 'Show Signals'}
             </button>
           )}
           <div className="flex items-center" style={{ marginLeft: '12px' }}>
@@ -646,6 +727,64 @@ export function PricePerformanceChart({
                     />
                   ) : null;
                 })}
+
+                {/* Trading Signals - Buy Points */}
+                {chartCompareStocks.length === 0 && showTradingSignals && tradingSignals?.buySignals && tradingSignals.buySignals.map((signal, idx) => {
+                  // Find the closest data point to this signal
+                  const closestPoint = multiData.reduce((closest, point) => {
+                    const currentDiff = Math.abs(point.price - signal.price);
+                    const closestDiff = Math.abs(closest.price - signal.price);
+                    return currentDiff < closestDiff ? point : closest;
+                  }, multiData[0]);
+
+                  return closestPoint ? (
+                    <ReferenceDot
+                      key={`trade-buy-${idx}`}
+                      x={closestPoint.date}
+                      y={signal.price}
+                      r={8}
+                      fill="#22c55e"
+                      stroke="#ffffff"
+                      strokeWidth={2}
+                      label={{
+                        value: `▲ BUY`,
+                        position: 'top',
+                        fill: '#22c55e',
+                        fontSize: 10,
+                        fontWeight: 'bold'
+                      }}
+                    />
+                  ) : null;
+                })}
+
+                {/* Trading Signals - Sell Points */}
+                {chartCompareStocks.length === 0 && showTradingSignals && tradingSignals?.sellSignals && tradingSignals.sellSignals.map((signal, idx) => {
+                  // Find the closest data point to this signal
+                  const closestPoint = multiData.reduce((closest, point) => {
+                    const currentDiff = Math.abs(point.price - signal.price);
+                    const closestDiff = Math.abs(closest.price - signal.price);
+                    return currentDiff < closestDiff ? point : closest;
+                  }, multiData[0]);
+
+                  return closestPoint ? (
+                    <ReferenceDot
+                      key={`trade-sell-${idx}`}
+                      x={closestPoint.date}
+                      y={signal.price}
+                      r={8}
+                      fill="#ef4444"
+                      stroke="#ffffff"
+                      strokeWidth={2}
+                      label={{
+                        value: `▼ SELL`,
+                        position: 'bottom',
+                        fill: '#ef4444',
+                        fontSize: 10,
+                        fontWeight: 'bold'
+                      }}
+                    />
+                  ) : null;
+                })}
                 {chartCompareStocks.length === 0 ? (
                   <Line type="monotone" dataKey="price" name={`${selectedStock?.code || ''} Price`} stroke="#3B82F6" strokeWidth={2} dot={false} />
                 ) : (
@@ -856,6 +995,209 @@ export function PricePerformanceChart({
                   Please configure your OpenAI API key in the .env.local file
                 </p>
               )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Trading Signals Backtest Results */}
+      {tradingSignals && showTradingSignals && !signalsLoading && (
+        <div className="mt-4 bg-gradient-to-br from-green-900/40 to-teal-900/40 rounded-xl shadow-xl p-4 border border-green-500/30">
+          <div className="flex items-center justify-between mb-4">
+            <div className="flex items-center gap-3">
+              <div className="p-2 bg-green-500/20 rounded-lg">
+                <DollarSign className="text-green-400" size={20} />
+              </div>
+              <div>
+                <h4 className="text-lg font-bold" style={{ color: '#fde047' }}>Trading Signals & Backtest Results</h4>
+                <p className="text-xs text-gray-400">
+                  {tradingSignals.fromCache ? '📦 Cached: ' : '🆕 Generated: '}
+                  {new Date(tradingSignals.analyzedAt).toLocaleString()}
+                </p>
+              </div>
+            </div>
+            <button
+              onClick={() => handleTradingSignals(true)}
+              className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs transition"
+              title="Force reload analysis"
+            >
+              Refresh
+            </button>
+          </div>
+
+          {/* Performance Summary */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+            <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
+              <h5 className="text-sm font-semibold mb-2 flex items-center gap-2" style={{ color: '#fde047' }}>
+                <DollarSign size={16} />
+                Strategy Performance
+              </h5>
+              <p className="text-2xl font-bold" style={{
+                color: parseFloat(tradingSignals.backtest.summary.totalReturnPct) >= 0 ? '#22c55e' : '#ef4444'
+              }}>
+                {tradingSignals.backtest.summary.totalReturnPct}%
+              </p>
+              <p className="text-xs text-gray-400 mt-1">
+                ${tradingSignals.backtest.summary.initialCapital} → ${tradingSignals.backtest.summary.finalCapital}
+              </p>
+              <p className="text-xs text-gray-300 mt-1">
+                Total Return: <span className="font-semibold">${tradingSignals.backtest.summary.totalReturn}</span>
+              </p>
+            </div>
+
+            <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
+              <h5 className="text-sm font-semibold mb-2" style={{ color: '#fde047' }}>Trading Activity</h5>
+              <p className="text-2xl font-bold text-blue-400">
+                {tradingSignals.backtest.summary.totalTrades}
+              </p>
+              <p className="text-xs text-gray-400 mt-1">Total Trades</p>
+              <div className="flex gap-3 mt-2 text-xs">
+                <span className="text-green-400">
+                  ✓ {tradingSignals.backtest.summary.winningTrades} Wins
+                </span>
+                <span className="text-red-400">
+                  ✗ {tradingSignals.backtest.summary.losingTrades} Losses
+                </span>
+              </div>
+            </div>
+
+            <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
+              <h5 className="text-sm font-semibold mb-2" style={{ color: '#fde047' }}>Win Rate</h5>
+              <p className="text-2xl font-bold text-purple-400">
+                {tradingSignals.backtest.summary.winRate}%
+              </p>
+              <p className="text-xs text-gray-400 mt-1">Success Rate</p>
+              <p className="text-xs text-gray-300 mt-1">
+                Profit Factor: <span className="font-semibold">{tradingSignals.backtest.summary.profitFactor}</span>
+              </p>
+            </div>
+          </div>
+
+          {/* Strategy vs Buy & Hold */}
+          <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700 mb-4">
+            <h5 className="text-sm font-semibold mb-2" style={{ color: '#fde047' }}>Strategy vs Buy & Hold</h5>
+            <div className="grid grid-cols-2 gap-4">
+              <div>
+                <p className="text-xs text-gray-400">Strategy Return</p>
+                <p className="text-lg font-bold" style={{
+                  color: parseFloat(tradingSignals.performance.strategyReturnPct) >= 0 ? '#22c55e' : '#ef4444'
+                }}>
+                  {tradingSignals.performance.strategyReturnPct}%
+                </p>
+              </div>
+              <div>
+                <p className="text-xs text-gray-400">Buy & Hold Return</p>
+                <p className="text-lg font-bold" style={{
+                  color: parseFloat(tradingSignals.performance.buyAndHoldReturnPct) >= 0 ? '#22c55e' : '#ef4444'
+                }}>
+                  {tradingSignals.performance.buyAndHoldReturnPct}%
+                </p>
+              </div>
+            </div>
+            <div className="mt-2 p-2 bg-gray-900/50 rounded">
+              <p className="text-xs text-gray-300">
+                Outperformance: <span className="font-bold" style={{
+                  color: parseFloat(tradingSignals.performance.outperformancePct) >= 0 ? '#22c55e' : '#ef4444'
+                }}>
+                  {tradingSignals.performance.outperformancePct > 0 ? '+' : ''}{tradingSignals.performance.outperformancePct}%
+                </span>
+              </p>
+            </div>
+          </div>
+
+          {/* Risk Metrics */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+            <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
+              <h5 className="text-sm font-semibold mb-2" style={{ color: '#fde047' }}>Average Win/Loss</h5>
+              <div className="space-y-1">
+                <p className="text-xs text-gray-300">
+                  Avg Win: <span className="font-semibold text-green-400">${tradingSignals.risk.avgWin}</span>
+                </p>
+                <p className="text-xs text-gray-300">
+                  Avg Loss: <span className="font-semibold text-red-400">${tradingSignals.risk.avgLoss}</span>
+                </p>
+              </div>
+            </div>
+
+            <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
+              <h5 className="text-sm font-semibold mb-2" style={{ color: '#fde047' }}>Current Position</h5>
+              <p className="text-lg font-bold" style={{
+                color: tradingSignals.currentPosition === 'LONG' ? '#22c55e' : '#9ca3af'
+              }}>
+                {tradingSignals.currentPosition}
+              </p>
+              {tradingSignals.lastSignal && (
+                <p className="text-xs text-gray-400 mt-1">
+                  Last: {tradingSignals.lastSignal.type} at ${tradingSignals.lastSignal.price.toFixed(2)}
+                </p>
+              )}
+            </div>
+          </div>
+
+          {/* Strategy Parameters */}
+          <div className="bg-blue-900/20 rounded-lg p-3 border border-blue-500/30 mb-3">
+            <h5 className="text-sm font-semibold mb-2" style={{ color: '#fde047' }}>Strategy Parameters</h5>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-2 text-xs text-gray-300">
+              <div>
+                <span className="text-gray-400">Fast MA:</span> <span className="font-semibold">{tradingSignals.parameters.fastPeriod}</span>
+              </div>
+              <div>
+                <span className="text-gray-400">Slow MA:</span> <span className="font-semibold">{tradingSignals.parameters.slowPeriod}</span>
+              </div>
+              <div>
+                <span className="text-gray-400">RSI Period:</span> <span className="font-semibold">{tradingSignals.parameters.rsiPeriod}</span>
+              </div>
+              <div>
+                <span className="text-gray-400">Volume MA:</span> <span className="font-semibold">{tradingSignals.parameters.volumePeriod}</span>
+              </div>
+            </div>
+          </div>
+
+          {/* Recent Trades */}
+          {tradingSignals.backtest.trades && tradingSignals.backtest.trades.length > 0 && (
+            <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
+              <h5 className="text-sm font-semibold mb-2" style={{ color: '#fde047' }}>Recent Trades</h5>
+              <div className="space-y-2 max-h-48 overflow-y-auto">
+                {tradingSignals.backtest.trades.slice(-10).reverse().map((trade, idx) => (
+                  <div key={idx} className="text-xs p-2 bg-gray-900/50 rounded">
+                    <div className="flex justify-between items-center">
+                      <span className={`font-bold ${trade.type === 'BUY' ? 'text-green-400' : 'text-red-400'}`}>
+                        {trade.type}
+                      </span>
+                      <span className="text-gray-300">{trade.date}</span>
+                      <span className="text-gray-300">${trade.price.toFixed(2)}</span>
+                      {trade.profitLoss && (
+                        <span className={`font-semibold ${parseFloat(trade.profitLoss) >= 0 ? 'text-green-400' : 'text-red-400'}`}>
+                          {parseFloat(trade.profitLoss) >= 0 ? '+' : ''}${trade.profitLoss} ({trade.profitLossPct}%)
+                        </span>
+                      )}
+                    </div>
+                    {trade.reason && (
+                      <p className="text-gray-400 mt-1 text-xs">→ {trade.reason}</p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Disclaimer */}
+          <div className="mt-3 p-2 bg-gray-900/50 rounded border border-gray-700">
+            <p className="text-xs text-gray-400 text-center">
+              ⚠️ This is a backtest on historical data. Past performance does not guarantee future results. Not financial advice.
+            </p>
+          </div>
+        </div>
+      )}
+
+      {/* Trading Signals Error Display */}
+      {signalsError && (
+        <div className="mt-4 p-4 bg-red-900/30 rounded-lg border border-red-500/50">
+          <div className="flex items-start gap-3">
+            <div className="text-red-400 flex-shrink-0 mt-0.5">⚠️</div>
+            <div className="flex-1">
+              <p className="text-red-400 font-semibold mb-1">Trading Signals Failed</p>
+              <p className="text-gray-300 text-sm">{signalsError}</p>
             </div>
           </div>
         </div>

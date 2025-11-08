@@ -103,6 +103,7 @@ export async function GET(request) {
       const fullHistoricalData = historical.historical.slice().reverse().map(d => ({
         date: d.date,
         price: d.close,
+        volume: d.volume || 0,
         rawDate: d.date
       }));
 
