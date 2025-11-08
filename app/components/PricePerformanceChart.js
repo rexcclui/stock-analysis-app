@@ -577,42 +577,52 @@ export function PricePerformanceChart({
                       const startDate = findClosestDate(cycle.startDate);
                       const endDate = findClosestDate(cycle.endDate);
 
+                      // Verify dates exist in data
+                      const startExists = multiData.some(d => d.date === startDate);
+                      const endExists = multiData.some(d => d.date === endDate);
+
                       console.log(`Cycle ${idx + 1} (${cycle.type}):`, {
                         original: `${cycle.startDate} to ${cycle.endDate}`,
                         matched: `${startDate} to ${endDate}`,
-                        dataPoints: multiData.length
+                        startExists,
+                        endExists,
+                        willRender: startExists && endExists
                       });
 
+                      // Only render if both dates exist in the data
+                      if (!startExists || !endExists) {
+                        console.warn(`Skipping cycle ${idx + 1} - dates not found in chart data`);
+                        return null;
+                      }
+
                       // Determine color based on cycle type
-                      const fillColor = cycle.type === 'bull' ? 'rgba(34, 197, 94, 0.2)' :
-                                       cycle.type === 'bear' ? 'rgba(239, 68, 68, 0.2)' :
-                                       'rgba(234, 179, 8, 0.2)';
+                      const fillColor = cycle.type === 'bull' ? 'rgba(34, 197, 94, 0.3)' :
+                                       cycle.type === 'bear' ? 'rgba(239, 68, 68, 0.3)' :
+                                       'rgba(234, 179, 8, 0.3)';
                       const strokeColor = cycle.type === 'bull' ? '#22c55e' :
                                          cycle.type === 'bear' ? '#ef4444' :
                                          '#eab308';
+
+                      console.log(`Rendering ReferenceArea with x1="${startDate}" x2="${endDate}" fill="${fillColor}"`);
 
                       return (
                         <ReferenceArea
                           key={`cycle-${cycle.id || idx}`}
                           x1={startDate}
                           x2={endDate}
+                          y1="auto"
+                          y2="auto"
                           fill={fillColor}
                           stroke={strokeColor}
-                          strokeWidth={2}
+                          strokeWidth={3}
                           strokeOpacity={1}
-                          fillOpacity={0.3}
-                          label={{
-                            value: `${cycle.type.toUpperCase()} (${cycle.duration}d)`,
-                            position: 'insideTop',
-                            fill: strokeColor,
-                            fontSize: 11,
-                            fontWeight: 'bold'
-                          }}
+                          fillOpacity={1}
+                          isFront={false}
                         />
                       );
                     })}
 
-                    {/* Show cycle boundaries as vertical reference lines */}
+                    {/* Show cycle boundaries as THICK vertical reference lines */}
                     {cycleAnalysis.cycles.map((cycle, idx) => {
                       // Find matching dates by comparing timestamps (same logic as ReferenceArea)
                       const findClosestDate = (originalDate) => {
@@ -643,6 +653,7 @@ export function PricePerformanceChart({
                       };
 
                       const startDate = findClosestDate(cycle.startDate);
+                      const endDate = findClosestDate(cycle.endDate);
                       const strokeColor = cycle.type === 'bull' ? '#22c55e' :
                                          cycle.type === 'bear' ? '#ef4444' :
                                          '#eab308';
@@ -652,13 +663,25 @@ export function PricePerformanceChart({
                           <ReferenceLine
                             x={startDate}
                             stroke={strokeColor}
-                            strokeDasharray="3 3"
-                            strokeWidth={2}
+                            strokeWidth={4}
                             label={{
-                              value: `${cycle.type.toUpperCase()} START`,
+                              value: `${cycle.type.toUpperCase()} ${idx + 1}`,
                               position: 'top',
                               fill: strokeColor,
-                              fontSize: 9
+                              fontSize: 12,
+                              fontWeight: 'bold'
+                            }}
+                          />
+                          <ReferenceLine
+                            x={endDate}
+                            stroke={strokeColor}
+                            strokeWidth={4}
+                            strokeDasharray="5 5"
+                            label={{
+                              value: `END`,
+                              position: 'bottom',
+                              fill: strokeColor,
+                              fontSize: 10
                             }}
                           />
                         </React.Fragment>
