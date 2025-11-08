@@ -269,7 +269,7 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
           <tbody>
             {/* Row 1: Executive Summary */}
             <tr>
-              <td colSpan={2} className="border border-gray-700 bg-gray-800/50 p-4">
+              <td colSpan={2} className="border border-gray-700 bg-gray-800/50 p-4 align-top">
                 <h4 className="text-lg font-semibold text-white mb-2">Executive Summary</h4>
                 <p className="text-gray-300 leading-relaxed">{analysis.summary}</p>
               </td>
@@ -277,9 +277,9 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
 
             {/* Row 2: Short & Long Term Negative Impact */}
             <tr>
-              <td className="border border-red-500/30 bg-red-900/20 p-4 w-1/2">
-                <h4 className="text-lg font-bold mb-3">
-                  <span className="text-red-400">Short Term Negative Impact</span>
+              <td className="border border-red-500/30 bg-red-900/20 p-4 w-1/2 align-top">
+                <h4 className="text-lg font-bold mb-3" style={{ color: '#f87171' }}>
+                  Short Term Negative Impact
                 </h4>
                 {analysis.negativeImpacts && analysis.negativeImpacts.length > 0 ? (
                   <div className="space-y-3">
@@ -305,9 +305,9 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
                   <p className="text-gray-400 text-sm">No significant short-term negative impacts</p>
                 )}
               </td>
-              <td className="border border-red-500/30 bg-red-900/20 p-4 w-1/2">
-                <h4 className="text-lg font-bold mb-3">
-                  <span className="text-red-400">Long Term Negative Impact</span>
+              <td className="border border-red-500/30 bg-red-900/20 p-4 w-1/2 align-top">
+                <h4 className="text-lg font-bold mb-3" style={{ color: '#f87171' }}>
+                  Long Term Negative Impact
                 </h4>
                 {analysis.longTermImpact?.direction === 'bearish' ? (
                   <div className="space-y-2">
@@ -329,9 +329,9 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
 
             {/* Row 3: Short & Long Term Positive Impact */}
             <tr>
-              <td className="border border-green-500/30 bg-green-900/20 p-4 w-1/2">
-                <h4 className="text-lg font-bold mb-3">
-                  <span className="text-green-400">Short Term Positive Impact</span>
+              <td className="border border-green-500/30 bg-green-900/20 p-4 w-1/2 align-top">
+                <h4 className="text-lg font-bold mb-3" style={{ color: '#4ade80' }}>
+                  Short Term Positive Impact
                 </h4>
                 {analysis.positiveImpacts && analysis.positiveImpacts.length > 0 ? (
                   <div className="space-y-3">
@@ -357,9 +357,9 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
                   <p className="text-gray-400 text-sm">No significant short-term positive impacts</p>
                 )}
               </td>
-              <td className="border border-green-500/30 bg-green-900/20 p-4 w-1/2">
-                <h4 className="text-lg font-bold mb-3">
-                  <span className="text-green-400">Long Term Positive Impact</span>
+              <td className="border border-green-500/30 bg-green-900/20 p-4 w-1/2 align-top">
+                <h4 className="text-lg font-bold mb-3" style={{ color: '#4ade80' }}>
+                  Long Term Positive Impact
                 </h4>
                 {analysis.longTermImpact?.direction === 'bullish' ? (
                   <div className="space-y-2">
@@ -381,11 +381,11 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
 
             {/* Row 4: Key Risks */}
             <tr>
-              <td colSpan={2} className="border border-orange-500/30 bg-orange-900/20 p-4">
+              <td colSpan={2} className="border border-orange-500/30 bg-orange-900/20 p-4 align-top">
                 <div className="flex items-center gap-2 mb-3">
                   <AlertTriangle className="text-orange-400" size={20} />
-                  <h4 className="text-lg font-bold">
-                    Key <span className="text-red-400 font-extrabold">Risks</span>
+                  <h4 className="text-lg font-bold text-white">
+                    Key <span className="font-extrabold" style={{ color: '#f87171' }}>Risks</span>
                   </h4>
                 </div>
                 {analysis.keyRisks && analysis.keyRisks.length > 0 ? (
@@ -402,11 +402,11 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
 
             {/* Row 5: Key Opportunities */}
             <tr>
-              <td colSpan={2} className="border border-green-500/30 bg-green-900/20 p-4">
+              <td colSpan={2} className="border border-green-500/30 bg-green-900/20 p-4 align-top">
                 <div className="flex items-center gap-2 mb-3">
                   <Lightbulb className="text-green-400" size={20} />
-                  <h4 className="text-lg font-bold">
-                    Key <span className="text-blue-400 font-extrabold">Opportunities</span>
+                  <h4 className="text-lg font-bold text-white">
+                    Key <span className="font-extrabold" style={{ color: '#60a5fa' }}>Opportunities</span>
                   </h4>
                 </div>
                 {analysis.keyOpportunities && analysis.keyOpportunities.length > 0 ? (
@@ -423,12 +423,12 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
 
             {/* Row 6: AI Analyst Recommendation */}
             <tr>
-              <td colSpan={2} className="border border-yellow-500 bg-yellow-900/20 p-4">
+              <td colSpan={2} className="border border-yellow-500 bg-yellow-900/20 p-4 align-top">
                 <div className="flex items-center gap-3 mb-2">
                   <Award className="text-yellow-300" size={24} />
                   <div>
-                    <h4 className="text-lg font-bold text-yellow-300">AI Analyst Recommendation</h4>
-                    <span className="text-2xl font-extrabold text-yellow-300">
+                    <h4 className="text-lg font-bold" style={{ color: '#fde047' }}>AI Analyst Recommendation</h4>
+                    <span className="text-2xl font-extrabold" style={{ color: '#fde047' }}>
                       {analysis.analystRecommendation?.toUpperCase() || 'N/A'}
                     </span>
                   </div>
