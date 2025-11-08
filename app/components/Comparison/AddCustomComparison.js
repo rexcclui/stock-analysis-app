@@ -19,7 +19,7 @@ export function AddCustomComparison({
 
   return (
     <div className="mb-6" style={{ marginTop: '1rem' }}>
-      <div className="flex items-center gap-3 mb-4">
+  <div className="flex flex-nowrap items-center mb-4">
   <h3 className="text-xl font-bold" style={{ color: '#3B82F6' }}>Add Custom Comparison</h3>
         <input
           type="text"
@@ -29,6 +29,7 @@ export function AddCustomComparison({
           onKeyPress={handleKeyPress}
           className="px-3 py-2 bg-gray-700 border-2 border-gray-600 text-white rounded-lg focus:border-blue-500 focus:outline-none placeholder-gray-400"
         />
+          <div style={{ width: '2px' }} />
         <button
           onClick={onAddComparison}
           disabled={loading}
@@ -37,10 +38,10 @@ export function AddCustomComparison({
           <Plus size={18} />
           Add
         </button>
-
-        <div className="flex items-center gap-2 ml-4">
-          <span className="text-sm text-gray-300">Filter:</span>
-          <div className="flex gap-2">
+  <div style={{ width: '2px' }} />
+        <div className="flex items-center gap-6">
+    <span className="text-sm text-gray-300" style={{ marginLeft: '16px', marginRight: '2px' }}>Filter:</span>
+          <div className="flex gap-6">
             {[
               { value: 'all', label: 'All' },
               { value: 'industry', label: 'Industry' },
@@ -63,7 +64,8 @@ export function AddCustomComparison({
           </div>
         </div>
 
-        <div className="flex items-center gap-2 ml-8">
+  <div style={{ width: '32px' }} />
+  <div className="flex items-center gap-2 ml-8">
           <span className="text-sm text-gray-300">Show Top:</span>
           <select
             value={comparisonRowSize}
