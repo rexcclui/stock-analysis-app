@@ -521,6 +521,18 @@ export function PricePerformanceChart({
               const multiData = fullData.slice(startIndex, endIndex);
               console.log('Rendering chart with offset:', dataOffset, 'dataLength:', fullData.length, 'showing:', startIndex, 'to', endIndex);
 
+              // Debug cycle analysis state
+              if (showCycleAnalysis) {
+                console.log('=== CYCLE ANALYSIS STATE ===');
+                console.log('showCycleAnalysis:', showCycleAnalysis);
+                console.log('cycleAnalysis exists:', !!cycleAnalysis);
+                console.log('cycleAnalysis.cycles exists:', !!cycleAnalysis?.cycles);
+                console.log('cycleAnalysis.cycles length:', cycleAnalysis?.cycles?.length);
+                console.log('multiData.length:', multiData.length);
+                console.log('chartCompareStocks.length:', chartCompareStocks.length);
+                console.log('chartPeriod:', chartPeriod);
+              }
+
               return (
                 <LineChart data={multiData}>
                   <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
