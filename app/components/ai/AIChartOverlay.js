@@ -16,10 +16,30 @@ export function AIChartOverlay({
   chartData,
   isCompareMode = false
 }) {
+  // Debug logging
+  console.log('AIChartOverlay - Render check:', {
+    isCompareMode,
+    showAiAnalysis,
+    hasAiAnalysis: !!aiAnalysis,
+    chartDataLength: chartData?.length,
+    resistanceLevels: aiAnalysis?.resistanceLevels?.length,
+    supportLevels: aiAnalysis?.supportLevels?.length,
+    buySignals: aiAnalysis?.buySignals?.length,
+    sellSignals: aiAnalysis?.sellSignals?.length,
+    firstChartPoint: chartData?.[0]
+  });
+
   // Don't render anything in compare mode or if AI analysis is not shown
   if (isCompareMode || !showAiAnalysis || !aiAnalysis) {
+    console.log('AIChartOverlay - Not rendering because:', {
+      isCompareMode,
+      showAiAnalysis,
+      hasAiAnalysis: !!aiAnalysis
+    });
     return null;
   }
+
+  console.log('AIChartOverlay - Rendering with analysis:', aiAnalysis);
 
   return (
     <>
