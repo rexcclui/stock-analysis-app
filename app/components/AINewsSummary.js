@@ -185,18 +185,6 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
             </div>
           </div>
         )}
-
-        {hasNews && !error && (
-          <div className="mt-4 p-3 bg-blue-900/20 rounded-lg border border-blue-500/30">
-            <p className="text-xs text-gray-300 flex items-start gap-2">
-              <Lightbulb size={16} className="text-blue-400 mt-0.5 flex-shrink-0" />
-              <span>
-                Click the button above to generate a comprehensive AI analysis including sentiment,
-                market expectations, short/long-term impact, risks, opportunities, and recommendations.
-              </span>
-            </p>
-          </div>
-        )}
       </div>
     );
   }
