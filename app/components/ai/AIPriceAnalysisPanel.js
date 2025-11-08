@@ -144,7 +144,7 @@ export function AIPriceAnalysisPanel({
       )}
 
       {/* Support & Resistance Levels */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
+      <div className="grid grid-cols-2 gap-3 mb-3">
         {aiAnalysis.supportLevels && aiAnalysis.supportLevels.length > 0 && (
           <div className="bg-green-900/20 rounded-lg p-3 border border-green-500/30">
             <h5 className="text-sm font-semibold mb-2" style={{ color: '#fde047' }}>Support Levels</h5>
