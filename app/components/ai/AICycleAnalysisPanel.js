@@ -57,9 +57,16 @@ export function AICycleAnalysisPanel({
     <div className="mt-4 bg-gradient-to-br from-gray-800 to-gray-900 rounded-xl p-6 border border-green-700/50 shadow-xl">
       {/* Header */}
       <div className="flex items-center justify-between mb-4">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-3">
           <TrendingUp className="text-green-400" size={24} />
-          <h4 className="text-lg font-bold text-green-400">AI Cycle Analysis</h4>
+          <div>
+            <h4 className="text-lg font-bold text-green-400">AI Cycle Analysis</h4>
+            {cycleAnalysis.cycles && (
+              <p className="text-sm text-gray-400">
+                {cycleAnalysis.cycles.length} cycles identified in historical data
+              </p>
+            )}
+          </div>
         </div>
         <button
           onClick={() => onRefresh(true)}
@@ -115,7 +122,34 @@ export function AICycleAnalysisPanel({
       {/* Historical Cycles */}
       {cycleAnalysis.cycles && cycleAnalysis.cycles.length > 0 && (
         <div className="mb-6">
-          <h5 className="font-semibold text-white mb-3">Historical Cycles</h5>
+          <div className="flex items-center justify-between mb-3">
+            <h5 className="font-semibold text-white">Historical Cycles</h5>
+            <div className="flex items-center gap-2">
+              {(() => {
+                const bullCount = cycleAnalysis.cycles.filter(c => c.type === 'bull').length;
+                const bearCount = cycleAnalysis.cycles.filter(c => c.type === 'bear').length;
+                const consolidationCount = cycleAnalysis.cycles.filter(c => c.type === 'consolidation').length;
+                return (
+                  <>
+                    <span className="bg-green-600 text-white px-2 py-1 rounded text-xs font-bold">
+                      {bullCount} Bull
+                    </span>
+                    <span className="bg-red-600 text-white px-2 py-1 rounded text-xs font-bold">
+                      {bearCount} Bear
+                    </span>
+                    {consolidationCount > 0 && (
+                      <span className="bg-yellow-600 text-white px-2 py-1 rounded text-xs font-bold">
+                        {consolidationCount} Consolidation
+                      </span>
+                    )}
+                    <span className="bg-blue-600 text-white px-2 py-1 rounded text-xs font-bold">
+                      {cycleAnalysis.cycles.length} Total
+                    </span>
+                  </>
+                );
+              })()}
+            </div>
+          </div>
           <div className="space-y-3 max-h-64 overflow-y-auto">
             {cycleAnalysis.cycles.map((cycle, idx) => (
               <div
