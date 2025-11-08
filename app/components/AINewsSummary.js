@@ -204,16 +204,27 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
   // Helper to get sentiment color and icon
   const getSentimentDisplay = (sentiment) => {
     const displays = {
-      positive: { color: 'text-green-400', bg: 'bg-green-900/30', border: 'border-green-500/50', icon: TrendingUp, label: 'Positive' },
-      negative: { color: 'text-red-400', bg: 'bg-red-900/30', border: 'border-red-500/50', icon: TrendingDown, label: 'Negative' },
-      neutral: { color: 'text-gray-400', bg: 'bg-gray-900/30', border: 'border-gray-500/50', icon: Minus, label: 'Neutral' },
-      mixed: { color: 'text-yellow-400', bg: 'bg-yellow-900/30', border: 'border-yellow-500/50', icon: AlertCircle, label: 'Mixed' }
+      positive: { color: 'text-green-400', bg: 'bg-green-900/40', border: 'border-green-400', icon: TrendingUp, label: 'Positive' },
+      negative: { color: 'text-red-400', bg: 'bg-red-900/40', border: 'border-red-400', icon: TrendingDown, label: 'Negative' },
+      neutral: { color: 'text-gray-400', bg: 'bg-gray-900/40', border: 'border-gray-400', icon: Minus, label: 'Neutral' },
+      mixed: { color: 'text-yellow-300', bg: 'bg-yellow-900/40', border: 'border-yellow-400', icon: AlertCircle, label: 'Mixed' }
     };
     return displays[sentiment] || displays.neutral;
   };
 
+  // Helper to get confidence level color
+  const getConfidenceColor = (confidence) => {
+    const colors = {
+      high: 'text-green-400',
+      medium: 'text-yellow-300',
+      low: 'text-red-400'
+    };
+    return colors[confidence] || 'text-gray-400';
+  };
+
   const sentimentDisplay = getSentimentDisplay(analysis.overallSentiment);
   const SentimentIcon = sentimentDisplay.icon;
+  const confidenceColor = getConfidenceColor(analysis.confidenceLevel);
 
   return (
     <div className="bg-gradient-to-br from-purple-900/40 to-blue-900/40 rounded-xl shadow-xl p-6 border border-purple-500/30 mb-6">
@@ -242,12 +253,12 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
 
         <div className="flex items-center gap-3">
           {/* Overall Sentiment Badge */}
-          <div className={`flex items-center gap-2 px-4 py-2 ${sentimentDisplay.bg} ${sentimentDisplay.border} border rounded-lg`}>
+          <div className={`flex items-center gap-2 px-4 py-2 ${sentimentDisplay.bg} ${sentimentDisplay.border} border-2 rounded-lg`}>
             <SentimentIcon className={sentimentDisplay.color} size={20} />
-            <span className={`font-semibold ${sentimentDisplay.color}`}>
+            <span className={`font-bold ${sentimentDisplay.color}`}>
               {sentimentDisplay.label}
             </span>
-            <span className="text-xs text-gray-400 ml-2">
+            <span className={`text-xs font-semibold ml-2 ${confidenceColor}`}>
               ({analysis.confidenceLevel} confidence)
             </span>
           </div>
@@ -279,8 +290,8 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
             {/* Row 2: Short & Long Term Negative Impact */}
             <tr>
               <td className="border border-red-500/30 bg-red-900/20 p-4 w-1/2">
-                <h4 className="text-lg font-semibold mb-3">
-                  <span className="text-red-500">Short Term Negative Impact</span>
+                <h4 className="text-lg font-bold mb-3">
+                  <span className="text-red-400">Short Term Negative Impact</span>
                 </h4>
                 {analysis.negativeImpacts && analysis.negativeImpacts.length > 0 ? (
                   <div className="space-y-3">
@@ -307,8 +318,8 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
                 )}
               </td>
               <td className="border border-red-500/30 bg-red-900/20 p-4 w-1/2">
-                <h4 className="text-lg font-semibold mb-3">
-                  <span className="text-red-500">Long Term Negative Impact</span>
+                <h4 className="text-lg font-bold mb-3">
+                  <span className="text-red-400">Long Term Negative Impact</span>
                 </h4>
                 {analysis.longTermImpact?.direction === 'bearish' ? (
                   <div className="space-y-2">
@@ -331,8 +342,8 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
             {/* Row 3: Short & Long Term Positive Impact */}
             <tr>
               <td className="border border-green-500/30 bg-green-900/20 p-4 w-1/2">
-                <h4 className="text-lg font-semibold mb-3">
-                  <span className="text-green-500">Short Term Positive Impact</span>
+                <h4 className="text-lg font-bold mb-3">
+                  <span className="text-green-400">Short Term Positive Impact</span>
                 </h4>
                 {analysis.positiveImpacts && analysis.positiveImpacts.length > 0 ? (
                   <div className="space-y-3">
@@ -359,8 +370,8 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
                 )}
               </td>
               <td className="border border-green-500/30 bg-green-900/20 p-4 w-1/2">
-                <h4 className="text-lg font-semibold mb-3">
-                  <span className="text-green-500">Long Term Positive Impact</span>
+                <h4 className="text-lg font-bold mb-3">
+                  <span className="text-green-400">Long Term Positive Impact</span>
                 </h4>
                 {analysis.longTermImpact?.direction === 'bullish' ? (
                   <div className="space-y-2">
@@ -385,8 +396,8 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
               <td colSpan={2} className="border border-orange-500/30 bg-orange-900/20 p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <AlertTriangle className="text-orange-400" size={20} />
-                  <h4 className="text-lg font-semibold">
-                    Key <span className="text-red-500">Risks</span>
+                  <h4 className="text-lg font-bold">
+                    Key <span className="text-red-400 font-extrabold">Risks</span>
                   </h4>
                 </div>
                 {analysis.keyRisks && analysis.keyRisks.length > 0 ? (
@@ -406,8 +417,8 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
               <td colSpan={2} className="border border-green-500/30 bg-green-900/20 p-4">
                 <div className="flex items-center gap-2 mb-3">
                   <Lightbulb className="text-green-400" size={20} />
-                  <h4 className="text-lg font-semibold">
-                    Key <span className="text-blue-500">Opportunities</span>
+                  <h4 className="text-lg font-bold">
+                    Key <span className="text-blue-400 font-extrabold">Opportunities</span>
                   </h4>
                 </div>
                 {analysis.keyOpportunities && analysis.keyOpportunities.length > 0 ? (
@@ -426,10 +437,10 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
             <tr>
               <td colSpan={2} className="border border-yellow-500 bg-yellow-900/20 p-4">
                 <div className="flex items-center gap-3 mb-2">
-                  <Award className="text-yellow-400" size={24} />
+                  <Award className="text-yellow-300" size={24} />
                   <div>
-                    <h4 className="text-lg font-semibold text-yellow-500">AI Analyst Recommendation</h4>
-                    <span className="text-2xl font-bold text-yellow-400">
+                    <h4 className="text-lg font-bold text-yellow-300">AI Analyst Recommendation</h4>
+                    <span className="text-2xl font-extrabold text-yellow-300">
                       {analysis.analystRecommendation?.toUpperCase() || 'N/A'}
                     </span>
                   </div>
