@@ -582,7 +582,14 @@ export function PricePerformanceChart({
                 )}
 
                 {/* AI Cycle Analysis - Vertical boundary markers and price ranges */}
-                {showCycleAnalysis && cycleAnalysis && chartCompareStocks.length === 0 && cycleAnalysis.cycles && multiData.length > 0 && (
+                {showCycleAnalysis && cycleAnalysis && chartCompareStocks.length === 0 && cycleAnalysis.cycles && multiData.length > 0 && (() => {
+                  const shouldShowVerticalLines = !['3Y', '5Y'].includes(chartPeriod);
+                  console.log('=== CYCLE VERTICAL LINES DEBUG ===');
+                  console.log('Current period:', chartPeriod);
+                  console.log('Should show vertical lines:', shouldShowVerticalLines);
+                  console.log('Sample chart dates:', multiData.slice(0, 3).map(d => d.date));
+                  return true;
+                })() && (
                   <>
                     {/* Vertical lines marking cycle boundaries - only show on daily periods (not 3Y/5Y) */}
                     {!['3Y', '5Y'].includes(chartPeriod) && cycleAnalysis.cycles.flatMap((cycle, idx) => {
@@ -622,6 +629,13 @@ export function PricePerformanceChart({
                       const strokeColor = cycle.type === 'bull' ? '#22c55e' :
                                          cycle.type === 'bear' ? '#ef4444' :
                                          '#eab308';
+
+                      console.log(`Rendering vertical lines for cycle ${idx + 1}:`, {
+                        type: cycle.type,
+                        original: `${cycle.startDate} to ${cycle.endDate}`,
+                        matched: `${startDate} to ${endDate}`,
+                        color: strokeColor
+                      });
 
                       return [
                         <ReferenceLine
