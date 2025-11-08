@@ -502,12 +502,23 @@ export function PricePerformanceChart({
                 )}
 
                 {/* AI Analysis Overlay - Buy/Sell Signals and Support/Resistance */}
-                <AIChartOverlay
-                  aiAnalysis={aiAnalysis}
-                  showAiAnalysis={showAiAnalysis}
-                  chartData={multiData}
-                  isCompareMode={chartCompareStocks.length > 0}
-                />
+                {(() => {
+                  console.log('About to render AIChartOverlay with props:', {
+                    aiAnalysis: !!aiAnalysis,
+                    showAiAnalysis,
+                    chartDataLength: multiData?.length,
+                    isCompareMode: chartCompareStocks.length > 0,
+                    aiAnalysisData: aiAnalysis
+                  });
+                  return (
+                    <AIChartOverlay
+                      aiAnalysis={aiAnalysis}
+                      showAiAnalysis={showAiAnalysis}
+                      chartData={multiData}
+                      isCompareMode={chartCompareStocks.length > 0}
+                    />
+                  );
+                })()}
                 {chartCompareStocks.length === 0 ? (
                   <Line type="monotone" dataKey="price" name={`${selectedStock?.code || ''} Price`} stroke="#3B82F6" strokeWidth={2} dot={false} />
                 ) : (
