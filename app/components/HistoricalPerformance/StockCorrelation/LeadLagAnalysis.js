@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { fetchWithCache, CACHE_DURATIONS } from "../../../../lib/clientCache";
 import {
   LineChart,
   Line,
@@ -30,15 +31,13 @@ export function LeadLagAnalysis({ symbol1, symbol2, onBack }) {
       setError(null);
 
       try {
-        const response = await fetch(
-          `/api/stock-correlation?symbol1=${symbol1}&symbol2=${symbol2}&years=${years}&maxLag=${maxLag}`
+        // Fetch stock correlation data - 4 HOUR CACHE
+        const result = await fetchWithCache(
+          `/api/stock-correlation?symbol1=${symbol1}&symbol2=${symbol2}&years=${years}&maxLag=${maxLag}`,
+          {},
+          CACHE_DURATIONS.FOUR_HOURS
         );
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch correlation data");
-        }
-
-        const result = await response.json();
         setData(result);
       } catch (err) {
         console.error("Error fetching lead-lag data:", err);

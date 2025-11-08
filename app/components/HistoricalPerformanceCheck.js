@@ -1,6 +1,7 @@
 "use client";
 import React, { useState, useEffect } from "react";
 import { TrendingUp, TrendingDown, ChevronDown, ChevronUp, BarChart3, X } from "lucide-react";
+import { fetchWithCache, CACHE_DURATIONS } from "../../lib/clientCache";
 import { TrendsTable } from "./HistoricalPerformance/TrendsTable";
 import { BigMovesTable } from "./HistoricalPerformance/BigMovesTable";
 import { SpyCorrelationTable } from "./HistoricalPerformance/SpyCorrelationTable";
@@ -68,16 +69,13 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       // Track API call
       const apiCounts = { historicalTrends: 1 };
 
-      // Fetch 5 years of historical data
-      const response = await fetch(
-        `/api/historical-trends?symbol=${stockCode}&years=5&type=${trendType}`
+      // Fetch 5 years of historical data - 4 HOUR CACHE
+      const data = await fetchWithCache(
+        `/api/historical-trends?symbol=${stockCode}&years=5&type=${trendType}`,
+        {},
+        CACHE_DURATIONS.FOUR_HOURS
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch trend data");
-      }
-
-      const data = await response.json();
       setTrends(data.trends || []);
 
       // Log API call to tracking endpoint
@@ -108,16 +106,13 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       // Track API call
       const apiCounts = { historicalTrends: 1 };
 
-      // Fetch big moves data
-      const response = await fetch(
-        `/api/historical-trends?symbol=${stockCode}&years=5&type=bigmoves&direction=${bigMovesDirection}`
+      // Fetch big moves data - 4 HOUR CACHE
+      const data = await fetchWithCache(
+        `/api/historical-trends?symbol=${stockCode}&years=5&type=bigmoves&direction=${bigMovesDirection}`,
+        {},
+        CACHE_DURATIONS.FOUR_HOURS
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch big moves data");
-      }
-
-      const data = await response.json();
       setBigMoves(data.bigMoves || []);
 
       // Log API call to tracking endpoint
@@ -148,16 +143,13 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       // Track API call
       const apiCounts = { historicalTrends: 1 };
 
-      // Fetch gap open data
-      const response = await fetch(
-        `/api/historical-trends?symbol=${stockCode}&years=5&type=gapopen&direction=${gapOpenDirection}`
+      // Fetch gap open data - 4 HOUR CACHE
+      const data = await fetchWithCache(
+        `/api/historical-trends?symbol=${stockCode}&years=5&type=gapopen&direction=${gapOpenDirection}`,
+        {},
+        CACHE_DURATIONS.FOUR_HOURS
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch gap open data");
-      }
-
-      const data = await response.json();
       setGapOpens(data.gapOpens || []);
 
       // Log API call to tracking endpoint
@@ -188,16 +180,13 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       // Track API call
       const apiCounts = { historicalTrends: 1 };
 
-      // Fetch gap open statistics
-      const response = await fetch(
-        `/api/historical-trends?symbol=${stockCode}&years=5&type=gapopenstat`
+      // Fetch gap open statistics - 4 HOUR CACHE
+      const data = await fetchWithCache(
+        `/api/historical-trends?symbol=${stockCode}&years=5&type=gapopenstat`,
+        {},
+        CACHE_DURATIONS.FOUR_HOURS
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch gap open statistics");
-      }
-
-      const data = await response.json();
       setGapOpenStats(data.statistics || null);
 
       // Log API call to tracking endpoint
@@ -228,16 +217,13 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       // Track API call
       const apiCounts = { historicalTrends: 1 };
 
-      // Fetch intraday statistics
-      const response = await fetch(
-        `/api/historical-trends?symbol=${stockCode}&years=5&type=intradaystat`
+      // Fetch intraday statistics - 4 HOUR CACHE
+      const data = await fetchWithCache(
+        `/api/historical-trends?symbol=${stockCode}&years=5&type=intradaystat`,
+        {},
+        CACHE_DURATIONS.FOUR_HOURS
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch intraday statistics");
-      }
-
-      const data = await response.json();
       setIntradayStats(data.statistics || null);
 
       // Log API call to tracking endpoint
@@ -268,16 +254,13 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       // Track API call
       const apiCounts = { historicalTrends: 1 };
 
-      // Fetch SPY correlation data
-      const response = await fetch(
-        `/api/spy-correlation?symbol=${stockCode}&years=5&direction=${spyDirection}`
+      // Fetch SPY correlation data - 4 HOUR CACHE
+      const data = await fetchWithCache(
+        `/api/spy-correlation?symbol=${stockCode}&years=5&direction=${spyDirection}`,
+        {},
+        CACHE_DURATIONS.FOUR_HOURS
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch SPY correlation data");
-      }
-
-      const data = await response.json();
       setSpyCorrelations(data.correlations || []);
 
       // Log API call to tracking endpoint
@@ -312,13 +295,8 @@ export function HistoricalPerformanceCheck({ stockCode }) {
         url += `&maShort=${maShort}&maLong=${maLong}`;
       }
 
-      const response = await fetch(url);
-
-      if (!response.ok) {
-        throw new Error("Failed to fetch cycle analysis data");
-      }
-
-      const data = await response.json();
+      // Fetch cycle analysis data - 4 HOUR CACHE
+      const data = await fetchWithCache(url, {}, CACHE_DURATIONS.FOUR_HOURS);
       setCycleAnalysis(data);
 
       // Log API call
@@ -356,16 +334,13 @@ export function HistoricalPerformanceCheck({ stockCode }) {
       // Track API call
       const apiCounts = { historicalTrends: 1 };
 
-      // Fetch historical data with volume for RVI calculation
-      const response = await fetch(
-        `/api/historical-trends?symbol=${stockCode}&years=5&type=raw`
+      // Fetch historical data with volume for RVI calculation - 4 HOUR CACHE
+      const data = await fetchWithCache(
+        `/api/historical-trends?symbol=${stockCode}&years=5&type=raw`,
+        {},
+        CACHE_DURATIONS.FOUR_HOURS
       );
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch historical data");
-      }
-
-      const data = await response.json();
       setHistoricalData(data.historicalData || []);
 
       // Log API call to tracking endpoint
@@ -391,13 +366,13 @@ export function HistoricalPerformanceCheck({ stockCode }) {
     setLoadingRelatedStocks(true);
 
     try {
-      const response = await fetch(`/api/related-stocks?symbol=${stockCode}`);
+      // Fetch related stocks - 4 HOUR CACHE
+      const data = await fetchWithCache(
+        `/api/related-stocks?symbol=${stockCode}`,
+        {},
+        CACHE_DURATIONS.FOUR_HOURS
+      );
 
-      if (!response.ok) {
-        throw new Error("Failed to fetch related stocks");
-      }
-
-      const data = await response.json();
       setRelatedStocks(data.relatedStocks || []);
 
     } catch (err) {

@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { fetchWithCache, CACHE_DURATIONS } from "../../../../lib/clientCache";
 import { CorrelationTable } from "./CorrelationTable";
 import { LeadLagAnalysis } from "./LeadLagAnalysis";
 
@@ -19,13 +20,13 @@ export function StockCorrelationSection({ symbol }) {
       setSelectedStock(null);
 
       try {
-        const response = await fetch(`/api/related-stocks?symbol=${symbol}`);
+        // Fetch related stocks - 4 HOUR CACHE
+        const data = await fetchWithCache(
+          `/api/related-stocks?symbol=${symbol}`,
+          {},
+          CACHE_DURATIONS.FOUR_HOURS
+        );
 
-        if (!response.ok) {
-          throw new Error("Failed to fetch related stocks");
-        }
-
-        const data = await response.json();
         setRelatedStocks(data.relatedStocks || []);
       } catch (err) {
         console.error("Error fetching related stocks:", err);

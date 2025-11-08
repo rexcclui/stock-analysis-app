@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { fetchPostWithCache, CACHE_DURATIONS } from '../../lib/clientCache';
 
 /**
  * Custom hook to manage AI price analysis
@@ -19,7 +20,7 @@ export function useAIPriceAnalysis(selectedStock, fullHistoricalData) {
     setShowAiAnalysis(false);
   }, [selectedStock?.code]);
 
-  // Handle AI price analysis
+  // Handle AI price analysis - 12 HOUR CACHE
   const handleAiAnalysis = async (forceReload = false) => {
     if (!selectedStock || !fullHistoricalData || fullHistoricalData.length === 0) {
       setAiError('No price data available for analysis');
@@ -30,22 +31,16 @@ export function useAIPriceAnalysis(selectedStock, fullHistoricalData) {
     setAiError(null);
 
     try {
-      const response = await fetch('/api/analyze-price', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const data = await fetchPostWithCache(
+        '/api/analyze-price',
+        {
           symbol: selectedStock.code,
           priceData: fullHistoricalData,
           currentPrice: selectedStock.price,
           forceReload
-        })
-      });
-
-      const data = await response.json();
-
-      if (!response.ok) {
-        throw new Error(data.error || 'Failed to analyze price');
-      }
+        },
+        CACHE_DURATIONS.TWELVE_HOURS
+      );
 
       setAiAnalysis(data);
       setShowAiAnalysis(true);

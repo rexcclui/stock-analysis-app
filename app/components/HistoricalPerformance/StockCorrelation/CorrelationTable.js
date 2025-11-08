@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { fetchWithCache, CACHE_DURATIONS } from "../../../../lib/clientCache";
 
 export function CorrelationTable({ symbol, relatedStocks, onSelectStock }) {
   const [correlations, setCorrelations] = useState([]);
@@ -24,15 +25,13 @@ export function CorrelationTable({ symbol, relatedStocks, onSelectStock }) {
         const results = await Promise.allSettled(
           stocksToAnalyze.map(async (relatedStock) => {
             try {
-              const response = await fetch(
-                `/api/stock-correlation?symbol1=${symbol}&symbol2=${relatedStock.symbol}&years=${years}`
+              // Fetch stock correlation - 4 HOUR CACHE
+              const data = await fetchWithCache(
+                `/api/stock-correlation?symbol1=${symbol}&symbol2=${relatedStock.symbol}&years=${years}`,
+                {},
+                CACHE_DURATIONS.FOUR_HOURS
               );
 
-              if (!response.ok) {
-                throw new Error(`Failed to fetch correlation with ${relatedStock.symbol}`);
-              }
-
-              const data = await response.json();
               return {
                 ...relatedStock,
                 correlation: data.correlation.value,

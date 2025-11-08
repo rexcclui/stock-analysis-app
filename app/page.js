@@ -13,6 +13,7 @@ import { HistoricalPerformanceCheck } from './components/HistoricalPerformanceCh
 import { LoadingState } from './components/LoadingState';
 import { Tabs, TabPanel } from './components/Tabs';
 import { AINewsSummary } from './components/AINewsSummary';
+import { fetchWithCache, fetchPostWithCache, CACHE_DURATIONS } from '../lib/clientCache';
 
 // Helper function to fetch with timeout
 const fetchWithTimeout = (url, timeout = 10000) => {
@@ -25,105 +26,99 @@ const fetchWithTimeout = (url, timeout = 10000) => {
 };
 
 // Fetch complete stock data from API routes
-const fetchCompleteStockData = async (symbol, apiCounts = null) => {
+const fetchCompleteStockData = async (symbol, apiCounts = null, forceReload = false) => {
   try {
-    // Fetch stock data (required)
+    // Fetch stock data (required) - NO CACHE for live stock data
     if (apiCounts) apiCounts.stock++;
-    const stockRes = await fetchWithTimeout(`/api/stock?symbol=${symbol}`, 15000);
-    if (!stockRes.ok) {
-      console.error(`Stock API error: ${stockRes.status}` + stockRes.statusText);
-      return null;
-    }
-    const stock = await stockRes.json();
+    const stockUrl = `/api/stock?symbol=${symbol}${forceReload ? `&nocache=${Date.now()}` : ''}`;
+    const stock = await fetchWithCache(stockUrl, {}, CACHE_DURATIONS.NONE);
     if (stock.error) {
       console.error(`Stock error: ${stock.error}`);
       return null;
     }
 
-    // Fetch sentiment data (optional - use defaults if fails)
+    // Fetch sentiment data (optional - use defaults if fails) - 4 HOUR CACHE
     let sentiment = { score: 0.5, positive: 50, neutral: 30, negative: 20, sentimentHistory: { '1D': 0.5, '7D': 0.5, '1M': 0.5 }, sentimentTimeSeries: [] };
     try {
       if (apiCounts) apiCounts.sentiment++;
-      const sentimentRes = await fetchWithTimeout(`/api/sentiment?symbol=${symbol}`, 10000);
-      if (sentimentRes.ok) {
-        sentiment = await sentimentRes.json();
-      }
+      sentiment = await fetchWithCache(
+        `/api/sentiment?symbol=${symbol}`,
+        { forceReload },
+        CACHE_DURATIONS.FOUR_HOURS
+      );
     } catch (err) {
       console.warn('Sentiment fetch failed, using defaults:', err.message);
     }
 
-    // Fetch related stocks (optional)
+    // Fetch related stocks (optional) - 4 HOUR CACHE
     let relatedStocksData = [];
     let fetchedComparisonType = 'related';
     try {
       if (apiCounts) apiCounts.competitors++;
-      const relatedRes = await fetchWithTimeout(`/api/related-stocks?symbol=${symbol}`, 10000);
-      if (relatedRes.ok) {
-        const relatedData = await relatedRes.json();
-        if (relatedData && relatedData.relatedStocks) {
-          relatedStocksData = relatedData.relatedStocks; // Array of { symbol, name, relationshipType }
-        }
+      const relatedData = await fetchWithCache(
+        `/api/related-stocks?symbol=${symbol}`,
+        { forceReload },
+        CACHE_DURATIONS.FOUR_HOURS
+      );
+      if (relatedData && relatedData.relatedStocks) {
+        relatedStocksData = relatedData.relatedStocks; // Array of { symbol, name, relationshipType }
       }
     } catch (err) {
       console.warn('Related stocks fetch failed:', err.message);
     }
 
-    // Fetch news (optional)
+    // Fetch news (optional) - 4 HOUR CACHE
     let news = [];
     try {
         if (apiCounts) apiCounts.news++;
-        const newsRes = await fetchWithTimeout(`/api/news?symbol=${symbol}`, 10000);
-        if (newsRes.ok) {
-            news = await newsRes.json();
-            console.log(`[PAGE] News received: ${Array.isArray(news) ? news.length : 0} articles`);
-        } else {
-            console.warn(`[PAGE] News API returned: ${newsRes.status}`);
-        }
+        news = await fetchWithCache(
+          `/api/news?symbol=${symbol}`,
+          { forceReload },
+          CACHE_DURATIONS.FOUR_HOURS
+        );
+        console.log(`[PAGE] News received: ${Array.isArray(news) ? news.length : 0} articles`);
     } catch (err) {
         console.warn('[PAGE] News fetch failed:', err.message);
     }
 
-    // Fetch Google News (optional)
+    // Fetch Google News (optional) - 4 HOUR CACHE
     let googleNews = [];
     try {
         if (apiCounts) apiCounts.googleNews = (apiCounts.googleNews || 0) + 1;
-        const googleNewsRes = await fetchWithTimeout(`/api/google-news?symbol=${symbol}`, 10000);
-        if (googleNewsRes.ok) {
-            googleNews = await googleNewsRes.json();
-            console.log(`[PAGE] Google News received: ${Array.isArray(googleNews) ? googleNews.length : 0} articles`);
-        } else {
-            console.warn(`[PAGE] Google News API returned: ${googleNewsRes.status}`);
-        }
+        googleNews = await fetchWithCache(
+          `/api/google-news?symbol=${symbol}`,
+          { forceReload },
+          CACHE_DURATIONS.FOUR_HOURS
+        );
+        console.log(`[PAGE] Google News received: ${Array.isArray(googleNews) ? googleNews.length : 0} articles`);
     } catch (err) {
         console.warn('[PAGE] Google News fetch failed:', err.message);
     }
 
-    // Fetch Yahoo News (optional)
+    // Fetch Yahoo News (optional) - 4 HOUR CACHE
     let yahooNews = [];
     try {
         if (apiCounts) apiCounts.yahooNews = (apiCounts.yahooNews || 0) + 1;
-        const yahooNewsRes = await fetchWithTimeout(`/api/yahoo-news?symbol=${symbol}`, 10000);
-        if (yahooNewsRes.ok) {
-            yahooNews = await yahooNewsRes.json();
-            console.log(`[PAGE] Yahoo News received: ${Array.isArray(yahooNews) ? yahooNews.length : 0} articles`);
-        } else {
-            console.warn(`[PAGE] Yahoo News API returned: ${yahooNewsRes.status}`);
-        }
+        yahooNews = await fetchWithCache(
+          `/api/yahoo-news?symbol=${symbol}`,
+          { forceReload },
+          CACHE_DURATIONS.FOUR_HOURS
+        );
+        console.log(`[PAGE] Yahoo News received: ${Array.isArray(yahooNews) ? yahooNews.length : 0} articles`);
     } catch (err) {
         console.warn('[PAGE] Yahoo News fetch failed:', err.message);
     }
 
-    // Fetch Bloomberg News (optional)
+    // Fetch Bloomberg News (optional) - 4 HOUR CACHE
     let bloombergNews = [];
     try {
         if (apiCounts) apiCounts.bloombergNews = (apiCounts.bloombergNews || 0) + 1;
-        const bloombergNewsRes = await fetchWithTimeout(`/api/bloomberg-news?symbol=${symbol}`, 10000);
-        if (bloombergNewsRes.ok) {
-            bloombergNews = await bloombergNewsRes.json();
-            console.log(`[PAGE] Bloomberg News received: ${Array.isArray(bloombergNews) ? bloombergNews.length : 0} articles`);
-        } else {
-            console.warn(`[PAGE] Bloomberg News API returned: ${bloombergNewsRes.status}`);
-        }
+        bloombergNews = await fetchWithCache(
+          `/api/bloomberg-news?symbol=${symbol}`,
+          { forceReload },
+          CACHE_DURATIONS.FOUR_HOURS
+        );
+        console.log(`[PAGE] Bloomberg News received: ${Array.isArray(bloombergNews) ? bloombergNews.length : 0} articles`);
     } catch (err) {
         console.warn('[PAGE] Bloomberg News fetch failed:', err.message);
     }
@@ -429,37 +424,29 @@ export default function StockAnalysisDashboard() {
     localStorage.setItem('stockSearchHistory', JSON.stringify(updated));
   };
 
-  // Fetch AI news analysis
+  // Fetch AI news analysis - 12 HOUR CACHE
   const fetchAINewsAnalysis = async (symbol, newsData, forceReload = false) => {
     try {
       setAiAnalysisLoading(true);
       setAiAnalysisError(null);
       console.log(`[AI Analysis] Fetching analysis for ${symbol}${forceReload ? ' (force reload)' : ''}`);
 
-      const response = await fetch('/api/analyze-news', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
+      const analysis = await fetchPostWithCache(
+        '/api/analyze-news',
+        {
           symbol,
           newsApiNews: newsData.newsApiNews || [],
           googleNews: newsData.googleNews || [],
           yahooNews: newsData.yahooNews || [],
           bloombergNews: newsData.bloombergNews || [],
           forceReload
-        })
-      });
+        },
+        CACHE_DURATIONS.TWELVE_HOURS
+      );
 
-      if (response.ok) {
-        const analysis = await response.json();
-        console.log('[AI Analysis] Analysis received:', analysis);
-        setAiNewsAnalysis(analysis);
-        setAiAnalysisError(null);
-      } else {
-        const errorData = await response.json().catch(() => ({ error: 'Unknown error' }));
-        console.error('[AI Analysis] API error:', response.status, errorData);
-        setAiNewsAnalysis(null);
-        setAiAnalysisError(errorData.error || `API error: ${response.status}`);
-      }
+      console.log('[AI Analysis] Analysis received:', analysis);
+      setAiNewsAnalysis(analysis);
+      setAiAnalysisError(null);
     } catch (error) {
       console.error('[AI Analysis] Fetch error:', error);
       setAiNewsAnalysis(null);
