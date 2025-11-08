@@ -528,17 +528,58 @@ export function PricePerformanceChart({
                 )}
 
                 {/* AI Cycle Analysis Overlay - Cycle Zones */}
-                {showCycleAnalysis && cycleAnalysis && chartCompareStocks.length === 0 && cycleAnalysis.cycles && (
+                {showCycleAnalysis && cycleAnalysis && chartCompareStocks.length === 0 && cycleAnalysis.cycles && multiData.length > 0 && (() => {
+                  console.log('Rendering cycles:', cycleAnalysis.cycles.length, 'Data points:', multiData.length);
+                  return true;
+                })() && (
                   <>
                     {cycleAnalysis.cycles.map((cycle, idx) => {
-                      // Find start and end dates in the current data
-                      const startDate = cycle.startDate;
-                      const endDate = cycle.endDate;
+                      // Format dates to match the chart's date format
+                      const formattedStartDate = formatChartDate(cycle.startDate, chartPeriod);
+                      const formattedEndDate = formatChartDate(cycle.endDate, chartPeriod);
+
+                      // Find the closest matching dates in the actual data
+                      const findClosestDate = (targetDate, originalDate) => {
+                        const exactMatch = multiData.find(d => d.date === targetDate);
+                        if (exactMatch) return targetDate;
+
+                        // If no exact match, find closest date
+                        const targetTime = new Date(originalDate).getTime();
+                        let closest = multiData[0].date;
+                        let closestDiff = Infinity;
+
+                        multiData.forEach(d => {
+                          if (!d.date) return;
+                          // Try to parse the date - handle both formats
+                          let dateStr = d.date;
+                          if (dateStr.length === 8) { // YY-MM-DD format
+                            const [yy, mm, dd] = dateStr.split('-');
+                            dateStr = `20${yy}-${mm}-${dd}`;
+                          }
+                          const time = new Date(dateStr).getTime();
+                          const diff = Math.abs(time - targetTime);
+                          if (diff < closestDiff) {
+                            closestDiff = diff;
+                            closest = d.date;
+                          }
+                        });
+
+                        return closest;
+                      };
+
+                      const startDate = findClosestDate(formattedStartDate, cycle.startDate);
+                      const endDate = findClosestDate(formattedEndDate, cycle.endDate);
+
+                      console.log(`Cycle ${idx + 1} (${cycle.type}):`, {
+                        original: `${cycle.startDate} to ${cycle.endDate}`,
+                        formatted: `${formattedStartDate} to ${formattedEndDate}`,
+                        matched: `${startDate} to ${endDate}`
+                      });
 
                       // Determine color based on cycle type
-                      const fillColor = cycle.type === 'bull' ? 'rgba(34, 197, 94, 0.1)' :
-                                       cycle.type === 'bear' ? 'rgba(239, 68, 68, 0.1)' :
-                                       'rgba(234, 179, 8, 0.1)';
+                      const fillColor = cycle.type === 'bull' ? 'rgba(34, 197, 94, 0.2)' :
+                                       cycle.type === 'bear' ? 'rgba(239, 68, 68, 0.2)' :
+                                       'rgba(234, 179, 8, 0.2)';
                       const strokeColor = cycle.type === 'bull' ? '#22c55e' :
                                          cycle.type === 'bear' ? '#ef4444' :
                                          '#eab308';
@@ -550,14 +591,14 @@ export function PricePerformanceChart({
                           x2={endDate}
                           fill={fillColor}
                           stroke={strokeColor}
-                          strokeWidth={1}
-                          strokeOpacity={0.5}
+                          strokeWidth={2}
+                          strokeOpacity={1}
                           fillOpacity={0.3}
                           label={{
                             value: `${cycle.type.toUpperCase()} (${cycle.duration}d)`,
-                            position: 'top',
+                            position: 'insideTop',
                             fill: strokeColor,
-                            fontSize: 10,
+                            fontSize: 11,
                             fontWeight: 'bold'
                           }}
                         />
