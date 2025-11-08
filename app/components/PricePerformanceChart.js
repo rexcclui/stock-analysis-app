@@ -508,13 +508,13 @@ export function PricePerformanceChart({
                       <ReferenceLine
                         key={`ai-resistance-${idx}`}
                         y={level.price}
-                        stroke="#ef4444"
+                        stroke="#f97316"
                         strokeDasharray="3 3"
                         strokeWidth={level.strength === 'strong' ? 2 : 1}
                         label={{
                           value: `AI Resistance: $${level.price.toFixed(2)}`,
                           position: idx % 2 === 0 ? 'right' : 'left',
-                          fill: '#ef4444',
+                          fill: '#f97316',
                           fontSize: 10
                         }}
                       />
@@ -525,13 +525,13 @@ export function PricePerformanceChart({
                       <ReferenceLine
                         key={`ai-support-${idx}`}
                         y={level.price}
-                        stroke="#10b981"
+                        stroke="#eab308"
                         strokeDasharray="3 3"
                         strokeWidth={level.strength === 'strong' ? 2 : 1}
                         label={{
                           value: `AI Support: $${level.price.toFixed(2)}`,
                           position: idx % 2 === 0 ? 'right' : 'left',
-                          fill: '#10b981',
+                          fill: '#eab308',
                           fontSize: 10
                         }}
                       />
@@ -558,13 +558,13 @@ export function PricePerformanceChart({
                           x={closestPoint.date}
                           y={signal.price}
                           r={6}
-                          fill="#10b981"
+                          fill="#3b82f6"
                           stroke="#ffffff"
                           strokeWidth={2}
                           label={{
                             value: `BUY $${signal.price.toFixed(2)}`,
                             position: 'top',
-                            fill: '#10b981',
+                            fill: '#3b82f6',
                             fontSize: 9,
                             fontWeight: 'bold'
                           }}
@@ -593,13 +593,13 @@ export function PricePerformanceChart({
                           x={closestPoint.date}
                           y={signal.price}
                           r={6}
-                          fill="#ef4444"
+                          fill="#ec4899"
                           stroke="#ffffff"
                           strokeWidth={2}
                           label={{
                             value: `SELL $${signal.price.toFixed(2)}`,
                             position: 'bottom',
-                            fill: '#ef4444',
+                            fill: '#ec4899',
                             fontSize: 9,
                             fontWeight: 'bold'
                           }}
