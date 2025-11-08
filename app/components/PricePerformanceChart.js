@@ -398,6 +398,33 @@ export function PricePerformanceChart({
             ))}
           </div>
         )}
+        {/* Cycle Timeline Visualization */}
+        {showCycleAnalysis && cycleAnalysis && cycleAnalysis.cycles && (
+          <div className="mb-2 px-4">
+            <div className="text-xs text-gray-400 mb-1">Cycle Timeline:</div>
+            <div className="relative h-12 bg-gray-700 rounded flex items-center">
+              {cycleAnalysis.cycles.map((cycle, idx) => {
+                const cycleColor = cycle.type === 'bull' ? 'bg-green-500' :
+                                  cycle.type === 'bear' ? 'bg-red-500' :
+                                  'bg-yellow-500';
+
+                return (
+                  <div
+                    key={`timeline-${idx}`}
+                    className={`h-10 ${cycleColor} border-l-2 border-white flex items-center justify-center text-white font-bold text-xs px-2`}
+                    style={{ flex: cycle.duration }}
+                    title={`${cycle.type.toUpperCase()} cycle: ${cycle.startDate} to ${cycle.endDate} (${cycle.duration} days)`}
+                  >
+                    {cycle.type.toUpperCase()} #{idx + 1}
+                    <br />
+                    {cycle.duration}d
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         <div
           ref={chartContainerRef}
           style={{
