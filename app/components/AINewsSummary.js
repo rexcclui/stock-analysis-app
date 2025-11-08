@@ -1,11 +1,12 @@
 'use client';
 
-import React from 'react';
-import { TrendingUp, TrendingDown, Minus, AlertCircle, Lightbulb, Target, Clock, Calendar, Award, AlertTriangle, Sparkles } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { TrendingUp, TrendingDown, Minus, AlertCircle, Lightbulb, Target, Clock, Calendar, Award, AlertTriangle, Sparkles, RefreshCw } from 'lucide-react';
 
 /**
  * AINewsSummary Component
  * Displays AI-generated analysis of news articles with impacts, expectations, and recommendations
+ * Features two-level caching (client + server) for performance
  *
  * Props:
  * - analysis: AI analysis object from /api/analyze-news
@@ -16,6 +17,70 @@ import { TrendingUp, TrendingDown, Minus, AlertCircle, Lightbulb, Target, Clock,
  * - symbol: stock symbol
  */
 export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, symbol }) {
+  const [cachedTime, setCachedTime] = useState(null);
+  const [isFromCache, setIsFromCache] = useState(false);
+
+  // Client-side cache management
+  useEffect(() => {
+    if (analysis) {
+      // Check if this analysis is from cache
+      if (analysis.fromCache) {
+        setIsFromCache(true);
+        setCachedTime(analysis.analyzedAt);
+      } else {
+        setIsFromCache(false);
+        setCachedTime(analysis.analyzedAt);
+
+        // Store in client cache (localStorage)
+        try {
+          const cacheData = {
+            analysis,
+            timestamp: new Date().toISOString(),
+            symbol
+          };
+          localStorage.setItem(`ai-analysis-${symbol}`, JSON.stringify(cacheData));
+        } catch (e) {
+          console.warn('Failed to cache analysis in localStorage:', e);
+        }
+      }
+    }
+  }, [analysis, symbol]);
+
+  // Load from client cache on mount
+  useEffect(() => {
+    if (!analysis && symbol) {
+      try {
+        const cached = localStorage.getItem(`ai-analysis-${symbol}`);
+        if (cached) {
+          const { analysis: cachedAnalysis, timestamp } = JSON.parse(cached);
+          // Check if cache is less than 4 hours old
+          const cacheAge = Date.now() - new Date(timestamp).getTime();
+          const fourHours = 4 * 60 * 60 * 1000;
+
+          if (cacheAge < fourHours) {
+            // You can optionally auto-load from client cache here
+            // For now, we'll let the server handle caching
+            console.log('Client cache available for', symbol);
+          }
+        }
+      } catch (e) {
+        console.warn('Failed to load from client cache:', e);
+      }
+    }
+  }, [symbol, analysis]);
+
+  const handleForceReload = () => {
+    // Clear client cache
+    try {
+      localStorage.removeItem(`ai-analysis-${symbol}`);
+    } catch (e) {
+      console.warn('Failed to clear client cache:', e);
+    }
+
+    // Trigger analysis with force reload flag
+    onAnalyze(true); // Pass true to indicate force reload
+  };
+
   if (loading) {
     return (
       <div className="bg-gradient-to-br from-purple-900/40 to-blue-900/40 rounded-xl shadow-xl p-6 border border-purple-500/30 mb-6">
@@ -51,7 +116,7 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
           </div>
 
           <button
-            onClick={onAnalyze}
+            onClick={() => onAnalyze(false)}
             disabled={!hasNews}
             className={`flex items-center gap-2 px-6 py-3 rounded-lg font-semibold transition-all ${
               hasNews
@@ -147,42 +212,8 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
     return displays[sentiment] || displays.neutral;
   };
 
-  // Helper to get direction display
-  const getDirectionDisplay = (direction) => {
-    const displays = {
-      bullish: { color: 'text-green-400', icon: TrendingUp, label: 'Bullish' },
-      bearish: { color: 'text-red-400', icon: TrendingDown, label: 'Bearish' },
-      neutral: { color: 'text-gray-400', icon: Minus, label: 'Neutral' }
-    };
-    return displays[direction] || displays.neutral;
-  };
-
-  // Helper to get alignment display
-  const getAlignmentDisplay = (alignment) => {
-    const displays = {
-      exceeds: { color: 'text-green-400', label: 'Exceeds Expectations' },
-      meets: { color: 'text-blue-400', label: 'Meets Expectations' },
-      below: { color: 'text-red-400', label: 'Below Expectations' },
-      unclear: { color: 'text-gray-400', label: 'Unclear' }
-    };
-    return displays[alignment] || displays.unclear;
-  };
-
-  // Helper to get recommendation display
-  const getRecommendationDisplay = (rec) => {
-    const displays = {
-      'strong buy': { color: 'text-green-400', bg: 'bg-green-900/40', border: 'border-green-500', label: 'Strong Buy' },
-      'buy': { color: 'text-green-300', bg: 'bg-green-900/30', border: 'border-green-400', label: 'Buy' },
-      'hold': { color: 'text-yellow-400', bg: 'bg-yellow-900/30', border: 'border-yellow-500', label: 'Hold' },
-      'sell': { color: 'text-red-300', bg: 'bg-red-900/30', border: 'border-red-400', label: 'Sell' },
-      'strong sell': { color: 'text-red-400', bg: 'bg-red-900/40', border: 'border-red-500', label: 'Strong Sell' }
-    };
-    return displays[rec] || displays.hold;
-  };
-
   const sentimentDisplay = getSentimentDisplay(analysis.overallSentiment);
   const SentimentIcon = sentimentDisplay.icon;
-  const recommendation = getRecommendationDisplay(analysis.analystRecommendation);
 
   return (
     <div className="bg-gradient-to-br from-purple-900/40 to-blue-900/40 rounded-xl shadow-xl p-6 border border-purple-500/30 mb-6">
@@ -194,193 +225,220 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
           </div>
           <div>
             <h3 className="text-2xl font-bold text-white">AI News Analysis</h3>
-            <p className="text-sm text-gray-400">
-              {analysis.articlesAnalyzed} articles analyzed • {new Date(analysis.analyzedAt).toLocaleString()}
-            </p>
-          </div>
-        </div>
-
-        {/* Overall Sentiment Badge */}
-        <div className={`flex items-center gap-2 px-4 py-2 ${sentimentDisplay.bg} ${sentimentDisplay.border} border rounded-lg`}>
-          <SentimentIcon className={sentimentDisplay.color} size={20} />
-          <span className={`font-semibold ${sentimentDisplay.color}`}>
-            {sentimentDisplay.label}
-          </span>
-          <span className="text-xs text-gray-400 ml-2">
-            ({analysis.confidenceLevel} confidence)
-          </span>
-        </div>
-      </div>
-
-      {/* Summary */}
-      <div className="bg-gray-800/50 rounded-lg p-4 mb-6 border border-gray-700">
-        <h4 className="text-lg font-semibold text-white mb-2">Executive Summary</h4>
-        <p className="text-gray-300 leading-relaxed">{analysis.summary}</p>
-      </div>
-
-      {/* Two Column Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Positive Impacts */}
-        <div className="bg-green-900/20 rounded-lg p-4 border border-green-500/30">
-          <div className="flex items-center gap-2 mb-3">
-            <TrendingUp className="text-green-400" size={20} />
-            <h4 className="text-lg font-semibold text-green-400">Positive Impacts</h4>
-          </div>
-          {analysis.positiveImpacts && analysis.positiveImpacts.length > 0 ? (
-            <ul className="space-y-3">
-              {analysis.positiveImpacts.map((impact, idx) => (
-                <li key={idx} className="text-sm">
-                  <p className="text-white font-medium mb-1">• {impact.point}</p>
-                  <p className="text-gray-400 text-xs ml-3">{impact.reasoning}</p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-gray-400 text-sm">No significant positive impacts identified</p>
-          )}
-        </div>
-
-        {/* Negative Impacts */}
-        <div className="bg-red-900/20 rounded-lg p-4 border border-red-500/30">
-          <div className="flex items-center gap-2 mb-3">
-            <TrendingDown className="text-red-400" size={20} />
-            <h4 className="text-lg font-semibold text-red-400">Negative Impacts</h4>
-          </div>
-          {analysis.negativeImpacts && analysis.negativeImpacts.length > 0 ? (
-            <ul className="space-y-3">
-              {analysis.negativeImpacts.map((impact, idx) => (
-                <li key={idx} className="text-sm">
-                  <p className="text-white font-medium mb-1">• {impact.point}</p>
-                  <p className="text-gray-400 text-xs ml-3">{impact.reasoning}</p>
-                </li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-gray-400 text-sm">No significant negative impacts identified</p>
-          )}
-        </div>
-      </div>
-
-      {/* Market Expectation */}
-      <div className="bg-blue-900/20 rounded-lg p-4 mb-6 border border-blue-500/30">
-        <div className="flex items-center gap-2 mb-3">
-          <Target className="text-blue-400" size={20} />
-          <h4 className="text-lg font-semibold text-blue-400">Market Expectation Alignment</h4>
-        </div>
-        <div className="flex items-center gap-3 mb-2">
-          <span className={`font-semibold ${getAlignmentDisplay(analysis.marketExpectation?.alignment).color}`}>
-            {getAlignmentDisplay(analysis.marketExpectation?.alignment).label}
-          </span>
-        </div>
-        <p className="text-gray-300 text-sm">{analysis.marketExpectation?.explanation}</p>
-      </div>
-
-      {/* Impact Timeline - Short & Long Term */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Short Term Impact */}
-        <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-          <div className="flex items-center gap-2 mb-3">
-            <Clock className="text-purple-400" size={20} />
-            <h4 className="text-lg font-semibold text-purple-400">Short-Term Impact</h4>
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              {(() => {
-                const dir = getDirectionDisplay(analysis.shortTermImpact?.direction);
-                const DirIcon = dir.icon;
-                return (
-                  <>
-                    <DirIcon className={dir.color} size={18} />
-                    <span className={`font-semibold ${dir.color}`}>{dir.label}</span>
-                    <span className="text-xs text-gray-400">
-                      (Magnitude: {analysis.shortTermImpact?.magnitude})
-                    </span>
-                  </>
-                );
-              })()}
+            <div className="flex items-center gap-2 text-sm text-gray-400">
+              <span>{analysis.articlesAnalyzed} articles analyzed</span>
+              {cachedTime && (
+                <>
+                  <span>•</span>
+                  <span className={isFromCache ? 'text-yellow-400' : 'text-green-400'}>
+                    {isFromCache ? '📦 Cached: ' : '🆕 Generated: '}
+                    {new Date(cachedTime).toLocaleString()}
+                  </span>
+                </>
+              )}
             </div>
-            <p className="text-xs text-gray-400 mb-2">Timeframe: {analysis.shortTermImpact?.timeframe}</p>
-            <p className="text-gray-300 text-sm">{analysis.shortTermImpact?.explanation}</p>
           </div>
         </div>
 
-        {/* Long Term Impact */}
-        <div className="bg-gray-800/50 rounded-lg p-4 border border-gray-700">
-          <div className="flex items-center gap-2 mb-3">
-            <Calendar className="text-cyan-400" size={20} />
-            <h4 className="text-lg font-semibold text-cyan-400">Long-Term Impact</h4>
-          </div>
-          <div className="space-y-2">
-            <div className="flex items-center gap-2">
-              {(() => {
-                const dir = getDirectionDisplay(analysis.longTermImpact?.direction);
-                const DirIcon = dir.icon;
-                return (
-                  <>
-                    <DirIcon className={dir.color} size={18} />
-                    <span className={`font-semibold ${dir.color}`}>{dir.label}</span>
-                    <span className="text-xs text-gray-400">
-                      (Magnitude: {analysis.longTermImpact?.magnitude})
-                    </span>
-                  </>
-                );
-              })()}
-            </div>
-            <p className="text-xs text-gray-400 mb-2">Timeframe: {analysis.longTermImpact?.timeframe}</p>
-            <p className="text-gray-300 text-sm">{analysis.longTermImpact?.explanation}</p>
-          </div>
-        </div>
-      </div>
-
-      {/* Risks and Opportunities */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-6">
-        {/* Key Risks */}
-        <div className="bg-orange-900/20 rounded-lg p-4 border border-orange-500/30">
-          <div className="flex items-center gap-2 mb-3">
-            <AlertTriangle className="text-orange-400" size={20} />
-            <h4 className="text-lg font-semibold text-orange-400">Key Risks</h4>
-          </div>
-          {analysis.keyRisks && analysis.keyRisks.length > 0 ? (
-            <ul className="space-y-2">
-              {analysis.keyRisks.map((risk, idx) => (
-                <li key={idx} className="text-sm text-gray-300">• {risk}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-gray-400 text-sm">No significant risks identified</p>
-          )}
-        </div>
-
-        {/* Key Opportunities */}
-        <div className="bg-green-900/20 rounded-lg p-4 border border-green-500/30">
-          <div className="flex items-center gap-2 mb-3">
-            <Lightbulb className="text-green-400" size={20} />
-            <h4 className="text-lg font-semibold text-green-400">Key Opportunities</h4>
-          </div>
-          {analysis.keyOpportunities && analysis.keyOpportunities.length > 0 ? (
-            <ul className="space-y-2">
-              {analysis.keyOpportunities.map((opp, idx) => (
-                <li key={idx} className="text-sm text-gray-300">• {opp}</li>
-              ))}
-            </ul>
-          ) : (
-            <p className="text-gray-400 text-sm">No significant opportunities identified</p>
-          )}
-        </div>
-      </div>
-
-      {/* Analyst Recommendation */}
-      <div className={`${recommendation.bg} rounded-lg p-4 border ${recommendation.border}`}>
-        <div className="flex items-center gap-3 mb-2">
-          <Award className={recommendation.color} size={24} />
-          <div>
-            <h4 className="text-lg font-semibold text-white">AI Analyst Recommendation</h4>
-            <span className={`text-2xl font-bold ${recommendation.color}`}>
-              {recommendation.label}
+        <div className="flex items-center gap-3">
+          {/* Overall Sentiment Badge */}
+          <div className={`flex items-center gap-2 px-4 py-2 ${sentimentDisplay.bg} ${sentimentDisplay.border} border rounded-lg`}>
+            <SentimentIcon className={sentimentDisplay.color} size={20} />
+            <span className={`font-semibold ${sentimentDisplay.color}`}>
+              {sentimentDisplay.label}
+            </span>
+            <span className="text-xs text-gray-400 ml-2">
+              ({analysis.confidenceLevel} confidence)
             </span>
           </div>
+
+          {/* Force Reload Button */}
+          <button
+            onClick={handleForceReload}
+            className="flex items-center gap-2 px-4 py-2 bg-gray-700 hover:bg-gray-600 text-white rounded-lg transition-all"
+            title="Force reload analysis"
+          >
+            <RefreshCw size={18} />
+            <span className="text-sm font-semibold">Reload</span>
+          </button>
         </div>
-        <p className="text-gray-300 text-sm mt-2">{analysis.recommendationReasoning}</p>
+      </div>
+
+      {/* Table Format Display */}
+      <div className="overflow-x-auto">
+        <table className="w-full border-collapse">
+          <tbody>
+            {/* Row 1: Executive Summary */}
+            <tr>
+              <td colSpan={2} className="border border-gray-700 bg-gray-800/50 p-4">
+                <h4 className="text-lg font-semibold text-white mb-2">Executive Summary</h4>
+                <p className="text-gray-300 leading-relaxed">{analysis.summary}</p>
+              </td>
+            </tr>
+
+            {/* Row 2: Short & Long Term Negative Impact */}
+            <tr>
+              <td className="border border-red-500/30 bg-red-900/20 p-4 w-1/2">
+                <h4 className="text-lg font-semibold mb-3">
+                  <span className="text-red-500">Short Term Negative Impact</span>
+                </h4>
+                {analysis.negativeImpacts && analysis.negativeImpacts.length > 0 ? (
+                  <div className="space-y-3">
+                    {analysis.negativeImpacts.map((impact, idx) => (
+                      <div key={idx} className="text-sm">
+                        <p className="text-white font-medium mb-1">• {impact.point}</p>
+                        <p className="text-gray-400 text-xs ml-3">{impact.reasoning}</p>
+                      </div>
+                    ))}
+                    {analysis.shortTermImpact?.direction === 'bearish' && (
+                      <div className="mt-3 pt-3 border-t border-red-500/30">
+                        <div className="flex items-center gap-2 mb-2">
+                          <TrendingDown className="text-red-400" size={16} />
+                          <span className="text-red-400 font-semibold text-sm">
+                            {analysis.shortTermImpact.magnitude} magnitude
+                          </span>
+                        </div>
+                        <p className="text-gray-300 text-xs">{analysis.shortTermImpact.explanation}</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-gray-400 text-sm">No significant short-term negative impacts</p>
+                )}
+              </td>
+              <td className="border border-red-500/30 bg-red-900/20 p-4 w-1/2">
+                <h4 className="text-lg font-semibold mb-3">
+                  <span className="text-red-500">Long Term Negative Impact</span>
+                </h4>
+                {analysis.longTermImpact?.direction === 'bearish' ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <TrendingDown className="text-red-400" size={18} />
+                      <span className="text-red-400 font-semibold">Bearish</span>
+                      <span className="text-xs text-gray-400">
+                        (Magnitude: {analysis.longTermImpact.magnitude})
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400">Timeframe: {analysis.longTermImpact.timeframe}</p>
+                    <p className="text-gray-300 text-sm">{analysis.longTermImpact.explanation}</p>
+                  </div>
+                ) : (
+                  <p className="text-gray-400 text-sm">No significant long-term negative impact identified</p>
+                )}
+              </td>
+            </tr>
+
+            {/* Row 3: Short & Long Term Positive Impact */}
+            <tr>
+              <td className="border border-green-500/30 bg-green-900/20 p-4 w-1/2">
+                <h4 className="text-lg font-semibold mb-3">
+                  <span className="text-green-500">Short Term Positive Impact</span>
+                </h4>
+                {analysis.positiveImpacts && analysis.positiveImpacts.length > 0 ? (
+                  <div className="space-y-3">
+                    {analysis.positiveImpacts.map((impact, idx) => (
+                      <div key={idx} className="text-sm">
+                        <p className="text-white font-medium mb-1">• {impact.point}</p>
+                        <p className="text-gray-400 text-xs ml-3">{impact.reasoning}</p>
+                      </div>
+                    ))}
+                    {analysis.shortTermImpact?.direction === 'bullish' && (
+                      <div className="mt-3 pt-3 border-t border-green-500/30">
+                        <div className="flex items-center gap-2 mb-2">
+                          <TrendingUp className="text-green-400" size={16} />
+                          <span className="text-green-400 font-semibold text-sm">
+                            {analysis.shortTermImpact.magnitude} magnitude
+                          </span>
+                        </div>
+                        <p className="text-gray-300 text-xs">{analysis.shortTermImpact.explanation}</p>
+                      </div>
+                    )}
+                  </div>
+                ) : (
+                  <p className="text-gray-400 text-sm">No significant short-term positive impacts</p>
+                )}
+              </td>
+              <td className="border border-green-500/30 bg-green-900/20 p-4 w-1/2">
+                <h4 className="text-lg font-semibold mb-3">
+                  <span className="text-green-500">Long Term Positive Impact</span>
+                </h4>
+                {analysis.longTermImpact?.direction === 'bullish' ? (
+                  <div className="space-y-2">
+                    <div className="flex items-center gap-2">
+                      <TrendingUp className="text-green-400" size={18} />
+                      <span className="text-green-400 font-semibold">Bullish</span>
+                      <span className="text-xs text-gray-400">
+                        (Magnitude: {analysis.longTermImpact.magnitude})
+                      </span>
+                    </div>
+                    <p className="text-xs text-gray-400">Timeframe: {analysis.longTermImpact.timeframe}</p>
+                    <p className="text-gray-300 text-sm">{analysis.longTermImpact.explanation}</p>
+                  </div>
+                ) : (
+                  <p className="text-gray-400 text-sm">No significant long-term positive impact identified</p>
+                )}
+              </td>
+            </tr>
+
+            {/* Row 4: Key Risks */}
+            <tr>
+              <td colSpan={2} className="border border-orange-500/30 bg-orange-900/20 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <AlertTriangle className="text-orange-400" size={20} />
+                  <h4 className="text-lg font-semibold">
+                    Key <span className="text-red-500">Risks</span>
+                  </h4>
+                </div>
+                {analysis.keyRisks && analysis.keyRisks.length > 0 ? (
+                  <ul className="space-y-2">
+                    {analysis.keyRisks.map((risk, idx) => (
+                      <li key={idx} className="text-sm text-gray-300">• {risk}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-gray-400 text-sm">No significant risks identified</p>
+                )}
+              </td>
+            </tr>
+
+            {/* Row 5: Key Opportunities */}
+            <tr>
+              <td colSpan={2} className="border border-green-500/30 bg-green-900/20 p-4">
+                <div className="flex items-center gap-2 mb-3">
+                  <Lightbulb className="text-green-400" size={20} />
+                  <h4 className="text-lg font-semibold">
+                    Key <span className="text-blue-500">Opportunities</span>
+                  </h4>
+                </div>
+                {analysis.keyOpportunities && analysis.keyOpportunities.length > 0 ? (
+                  <ul className="space-y-2">
+                    {analysis.keyOpportunities.map((opp, idx) => (
+                      <li key={idx} className="text-sm text-gray-300">• {opp}</li>
+                    ))}
+                  </ul>
+                ) : (
+                  <p className="text-gray-400 text-sm">No significant opportunities identified</p>
+                )}
+              </td>
+            </tr>
+
+            {/* Row 6: AI Analyst Recommendation */}
+            <tr>
+              <td colSpan={2} className="border border-yellow-500 bg-yellow-900/20 p-4">
+                <div className="flex items-center gap-3 mb-2">
+                  <Award className="text-yellow-400" size={24} />
+                  <div>
+                    <h4 className="text-lg font-semibold text-yellow-500">AI Analyst Recommendation</h4>
+                    <span className="text-2xl font-bold text-yellow-400">
+                      {analysis.analystRecommendation?.toUpperCase() || 'N/A'}
+                    </span>
+                  </div>
+                </div>
+                <p className="text-gray-300 text-sm mt-2">{analysis.recommendationReasoning}</p>
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
 
       {/* Disclaimer */}

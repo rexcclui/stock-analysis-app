@@ -1,10 +1,14 @@
 import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
+import { getCache, setCache } from '@/lib/cache';
 
 // Initialize OpenAI client
 const openai = new OpenAI({
   apiKey: process.env.OPENAI_API_KEY,
 });
+
+// Cache TTL for AI analysis: 4 hours (240 minutes)
+const AI_ANALYSIS_CACHE_TTL = 240;
 
 /**
  * AI-powered news analysis endpoint
@@ -38,6 +42,28 @@ export async function POST(request) {
     if (allNews.length === 0) {
       return NextResponse.json({ error: 'No news articles available for analysis' }, { status: 400 });
     }
+
+    // Create cache key based on symbol and news content hash
+    const newsTitles = allNews.map(n => n.title).sort().join('|');
+    const cacheKey = `ai-analysis:${symbol}:${Buffer.from(newsTitles).toString('base64').slice(0, 50)}`;
+
+    // Check if forceReload is requested
+    const forceReload = body.forceReload === true;
+
+    // Check cache first (unless force reload)
+    if (!forceReload) {
+      const cachedAnalysis = getCache(cacheKey);
+      if (cachedAnalysis) {
+        console.log(`[AI News Analysis] Cache hit for ${symbol}`);
+        return NextResponse.json({
+          ...cachedAnalysis,
+          fromCache: true,
+          cacheKey
+        });
+      }
+    }
+
+    console.log(`[AI News Analysis] Cache miss for ${symbol}, calling OpenAI`);
 
     // Prepare news data for AI analysis
     const newsText = allNews.map((article, idx) =>
@@ -147,9 +173,15 @@ Provide ONLY the JSON response, no additional text.`;
       }
     };
 
-    console.log(`[AI News Analysis] Successfully analyzed ${symbol}`);
+    // Cache the result
+    setCache(cacheKey, result, AI_ANALYSIS_CACHE_TTL);
+    console.log(`[AI News Analysis] Successfully analyzed and cached ${symbol}`);
 
-    return NextResponse.json(result);
+    return NextResponse.json({
+      ...result,
+      fromCache: false,
+      cacheKey
+    });
 
   } catch (error) {
     console.error('[AI News Analysis] Error:', error);

@@ -430,11 +430,11 @@ export default function StockAnalysisDashboard() {
   };
 
   // Fetch AI news analysis
-  const fetchAINewsAnalysis = async (symbol, newsData) => {
+  const fetchAINewsAnalysis = async (symbol, newsData, forceReload = false) => {
     try {
       setAiAnalysisLoading(true);
       setAiAnalysisError(null);
-      console.log(`[AI Analysis] Fetching analysis for ${symbol}`);
+      console.log(`[AI Analysis] Fetching analysis for ${symbol}${forceReload ? ' (force reload)' : ''}`);
 
       const response = await fetch('/api/analyze-news', {
         method: 'POST',
@@ -444,7 +444,8 @@ export default function StockAnalysisDashboard() {
           newsApiNews: newsData.newsApiNews || [],
           googleNews: newsData.googleNews || [],
           yahooNews: newsData.yahooNews || [],
-          bloombergNews: newsData.bloombergNews || []
+          bloombergNews: newsData.bloombergNews || [],
+          forceReload
         })
       });
 
@@ -469,7 +470,7 @@ export default function StockAnalysisDashboard() {
   };
 
   // Handler for manual AI analysis trigger
-  const handleAnalyzeNews = () => {
+  const handleAnalyzeNews = (forceReload = false) => {
     if (!selectedStock?.code) return;
 
     fetchAINewsAnalysis(selectedStock.code, {
@@ -477,7 +478,7 @@ export default function StockAnalysisDashboard() {
       googleNews: googleNews,
       yahooNews: yahooNews,
       bloombergNews: bloombergNews
-    }).catch(err => console.error('[AI Analysis] Failed:', err));
+    }, forceReload).catch(err => console.error('[AI Analysis] Failed:', err));
   };
 
   const handleSearch = async (overrideCode) => {
