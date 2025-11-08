@@ -79,10 +79,10 @@ export function SentimentTimeSeriesChart({ sentimentTimeSeries, loading = false 
   return (
     <div className="mb-6" style={{ marginTop: '1rem' }}>
       <h3
-        className="text-xl font-bold text-white mb-4 flex items-center justify-between cursor-pointer hover:text-blue-400 transition"
+  className="text-xl font-bold mb-4 flex items-center justify-between cursor-pointer hover:text-blue-400 transition"
         onClick={() => setIsExpanded(!isExpanded)}
       >
-        <span>Sentiment Trend ({periodLabel})</span>
+  <span style={{ color: '#3B82F6' }}>Sentiment Trend ({periodLabel})</span>
         {isExpanded ? <ChevronUp size={24} /> : <ChevronDown size={24} />}
       </h3>
       {isExpanded && (

@@ -21,7 +21,7 @@ export function SentimentSection({ sentiment, loading = false }) {
   }
   return (
     <div className="bg-gray-800 rounded-xl shadow-xl p-6 border border-gray-700" style={{ marginTop: '1rem' }}>
-      <h3 className="text-xl font-bold text-white mb-4">Social Media Sentiment</h3>
+  <h3 className="text-xl font-bold mb-4" style={{ color: '#3B82F6', marginTop: '2rem' }}>Social Media Sentiment</h3>
       <div className="grid grid-cols-4 gap-4 mb-4">
         <div className="bg-gray-700/20 rounded-lg p-4 border border-gray-600">
           <div className="text-sm text-gray-300">Score</div>

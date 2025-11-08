@@ -87,7 +87,7 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
         <div className="flex items-center gap-3 mb-4">
           <div className="animate-pulse flex items-center gap-2">
             <div className="w-6 h-6 bg-purple-500 rounded-full"></div>
-            <h3 className="text-xl font-bold text-white">AI News Analysis</h3>
+            <h3 className="text-xl font-bold" style={{ color: '#3B82F6', marginTop: '2rem' }}>AI News Analysis</h3>
           </div>
         </div>
         <div className="text-gray-300 flex items-center gap-2">
@@ -108,7 +108,7 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
               <Sparkles className="text-purple-400" size={24} />
             </div>
             <div>
-              <h3 className="text-xl font-bold text-white">AI News Analysis</h3>
+              <h3 className="text-xl font-bold" style={{ color: '#3B82F6', marginTop: '2rem' }}>AI News Analysis</h3>
               <p className="text-sm text-gray-400">
                 Get AI-powered insights on market impact, sentiment, and recommendations
               </p>
@@ -215,7 +215,8 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
   const confidenceColor = getConfidenceColor(analysis.confidenceLevel);
 
   return (
-    <div className="bg-gradient-to-br from-purple-900/40 to-blue-900/40 rounded-xl shadow-xl p-6 border border-purple-500/30 mb-6">
+    <>
+      <div className="bg-gradient-to-br from-purple-900/40 to-blue-900/40 rounded-xl shadow-xl p-6 border border-purple-500/30 mb-6">
       {/* Header */}
       <div className="flex items-center justify-between mb-6 flex-wrap gap-4">
         <div className="flex items-center gap-3">
@@ -223,7 +224,7 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
             <Lightbulb className="text-purple-400" size={24} />
           </div>
           <div>
-            <h3 className="text-2xl font-bold text-white">AI News Analysis</h3>
+            <h3 className="text-2xl font-bold" style={{ color: '#3B82F6', marginTop: '2.5rem' }}>AI News Analysis</h3>
             <div className="flex items-center gap-2 text-sm text-gray-400">
               <span>{analysis.articlesAnalyzed} articles analyzed</span>
               {cachedTime && (
@@ -447,6 +448,7 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
           Always conduct your own research and consult with a qualified financial advisor.
         </p>
       </div>
-    </div>
+      </div>
+    </>
   );
 }
