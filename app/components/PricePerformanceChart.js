@@ -1,9 +1,12 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceDot, Scatter } from 'recharts';
+import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceDot, Scatter, ReferenceArea } from 'recharts';
 import { LoadingState } from './LoadingState';
 import { useAIPriceAnalysis } from '../hooks/useAIPriceAnalysis';
+import { useAICycleAnalysis } from '../hooks/useAICycleAnalysis';
 import { AIPriceAnalysisButton } from './ai/AIPriceAnalysisButton';
 import { AIPriceAnalysisPanel } from './ai/AIPriceAnalysisPanel';
+import { AICycleAnalysisButton } from './ai/AICycleAnalysisButton';
+import { AICycleAnalysisPanel } from './ai/AICycleAnalysisPanel';
 
 /**
  * PricePerformanceChart
@@ -48,6 +51,16 @@ export function PricePerformanceChart({
     setShowAiAnalysis,
     handleAiAnalysis
   } = useAIPriceAnalysis(selectedStock, fullHistoricalData);
+
+  // AI Cycle Analysis using custom hook
+  const {
+    cycleAnalysis,
+    cycleLoading,
+    cycleError,
+    showCycleAnalysis,
+    setShowCycleAnalysis,
+    handleCycleAnalysis
+  } = useAICycleAnalysis(selectedStock, fullHistoricalData);
 
   // Don't return early here; render decisions happen after hooks are declared to keep hooks order stable.
   const shouldShowLoading = !selectedStock && loading;
@@ -296,6 +309,25 @@ export function PricePerformanceChart({
               {showAiAnalysis ? 'Hide AI Markers' : 'Show AI Markers'}
             </button>
           )}
+
+          {/* AI Cycle Analysis Button */}
+          <AICycleAnalysisButton
+            onAnalyze={handleCycleAnalysis}
+            isLoading={cycleLoading}
+            isDisabled={!selectedStock || chartCompareStocks.length > 0}
+            disabledReason={chartCompareStocks.length > 0 ? 'AI cycle analysis only available for single stock view' : 'No stock selected'}
+          />
+
+          {/* Toggle Cycle Analysis Display */}
+          {cycleAnalysis && !cycleLoading && (
+            <button
+              onClick={() => setShowCycleAnalysis(!showCycleAnalysis)}
+              className="px-3 py-2 bg-green-700 hover:bg-green-600 text-white rounded-lg text-xs font-medium transition"
+              title={showCycleAnalysis ? 'Hide cycle markers' : 'Show cycle markers'}
+            >
+              {showCycleAnalysis ? 'Hide Cycles' : 'Show Cycles'}
+            </button>
+          )}
           <div className="flex items-center" style={{ marginLeft: '12px' }}>
             <input
               type="text"
@@ -495,6 +527,77 @@ export function PricePerformanceChart({
                   </>
                 )}
 
+                {/* AI Cycle Analysis Overlay - Cycle Zones */}
+                {showCycleAnalysis && cycleAnalysis && chartCompareStocks.length === 0 && cycleAnalysis.cycles && (
+                  <>
+                    {cycleAnalysis.cycles.map((cycle, idx) => {
+                      // Find start and end dates in the current data
+                      const startDate = cycle.startDate;
+                      const endDate = cycle.endDate;
+
+                      // Determine color based on cycle type
+                      const fillColor = cycle.type === 'bull' ? 'rgba(34, 197, 94, 0.1)' :
+                                       cycle.type === 'bear' ? 'rgba(239, 68, 68, 0.1)' :
+                                       'rgba(234, 179, 8, 0.1)';
+                      const strokeColor = cycle.type === 'bull' ? '#22c55e' :
+                                         cycle.type === 'bear' ? '#ef4444' :
+                                         '#eab308';
+
+                      return (
+                        <ReferenceArea
+                          key={`cycle-${cycle.id || idx}`}
+                          x1={startDate}
+                          x2={endDate}
+                          fill={fillColor}
+                          stroke={strokeColor}
+                          strokeWidth={1}
+                          strokeOpacity={0.5}
+                          fillOpacity={0.3}
+                          label={{
+                            value: `${cycle.type.toUpperCase()} (${cycle.duration}d)`,
+                            position: 'top',
+                            fill: strokeColor,
+                            fontSize: 10,
+                            fontWeight: 'bold'
+                          }}
+                        />
+                      );
+                    })}
+
+                    {/* Show cycle price ranges as reference lines */}
+                    {cycleAnalysis.currentCycle && (
+                      <>
+                        <ReferenceLine
+                          y={cycleAnalysis.currentCycle.priceRange.high}
+                          stroke="#22c55e"
+                          strokeDasharray="5 5"
+                          strokeWidth={2}
+                          label={{
+                            value: `Cycle High: $${cycleAnalysis.currentCycle.priceRange.high?.toFixed(2)}`,
+                            position: 'right',
+                            fill: '#22c55e',
+                            fontSize: 11,
+                            fontWeight: 'bold'
+                          }}
+                        />
+                        <ReferenceLine
+                          y={cycleAnalysis.currentCycle.priceRange.low}
+                          stroke="#ef4444"
+                          strokeDasharray="5 5"
+                          strokeWidth={2}
+                          label={{
+                            value: `Cycle Low: $${cycleAnalysis.currentCycle.priceRange.low?.toFixed(2)}`,
+                            position: 'right',
+                            fill: '#ef4444',
+                            fontSize: 11,
+                            fontWeight: 'bold'
+                          }}
+                        />
+                      </>
+                    )}
+                  </>
+                )}
+
                 {/* AI Analysis Overlay - Buy/Sell Signals and Support/Resistance */}
                 {showAiAnalysis && aiAnalysis && chartCompareStocks.length === 0 && (
                   <>
@@ -622,6 +725,14 @@ export function PricePerformanceChart({
         showAiAnalysis={showAiAnalysis}
         onRefresh={handleAiAnalysis}
         aiError={aiError}
+      />
+
+      {/* AI Cycle Analysis Panel - Shows cycle analysis summary and errors */}
+      <AICycleAnalysisPanel
+        cycleAnalysis={cycleAnalysis}
+        showCycleAnalysis={showCycleAnalysis}
+        onRefresh={handleCycleAnalysis}
+        cycleError={cycleError}
       />
     </div>
   );
