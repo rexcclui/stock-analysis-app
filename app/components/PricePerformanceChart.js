@@ -605,6 +605,23 @@ export function PricePerformanceChart({
                   <>
                     {/* Vertical lines marking cycle boundaries - only show on daily periods (not 3Y/5Y) */}
                     {!['3Y', '5Y'].includes(chartPeriod) && cycleAnalysis.cycles.flatMap((cycle, idx) => {
+                      // Check if cycle is within visible chart range
+                      const cycleStart = new Date(cycle.startDate).getTime();
+                      const cycleEnd = new Date(cycle.endDate).getTime();
+
+                      // Get visible chart range
+                      const chartStart = new Date(multiData[0].date.replace(/^(\d{2})-/, '20$1-')).getTime();
+                      const chartEnd = new Date(multiData[multiData.length - 1].date.replace(/^(\d{2})-/, '20$1-')).getTime();
+
+                      // Skip cycles completely outside visible range
+                      if (cycleEnd < chartStart || cycleStart > chartEnd) {
+                        console.log(`Skipping cycle ${idx + 1} - outside visible range:`, {
+                          cycle: `${cycle.startDate} to ${cycle.endDate}`,
+                          chart: `${multiData[0].date} to ${multiData[multiData.length - 1].date}`
+                        });
+                        return [];
+                      }
+
                       // Find matching dates
                       const findClosestDate = (originalDate) => {
                         const targetTime = new Date(originalDate).getTime();
