@@ -686,7 +686,7 @@ export function PricePerformanceChart({
                 <Target className="text-purple-400" size={20} />
               </div>
               <div>
-                <h4 className="text-lg font-bold text-blue-400">AI Price Analysis</h4>
+                <h4 className="text-lg font-bold" style={{ color: '#fde047' }}>AI Price Analysis</h4>
                 <p className="text-xs text-gray-400">
                   {aiAnalysis.fromCache ? '📦 Cached: ' : '🆕 Generated: '}
                   {new Date(aiAnalysis.analyzedAt).toLocaleString()}
@@ -705,7 +705,7 @@ export function PricePerformanceChart({
           {/* Trend Analysis */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
             <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
-              <h5 className="text-sm font-semibold text-white mb-2 flex items-center gap-2">
+              <h5 className="text-sm font-semibold mb-2 flex items-center gap-2" style={{ color: '#fde047' }}>
                 {aiAnalysis.trendAnalysis?.direction === 'uptrend' ? <TrendingUp className="text-green-400" size={16} /> :
                  aiAnalysis.trendAnalysis?.direction === 'downtrend' ? <TrendingDown className="text-red-400" size={16} /> :
                  <Target className="text-gray-400" size={16} />}
@@ -718,7 +718,7 @@ export function PricePerformanceChart({
             </div>
 
             <div className="bg-gray-800/50 rounded-lg p-3 border border-gray-700">
-              <h5 className="text-sm font-semibold text-white mb-2">Recommendation</h5>
+              <h5 className="text-sm font-semibold mb-2" style={{ color: '#fde047' }}>Recommendation</h5>
               <p className="text-lg font-bold" style={{
                 color: aiAnalysis.recommendation?.action?.includes('buy') ? '#10b981' :
                        aiAnalysis.recommendation?.action?.includes('sell') ? '#ef4444' : '#fbbf24'
@@ -736,7 +736,7 @@ export function PricePerformanceChart({
           {/* Buy Signals */}
           {aiAnalysis.buySignals && aiAnalysis.buySignals.length > 0 && (
             <div className="bg-green-900/20 rounded-lg p-3 border border-green-500/30 mb-3">
-              <h5 className="text-sm font-semibold text-green-400 mb-2 flex items-center gap-2">
+              <h5 className="text-sm font-semibold mb-2 flex items-center gap-2" style={{ color: '#fde047' }}>
                 <TrendingUp size={16} />
                 Buy Signals
               </h5>
@@ -761,7 +761,7 @@ export function PricePerformanceChart({
           {/* Sell Signals */}
           {aiAnalysis.sellSignals && aiAnalysis.sellSignals.length > 0 && (
             <div className="bg-red-900/20 rounded-lg p-3 border border-red-500/30 mb-3">
-              <h5 className="text-sm font-semibold text-red-400 mb-2 flex items-center gap-2">
+              <h5 className="text-sm font-semibold mb-2 flex items-center gap-2" style={{ color: '#fde047' }}>
                 <TrendingDown size={16} />
                 Sell Signals
               </h5>
@@ -782,7 +782,7 @@ export function PricePerformanceChart({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mb-3">
             {aiAnalysis.supportLevels && aiAnalysis.supportLevels.length > 0 && (
               <div className="bg-green-900/20 rounded-lg p-3 border border-green-500/30">
-                <h5 className="text-sm font-semibold text-green-400 mb-2">Support Levels</h5>
+                <h5 className="text-sm font-semibold mb-2" style={{ color: '#fde047' }}>Support Levels</h5>
                 <div className="space-y-1">
                   {aiAnalysis.supportLevels.map((level, idx) => (
                     <div key={idx} className="text-xs">
@@ -798,7 +798,7 @@ export function PricePerformanceChart({
 
             {aiAnalysis.resistanceLevels && aiAnalysis.resistanceLevels.length > 0 && (
               <div className="bg-red-900/20 rounded-lg p-3 border border-red-500/30">
-                <h5 className="text-sm font-semibold text-red-400 mb-2">Resistance Levels</h5>
+                <h5 className="text-sm font-semibold mb-2" style={{ color: '#fde047' }}>Resistance Levels</h5>
                 <div className="space-y-1">
                   {aiAnalysis.resistanceLevels.map((level, idx) => (
                     <div key={idx} className="text-xs">
@@ -818,7 +818,7 @@ export function PricePerformanceChart({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {aiAnalysis.keyLevelsToWatch && aiAnalysis.keyLevelsToWatch.length > 0 && (
                 <div className="bg-blue-900/20 rounded-lg p-3 border border-blue-500/30">
-                  <h5 className="text-sm font-semibold text-blue-400 mb-2">Key Levels to Watch</h5>
+                  <h5 className="text-sm font-semibold mb-2" style={{ color: '#fde047' }}>Key Levels to Watch</h5>
                   <ul className="text-xs text-gray-300 space-y-1">
                     {aiAnalysis.keyLevelsToWatch.map((level, idx) => (
                       <li key={idx}>• {level}</li>
@@ -829,7 +829,7 @@ export function PricePerformanceChart({
 
               {aiAnalysis.riskFactors && aiAnalysis.riskFactors.length > 0 && (
                 <div className="bg-orange-900/20 rounded-lg p-3 border border-orange-500/30">
-                  <h5 className="text-sm font-semibold text-orange-400 mb-2">Risk Factors</h5>
+                  <h5 className="text-sm font-semibold mb-2" style={{ color: '#fde047' }}>Risk Factors</h5>
                   <ul className="text-xs text-gray-300 space-y-1">
                     {aiAnalysis.riskFactors.map((risk, idx) => (
                       <li key={idx}>• {risk}</li>
