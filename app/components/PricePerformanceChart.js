@@ -581,35 +581,110 @@ export function PricePerformanceChart({
                   </>
                 )}
 
-                {/* AI Cycle Analysis - Show current cycle price ranges */}
-                {showCycleAnalysis && cycleAnalysis && chartCompareStocks.length === 0 && cycleAnalysis.currentCycle && (
+                {/* AI Cycle Analysis - Vertical boundary markers and price ranges */}
+                {showCycleAnalysis && cycleAnalysis && chartCompareStocks.length === 0 && cycleAnalysis.cycles && multiData.length > 0 && (
                   <>
-                    <ReferenceLine
-                      y={cycleAnalysis.currentCycle.priceRange.high}
-                      stroke="#22c55e"
-                      strokeDasharray="5 5"
-                      strokeWidth={2}
-                      label={{
-                        value: `Cycle High: $${cycleAnalysis.currentCycle.priceRange.high?.toFixed(2)}`,
-                        position: 'right',
-                        fill: '#22c55e',
-                        fontSize: 11,
-                        fontWeight: 'bold'
-                      }}
-                    />
-                    <ReferenceLine
-                      y={cycleAnalysis.currentCycle.priceRange.low}
-                      stroke="#ef4444"
-                      strokeDasharray="5 5"
-                      strokeWidth={2}
-                      label={{
-                        value: `Cycle Low: $${cycleAnalysis.currentCycle.priceRange.low?.toFixed(2)}`,
-                        position: 'right',
-                        fill: '#ef4444',
-                        fontSize: 11,
-                        fontWeight: 'bold'
-                      }}
-                    />
+                    {/* Vertical lines marking cycle boundaries */}
+                    {cycleAnalysis.cycles.flatMap((cycle, idx) => {
+                      // Find matching dates
+                      const findClosestDate = (originalDate) => {
+                        const targetTime = new Date(originalDate).getTime();
+                        let closest = multiData[0];
+                        let closestDiff = Infinity;
+
+                        multiData.forEach(d => {
+                          if (!d.date) return;
+                          let dateStr = d.date;
+                          if (dateStr.includes('-')) {
+                            const parts = dateStr.split('-');
+                            if (parts[0].length === 2) {
+                              dateStr = `20${parts[0]}-${parts[1]}-${parts[2]}`;
+                            } else if (parts.length === 2) {
+                              dateStr = `${parts[0]}-${parts[1]}-01`;
+                            }
+                          }
+                          const time = new Date(dateStr).getTime();
+                          if (isNaN(time)) return;
+                          const diff = Math.abs(time - targetTime);
+                          if (diff < closestDiff) {
+                            closestDiff = diff;
+                            closest = d;
+                          }
+                        });
+                        return closest;
+                      };
+
+                      const startDateObj = findClosestDate(cycle.startDate);
+                      const endDateObj = findClosestDate(cycle.endDate);
+                      const startDate = startDateObj.date;
+                      const endDate = endDateObj.date;
+
+                      const strokeColor = cycle.type === 'bull' ? '#22c55e' :
+                                         cycle.type === 'bear' ? '#ef4444' :
+                                         '#eab308';
+
+                      return [
+                        <ReferenceLine
+                          key={`cycle-start-${idx}`}
+                          x={startDate}
+                          stroke={strokeColor}
+                          strokeWidth={2}
+                          label={{
+                            value: `${cycle.type.toUpperCase()} ${idx + 1}`,
+                            position: 'top',
+                            fill: strokeColor,
+                            fontSize: 10,
+                            fontWeight: 'bold'
+                          }}
+                        />,
+                        <ReferenceLine
+                          key={`cycle-end-${idx}`}
+                          x={endDate}
+                          stroke={strokeColor}
+                          strokeWidth={2}
+                          strokeDasharray="5 5"
+                          label={{
+                            value: `END`,
+                            position: 'bottom',
+                            fill: strokeColor,
+                            fontSize: 10,
+                            fontWeight: 'bold'
+                          }}
+                        />
+                      ];
+                    })}
+
+                    {/* Horizontal price range lines for current cycle */}
+                    {cycleAnalysis.currentCycle && (
+                      <>
+                        <ReferenceLine
+                          y={cycleAnalysis.currentCycle.priceRange.high}
+                          stroke="#22c55e"
+                          strokeDasharray="5 5"
+                          strokeWidth={2}
+                          label={{
+                            value: `Cycle High: $${cycleAnalysis.currentCycle.priceRange.high?.toFixed(2)}`,
+                            position: 'right',
+                            fill: '#22c55e',
+                            fontSize: 11,
+                            fontWeight: 'bold'
+                          }}
+                        />
+                        <ReferenceLine
+                          y={cycleAnalysis.currentCycle.priceRange.low}
+                          stroke="#ef4444"
+                          strokeDasharray="5 5"
+                          strokeWidth={2}
+                          label={{
+                            value: `Cycle Low: $${cycleAnalysis.currentCycle.priceRange.low?.toFixed(2)}`,
+                            position: 'right',
+                            fill: '#ef4444',
+                            fontSize: 11,
+                            fontWeight: 'bold'
+                          }}
+                        />
+                      </>
+                    )}
                   </>
                 )}
 
