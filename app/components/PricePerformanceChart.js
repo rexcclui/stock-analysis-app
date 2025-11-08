@@ -399,31 +399,55 @@ export function PricePerformanceChart({
           </div>
         )}
         {/* Cycle Timeline Visualization */}
-        {showCycleAnalysis && cycleAnalysis && cycleAnalysis.cycles && (
-          <div className="mb-2 px-4">
-            <div className="text-xs text-gray-400 mb-1">Cycle Timeline:</div>
-            <div className="relative h-12 bg-gray-700 rounded flex items-center">
-              {cycleAnalysis.cycles.map((cycle, idx) => {
-                const cycleColor = cycle.type === 'bull' ? 'bg-green-500' :
-                                  cycle.type === 'bear' ? 'bg-red-500' :
-                                  'bg-yellow-500';
+        {showCycleAnalysis && cycleAnalysis && cycleAnalysis.cycles && (() => {
+          // Filter cycles that overlap with visible date range
+          const visibleCycles = cycleAnalysis.cycles.filter(cycle => {
+            const cycleStart = new Date(cycle.startDate).getTime();
+            const cycleEnd = new Date(cycle.endDate).getTime();
 
-                return (
-                  <div
-                    key={`timeline-${idx}`}
-                    className={`h-10 ${cycleColor} border-l-2 border-white flex items-center justify-center text-white font-bold text-xs px-2`}
-                    style={{ flex: cycle.duration }}
-                    title={`${cycle.type.toUpperCase()} cycle: ${cycle.startDate} to ${cycle.endDate} (${cycle.duration} days)`}
-                  >
-                    {cycle.type.toUpperCase()} #{idx + 1}
-                    <br />
-                    {cycle.duration}d
-                  </div>
-                );
-              })}
+            // Get visible date range from chart data
+            if (currentData.length === 0) return false;
+            const chartStart = new Date(currentData[0].date || currentData[0].rawDate).getTime();
+            const chartEnd = new Date(currentData[currentData.length - 1].date || currentData[currentData.length - 1].rawDate).getTime();
+
+            // Check if cycle overlaps with visible range
+            return cycleEnd >= chartStart && cycleStart <= chartEnd;
+          });
+
+          if (visibleCycles.length === 0) return null;
+
+          return (
+            <div className="mb-2 px-4">
+              <div className="text-xs text-gray-400 mb-1">
+                Cycle Timeline ({visibleCycles.length} of {cycleAnalysis.cycles.length} visible):
+              </div>
+              <div className="relative h-8 bg-gray-700 rounded flex items-center overflow-hidden">
+                {visibleCycles.map((cycle, idx) => {
+                  const cycleColor = cycle.type === 'bull' ? 'bg-green-500' :
+                                    cycle.type === 'bear' ? 'bg-red-500' :
+                                    'bg-yellow-500';
+
+                  return (
+                    <div
+                      key={`timeline-${idx}`}
+                      className={`h-6 ${cycleColor} border-l-2 border-white flex items-center justify-center text-white font-bold overflow-hidden`}
+                      style={{
+                        flex: cycle.duration,
+                        fontSize: '10px',
+                        padding: '0 4px'
+                      }}
+                      title={`${cycle.type.toUpperCase()} cycle: ${cycle.startDate} to ${cycle.endDate} (${cycle.duration} days)`}
+                    >
+                      <span className="whitespace-nowrap overflow-hidden text-ellipsis">
+                        {cycle.type.toUpperCase().slice(0, 4)} #{idx + 1}
+                      </span>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
-          </div>
-        )}
+          );
+        })()}
 
         <div
           ref={chartContainerRef}
