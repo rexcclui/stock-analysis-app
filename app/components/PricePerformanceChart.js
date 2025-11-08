@@ -622,9 +622,9 @@ export function PricePerformanceChart({
                       );
                     })}
 
-                    {/* Show cycle boundaries as THICK vertical reference lines */}
-                    {cycleAnalysis.cycles.map((cycle, idx) => {
-                      // Find matching dates by comparing timestamps (same logic as ReferenceArea)
+                    {/* Show cycle boundaries as THICK vertical lines AND dots */}
+                    {cycleAnalysis.cycles.flatMap((cycle, idx) => {
+                      // Find matching dates
                       const findClosestDate = (originalDate) => {
                         const targetTime = new Date(originalDate).getTime();
                         let closest = multiData[0];
@@ -649,43 +649,69 @@ export function PricePerformanceChart({
                             closest = d;
                           }
                         });
-                        return closest.date;
+                        return closest;
                       };
 
-                      const startDate = findClosestDate(cycle.startDate);
-                      const endDate = findClosestDate(cycle.endDate);
+                      const startDateObj = findClosestDate(cycle.startDate);
+                      const endDateObj = findClosestDate(cycle.endDate);
+                      const startDate = startDateObj.date;
+                      const endDate = endDateObj.date;
+                      const startPrice = startDateObj.price;
+                      const endPrice = endDateObj.price;
+
                       const strokeColor = cycle.type === 'bull' ? '#22c55e' :
                                          cycle.type === 'bear' ? '#ef4444' :
                                          '#eab308';
 
-                      return (
-                        <React.Fragment key={`cycle-boundary-${idx}`}>
-                          <ReferenceLine
-                            x={startDate}
-                            stroke={strokeColor}
-                            strokeWidth={4}
-                            label={{
-                              value: `${cycle.type.toUpperCase()} ${idx + 1}`,
-                              position: 'top',
-                              fill: strokeColor,
-                              fontSize: 12,
-                              fontWeight: 'bold'
-                            }}
-                          />
-                          <ReferenceLine
-                            x={endDate}
-                            stroke={strokeColor}
-                            strokeWidth={4}
-                            strokeDasharray="5 5"
-                            label={{
-                              value: `END`,
-                              position: 'bottom',
-                              fill: strokeColor,
-                              fontSize: 10
-                            }}
-                          />
-                        </React.Fragment>
-                      );
+                      console.log(`Creating markers for cycle ${idx + 1}: start=${startDate} (${startPrice}), end=${endDate} (${endPrice})`);
+
+                      return [
+                        <ReferenceLine
+                          key={`cycle-line-start-${idx}`}
+                          x={startDate}
+                          stroke={strokeColor}
+                          strokeWidth={5}
+                          label={{
+                            value: `${cycle.type.toUpperCase()} ${idx + 1} START`,
+                            position: 'top',
+                            fill: strokeColor,
+                            fontSize: 13,
+                            fontWeight: 'bold'
+                          }}
+                        />,
+                        <ReferenceLine
+                          key={`cycle-line-end-${idx}`}
+                          x={endDate}
+                          stroke={strokeColor}
+                          strokeWidth={5}
+                          strokeDasharray="5 5"
+                          label={{
+                            value: `${cycle.type.toUpperCase()} ${idx + 1} END`,
+                            position: 'bottom',
+                            fill: strokeColor,
+                            fontSize: 13,
+                            fontWeight: 'bold'
+                          }}
+                        />,
+                        <ReferenceDot
+                          key={`cycle-dot-start-${idx}`}
+                          x={startDate}
+                          y={startPrice}
+                          r={10}
+                          fill={strokeColor}
+                          stroke="#ffffff"
+                          strokeWidth={3}
+                        />,
+                        <ReferenceDot
+                          key={`cycle-dot-end-${idx}`}
+                          x={endDate}
+                          y={endPrice}
+                          r={10}
+                          fill={strokeColor}
+                          stroke="#000000"
+                          strokeWidth={3}
+                        />
+                      ];
                     })}
 
                     {/* Show cycle price ranges as reference lines */}
