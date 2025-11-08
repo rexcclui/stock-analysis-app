@@ -538,46 +538,49 @@ export function PricePerformanceChart({
                 })() && (
                   <>
                     {cycleAnalysis.cycles.map((cycle, idx) => {
-                      // Format dates to match the chart's date format
-                      const formattedStartDate = formatChartDate(cycle.startDate, chartPeriod);
-                      const formattedEndDate = formatChartDate(cycle.endDate, chartPeriod);
-
-                      // Find the closest matching dates in the actual data
-                      const findClosestDate = (targetDate, originalDate) => {
-                        const exactMatch = multiData.find(d => d.date === targetDate);
-                        if (exactMatch) return targetDate;
-
-                        // If no exact match, find closest date
+                      // Find matching dates by comparing timestamps
+                      const findClosestDate = (originalDate) => {
                         const targetTime = new Date(originalDate).getTime();
-                        let closest = multiData[0].date;
+                        let closest = multiData[0];
                         let closestDiff = Infinity;
 
                         multiData.forEach(d => {
                           if (!d.date) return;
-                          // Try to parse the date - handle both formats
+
+                          // Parse the chart date to timestamp
                           let dateStr = d.date;
-                          if (dateStr.length === 8) { // YY-MM-DD format
-                            const [yy, mm, dd] = dateStr.split('-');
-                            dateStr = `20${yy}-${mm}-${dd}`;
+                          // Handle different formats: "25-01-15" (YY-MM-DD) or "2025-01" (YYYY-MM)
+                          if (dateStr.includes('-')) {
+                            const parts = dateStr.split('-');
+                            if (parts[0].length === 2) {
+                              // YY-MM-DD format
+                              dateStr = `20${parts[0]}-${parts[1]}-${parts[2]}`;
+                            } else if (parts.length === 2) {
+                              // YYYY-MM format - use first day of month
+                              dateStr = `${parts[0]}-${parts[1]}-01`;
+                            }
                           }
+
                           const time = new Date(dateStr).getTime();
+                          if (isNaN(time)) return;
+
                           const diff = Math.abs(time - targetTime);
                           if (diff < closestDiff) {
                             closestDiff = diff;
-                            closest = d.date;
+                            closest = d;
                           }
                         });
 
-                        return closest;
+                        return closest.date;
                       };
 
-                      const startDate = findClosestDate(formattedStartDate, cycle.startDate);
-                      const endDate = findClosestDate(formattedEndDate, cycle.endDate);
+                      const startDate = findClosestDate(cycle.startDate);
+                      const endDate = findClosestDate(cycle.endDate);
 
                       console.log(`Cycle ${idx + 1} (${cycle.type}):`, {
                         original: `${cycle.startDate} to ${cycle.endDate}`,
-                        formatted: `${formattedStartDate} to ${formattedEndDate}`,
-                        matched: `${startDate} to ${endDate}`
+                        matched: `${startDate} to ${endDate}`,
+                        dataPoints: multiData.length
                       });
 
                       // Determine color based on cycle type
@@ -611,9 +614,35 @@ export function PricePerformanceChart({
 
                     {/* Show cycle boundaries as vertical reference lines */}
                     {cycleAnalysis.cycles.map((cycle, idx) => {
-                      const formattedStartDate = formatChartDate(cycle.startDate, chartPeriod);
-                      const formattedEndDate = formatChartDate(cycle.endDate, chartPeriod);
+                      // Find matching dates by comparing timestamps (same logic as ReferenceArea)
+                      const findClosestDate = (originalDate) => {
+                        const targetTime = new Date(originalDate).getTime();
+                        let closest = multiData[0];
+                        let closestDiff = Infinity;
 
+                        multiData.forEach(d => {
+                          if (!d.date) return;
+                          let dateStr = d.date;
+                          if (dateStr.includes('-')) {
+                            const parts = dateStr.split('-');
+                            if (parts[0].length === 2) {
+                              dateStr = `20${parts[0]}-${parts[1]}-${parts[2]}`;
+                            } else if (parts.length === 2) {
+                              dateStr = `${parts[0]}-${parts[1]}-01`;
+                            }
+                          }
+                          const time = new Date(dateStr).getTime();
+                          if (isNaN(time)) return;
+                          const diff = Math.abs(time - targetTime);
+                          if (diff < closestDiff) {
+                            closestDiff = diff;
+                            closest = d;
+                          }
+                        });
+                        return closest.date;
+                      };
+
+                      const startDate = findClosestDate(cycle.startDate);
                       const strokeColor = cycle.type === 'bull' ? '#22c55e' :
                                          cycle.type === 'bear' ? '#ef4444' :
                                          '#eab308';
@@ -621,7 +650,7 @@ export function PricePerformanceChart({
                       return (
                         <React.Fragment key={`cycle-boundary-${idx}`}>
                           <ReferenceLine
-                            x={formattedStartDate}
+                            x={startDate}
                             stroke={strokeColor}
                             strokeDasharray="3 3"
                             strokeWidth={2}
