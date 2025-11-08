@@ -203,9 +203,9 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
   // Helper to get confidence level color
   const getConfidenceColor = (confidence) => {
     const colors = {
-      high: 'text-green-400',
+      high: 'text-blue-400',
       medium: 'text-yellow-300',
-      low: 'text-red-400'
+      low: 'text-white'
     };
     return colors[confidence] || 'text-gray-400';
   };
