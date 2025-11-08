@@ -239,7 +239,7 @@ export function PricePerformanceChart({
       isDragging: true
     };
     setIsDragging(true);
-    console.log('Mouse down, starting drag at', e.clientX, 'offset:', dataOffset);
+      // ...existing code...
   }, [dataOffset]);
 
   const handleMouseMove = useCallback((e) => {
@@ -274,19 +274,13 @@ export function PricePerformanceChart({
     const maxOffset = Math.max(0, totalDays - periodDays);
     newOffset = Math.max(0, Math.min(maxOffset, newOffset));
 
-    console.log('Dragging:', {
-      dragDistance,
-      dragDays,
-      oldOffset: dragStartRef.current.startOffset,
-      newOffset,
-      maxOffset
-    });
+      // ...existing code...
 
     setDataOffset(newOffset);
   }, [chartPeriod, fullHistoricalData]);
 
   const handleMouseUp = useCallback(() => {
-    console.log('Mouse up, ending drag');
+    // ...existing code...
     if (dragStartRef.current) {
       dragStartRef.current.isDragging = false;
     }
