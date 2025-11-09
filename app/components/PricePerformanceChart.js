@@ -974,20 +974,44 @@ export function PricePerformanceChart({
                     // RVI Mode: Render colored segments based on volume
                     (() => {
                       const segments = createRviSegments(multiData);
-                      return segments.map((segment, idx) => (
-                        <Line
-                          key={`rvi-segment-${idx}`}
-                          type="monotone"
-                          dataKey="price"
-                          data={segment.data}
-                          name={idx === 0 ? `${selectedStock?.code || ''} Price (RVI)` : undefined}
-                          stroke={segment.color}
-                          strokeWidth={2}
-                          dot={false}
-                          connectNulls={false}
-                          isAnimationActive={false}
-                        />
-                      ));
+                      console.log('RVI Segments:', segments.length, segments.map(s => ({ color: s.color, points: s.data.length })));
+
+                      // Create a combined dataset with color information per point
+                      const dataWithColors = multiData.map((point, idx) => {
+                        const segment = segments.find(seg => seg.data.some(d => d.date === point.date));
+                        return {
+                          ...point,
+                          rviColor: segment ? segment.color : '#3B82F6'
+                        };
+                      });
+
+                      // Render each segment as a separate Line with filtered data
+                      return segments.map((segment, segIdx) => {
+                        // For this segment, create data with nulls outside the segment range
+                        const segmentStartDate = segment.data[0].date;
+                        const segmentEndDate = segment.data[segment.data.length - 1].date;
+
+                        const filteredData = multiData.map(point => {
+                          // Check if this point is within the segment's date range
+                          const inSegment = segment.data.some(d => d.date === point.date);
+                          return inSegment ? point : { ...point, price: null };
+                        });
+
+                        return (
+                          <Line
+                            key={`rvi-segment-${segIdx}`}
+                            type="monotone"
+                            dataKey="price"
+                            data={filteredData}
+                            name={segIdx === 0 ? `${selectedStock?.code || ''} Price (RVI)` : undefined}
+                            stroke={segment.color}
+                            strokeWidth={2}
+                            dot={false}
+                            connectNulls={false}
+                            isAnimationActive={false}
+                          />
+                        );
+                      });
                     })()
                   ) : (
                     // Default Mode: Single blue line
