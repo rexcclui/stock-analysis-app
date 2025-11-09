@@ -93,10 +93,10 @@ export function SearchHistoryTable({ historyStocks, onClickCode, onRemoveStock, 
                     e.stopPropagation();
                     onRemoveStock(item.code);
                   }}
-                  className="absolute bottom-1 right-1 p-0.5 text-white/60 hover:text-white hover:bg-black/30 rounded transition"
+                  className="absolute bottom-0 right-0 p-1 text-white/70 hover:text-white hover:bg-black/40 rounded-tl transition z-10"
                   title="Remove from history"
                 >
-                  <X size={14} />
+                  <X size={12} />
                 </button>
               )}
               <span
