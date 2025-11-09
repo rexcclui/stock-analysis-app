@@ -155,38 +155,35 @@ export function PricePerformanceChart({
     }
   };
 
-  // Create line segments based on RVI values for colored rendering
-  const createRviSegments = (data) => {
-    if (!data || data.length === 0) return [];
+  // Prepare data with separate dataKeys for each RVI color level
+  const prepareRviData = (data) => {
+    if (!data || data.length === 0) return data;
 
-    const segments = [];
-    let currentSegment = {
-      color: getRviColor(data[0].rvi || 1),
-      data: [data[0]]
-    };
+    // Define color thresholds
+    const colorLevels = [
+      { min: 0, max: 0.7, key: 'price_rvi_1', color: '#93C5FD' },
+      { min: 0.7, max: 1.0, key: 'price_rvi_2', color: '#60A5FA' },
+      { min: 1.0, max: 1.3, key: 'price_rvi_3', color: '#3B82F6' },
+      { min: 1.3, max: 1.7, key: 'price_rvi_4', color: '#2563EB' },
+      { min: 1.7, max: 2.2, key: 'price_rvi_5', color: '#1D4ED8' },
+      { min: 2.2, max: 999, key: 'price_rvi_6', color: '#1E40AF' }
+    ];
 
-    for (let i = 1; i < data.length; i++) {
-      const color = getRviColor(data[i].rvi || 1);
+    return data.map((point, idx) => {
+      const rvi = point.rvi || 1;
+      const newPoint = { ...point };
 
-      if (color === currentSegment.color) {
-        // Continue current segment
-        currentSegment.data.push(data[i]);
-      } else {
-        // Start new segment, but include the previous point for continuity
-        segments.push(currentSegment);
-        currentSegment = {
-          color: color,
-          data: [data[i - 1], data[i]]
-        };
-      }
-    }
+      // Assign price to appropriate color level dataKey
+      colorLevels.forEach(level => {
+        if (rvi >= level.min && rvi < level.max) {
+          newPoint[level.key] = point.price;
+        } else {
+          newPoint[level.key] = null;
+        }
+      });
 
-    // Add the last segment
-    if (currentSegment.data.length > 0) {
-      segments.push(currentSegment);
-    }
-
-    return segments;
+      return newPoint;
+    });
   };
 
   // Get current data slice based on offset and period
@@ -679,8 +676,14 @@ export function PricePerformanceChart({
               // Apply zoom by slicing data based on domain
               const startIndex = Math.floor((zoomDomain.start / 100) * fullData.length);
               const endIndex = Math.ceil((zoomDomain.end / 100) * fullData.length);
-              const multiData = fullData.slice(startIndex, endIndex);
-              console.log('Rendering chart with offset:', dataOffset, 'dataLength:', fullData.length, 'showing:', startIndex, 'to', endIndex);
+              let multiData = fullData.slice(startIndex, endIndex);
+
+              // If RVI mode is on, prepare data with separate dataKeys for each color level
+              if (colorMode === 'rvi' && chartCompareStocks.length === 0) {
+                multiData = prepareRviData(multiData);
+              }
+
+              console.log('Rendering chart with offset:', dataOffset, 'dataLength:', fullData.length, 'showing:', startIndex, 'to', endIndex, 'RVI mode:', colorMode === 'rvi');
 
               // Debug cycle analysis state
               if (showCycleAnalysis) {
@@ -971,48 +974,69 @@ export function PricePerformanceChart({
                 )}
                 {chartCompareStocks.length === 0 ? (
                   colorMode === 'rvi' ? (
-                    // RVI Mode: Render colored segments based on volume
-                    (() => {
-                      const segments = createRviSegments(multiData);
-                      console.log('RVI Segments:', segments.length, segments.map(s => ({ color: s.color, points: s.data.length })));
-
-                      // Create a combined dataset with color information per point
-                      const dataWithColors = multiData.map((point, idx) => {
-                        const segment = segments.find(seg => seg.data.some(d => d.date === point.date));
-                        return {
-                          ...point,
-                          rviColor: segment ? segment.color : '#3B82F6'
-                        };
-                      });
-
-                      // Render each segment as a separate Line with filtered data
-                      return segments.map((segment, segIdx) => {
-                        // For this segment, create data with nulls outside the segment range
-                        const segmentStartDate = segment.data[0].date;
-                        const segmentEndDate = segment.data[segment.data.length - 1].date;
-
-                        const filteredData = multiData.map(point => {
-                          // Check if this point is within the segment's date range
-                          const inSegment = segment.data.some(d => d.date === point.date);
-                          return inSegment ? point : { ...point, price: null };
-                        });
-
-                        return (
-                          <Line
-                            key={`rvi-segment-${segIdx}`}
-                            type="monotone"
-                            dataKey="price"
-                            data={filteredData}
-                            name={segIdx === 0 ? `${selectedStock?.code || ''} Price (RVI)` : undefined}
-                            stroke={segment.color}
-                            strokeWidth={2}
-                            dot={false}
-                            connectNulls={false}
-                            isAnimationActive={false}
-                          />
-                        );
-                      });
-                    })()
+                    // RVI Mode: Render 6 colored lines for different RVI levels
+                    <>
+                      <Line
+                        type="monotone"
+                        dataKey="price_rvi_1"
+                        name={`${selectedStock?.code || ''} Low Volume`}
+                        stroke="#93C5FD"
+                        strokeWidth={2}
+                        dot={false}
+                        connectNulls={true}
+                        isAnimationActive={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="price_rvi_2"
+                        name="Below Avg"
+                        stroke="#60A5FA"
+                        strokeWidth={2}
+                        dot={false}
+                        connectNulls={true}
+                        isAnimationActive={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="price_rvi_3"
+                        name="Normal"
+                        stroke="#3B82F6"
+                        strokeWidth={2}
+                        dot={false}
+                        connectNulls={true}
+                        isAnimationActive={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="price_rvi_4"
+                        name="Above Avg"
+                        stroke="#2563EB"
+                        strokeWidth={2}
+                        dot={false}
+                        connectNulls={true}
+                        isAnimationActive={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="price_rvi_5"
+                        name="High"
+                        stroke="#1D4ED8"
+                        strokeWidth={2}
+                        dot={false}
+                        connectNulls={true}
+                        isAnimationActive={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="price_rvi_6"
+                        name="Very High"
+                        stroke="#1E40AF"
+                        strokeWidth={2}
+                        dot={false}
+                        connectNulls={true}
+                        isAnimationActive={false}
+                      />
+                    </>
                   ) : (
                     // Default Mode: Single blue line
                     <Line type="monotone" dataKey="price" name={`${selectedStock?.code || ''} Price`} stroke="#3B82F6" strokeWidth={2} dot={false} />
