@@ -70,6 +70,8 @@ export function ComparisonTable({
   onStockCodeClick,
   onAddToChart,
   chartCompareStocks,
+  searchHistoryStocks,
+  searchHistoryFullStocks,
   loading = false
 }) {
   const [colorMode, setColorMode] = useState('historical'); // 'historical' | 'relative'
@@ -90,33 +92,53 @@ export function ComparisonTable({
     );
   }
 
-  // Filter comparison stocks based on relationship type
-  let filteredComparisonStocks = comparisonStocks.filter(stock => {
-    // SPY and QQQ are always shown (benchmarks)
-    if (stock.code === 'SPY' || stock.code === 'QQQ') return true;
+  // For 'recent' mode, use searchHistoryFullStocks directly
+  let filteredComparisonStocks;
+  if (relationshipTypeFilter === 'recent') {
+    filteredComparisonStocks = searchHistoryFullStocks || [];
+  } else {
+    // Filter comparison stocks based on relationship type
+    filteredComparisonStocks = comparisonStocks.filter(stock => {
+      // SPY and QQQ are always shown (benchmarks)
+      if (stock.code === 'SPY' || stock.code === 'QQQ') return true;
 
-    // Filter based on relationshipTypeFilter
-    if (relationshipTypeFilter === 'all') return true;
+      // Filter based on relationshipTypeFilter
+      if (relationshipTypeFilter === 'all') return true;
 
-    if (!stock.relationshipType) return false;
+      if (!stock.relationshipType) return false;
 
-    const type = stock.relationshipType.toLowerCase();
-    if (relationshipTypeFilter === 'industry' && type.includes('industry')) return true;
-    if (relationshipTypeFilter === 'sector' && type.includes('sector')) return true;
-    if (relationshipTypeFilter === 'competitor' && type.includes('competitor')) return true;
-    if (relationshipTypeFilter === 'etf' && (type.includes('co-held') || type.includes('etf'))) return true;
+      const type = stock.relationshipType.toLowerCase();
+      if (relationshipTypeFilter === 'industry' && type.includes('industry')) return true;
+      if (relationshipTypeFilter === 'sector' && type.includes('sector')) return true;
+      if (relationshipTypeFilter === 'competitor' && type.includes('competitor')) return true;
+      if (relationshipTypeFilter === 'etf' && (type.includes('co-held') || type.includes('etf'))) return true;
 
-    return false;
-  });
+      return false;
+    });
+  }
 
   // Separate benchmarks from other stocks for row size limiting
   const benchmarks = filteredComparisonStocks.filter(s => s.code === 'SPY' || s.code === 'QQQ');
   const nonBenchmarks = filteredComparisonStocks.filter(s => s.code !== 'SPY' && s.code !== 'QQQ');
 
-  // Sort non-benchmarks by market cap (descending) and limit to comparisonRowSize
-  const sortedLimitedNonBenchmarks = nonBenchmarks
-    .sort((a, b) => getMarketCapValue(b.marketCap) - getMarketCapValue(a.marketCap))
-    .slice(0, comparisonRowSize);
+  // Sort non-benchmarks based on mode
+  let sortedLimitedNonBenchmarks;
+  if (relationshipTypeFilter === 'recent' && searchHistoryStocks && searchHistoryStocks.length > 0) {
+    // For 'recent' mode, sort by search history order (most recent first)
+    const searchHistoryCodes = searchHistoryStocks.map(s => s.code);
+    sortedLimitedNonBenchmarks = nonBenchmarks
+      .sort((a, b) => {
+        const indexA = searchHistoryCodes.indexOf(a.code);
+        const indexB = searchHistoryCodes.indexOf(b.code);
+        return indexA - indexB;
+      })
+      .slice(0, comparisonRowSize);
+  } else {
+    // Default: sort by market cap (descending) and limit to comparisonRowSize
+    sortedLimitedNonBenchmarks = nonBenchmarks
+      .sort((a, b) => getMarketCapValue(b.marketCap) - getMarketCapValue(a.marketCap))
+      .slice(0, comparisonRowSize);
+  }
 
   // Combine benchmarks + limited sorted stocks
   filteredComparisonStocks = [...benchmarks, ...sortedLimitedNonBenchmarks];

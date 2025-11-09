@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, X } from 'lucide-react';
 import { LoadingState } from './LoadingState';
 
-// props: historyStocks: array of { code, dayChange }
+// props: historyStocks: array of { code, dayChange, lastUpdated }
 // onClickCode(code): optional callback to trigger a search again
+// onRemoveStock(code): optional callback to remove a stock from history
 // onReload: optional callback to reload all stocks
 // loading: boolean to show loading state
-export function SearchHistoryTable({ historyStocks, onClickCode, onReload, loading }) {
+export function SearchHistoryTable({ historyStocks, onClickCode, onRemoveStock, onReload, loading }) {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -27,7 +28,7 @@ export function SearchHistoryTable({ historyStocks, onClickCode, onReload, loadi
 
   if (!historyStocks || historyStocks.length === 0) {
     if (loading) {
-      return <LoadingState message="Loading previous searches..." className="mb-6" />;
+      return <LoadingState message="Loading historical searches..." className="mb-6" />;
     }
     return null;
   }
@@ -40,7 +41,7 @@ export function SearchHistoryTable({ historyStocks, onClickCode, onReload, loadi
   return (
     <div className="bg-gray-800 rounded-xl p-4 mb-6 border border-gray-700 shadow-md" style={{ marginTop: '1rem' }}>
       <div className="flex items-center gap-3 mb-3">
-        <h3 className="text-lg font-semibold text-white">Previous Search:</h3>
+        <h3 className="text-lg font-semibold text-white">Historical Search:</h3>
         {onReload && (
           <button
             onClick={onReload}
@@ -62,12 +63,46 @@ export function SearchHistoryTable({ historyStocks, onClickCode, onReload, loadi
             ? 'bg-red-700 hover:bg-red-600 border-red-600 hover:border-red-500'
             : 'bg-gray-700 hover:bg-gray-600 border-gray-600 hover:border-gray-500';
           const inlineBg = pct > 0 ? '#047857' : pct < 0 ? '#7f1d1d' : '#374151';
+
+          // Format timestamp
+          const formatTimestamp = (timestamp) => {
+            if (!timestamp) return '';
+            const date = new Date(timestamp);
+            const now = new Date();
+            const isToday = date.toDateString() === now.toDateString();
+
+            const hours = date.getHours().toString().padStart(2, '0');
+            const minutes = date.getMinutes().toString().padStart(2, '0');
+            const timeStr = `${hours}:${minutes}`;
+
+            if (isToday) {
+              return timeStr;
+            } else {
+              const month = (date.getMonth() + 1).toString().padStart(2, '0');
+              const day = date.getDate().toString().padStart(2, '0');
+              return `${month}/${day} ${timeStr}`;
+            }
+          };
+
           return (
             <div
               key={item.code + pct}
-              className={`group flex flex-col items-center justify-center min-w-[120px] h-20 px-3 py-2 rounded-lg border transition ${trendBg}`}
+              className={`group relative flex flex-col items-center justify-center min-w-[120px] h-24 px-3 py-2 rounded-lg border transition ${trendBg}`}
               style={{ backgroundColor: inlineBg }}
             >
+              {onRemoveStock && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemoveStock(item.code);
+                  }}
+                  className="absolute text-gray-900 hover:text-black transition z-10"
+                  style={{ bottom: '0px', right: '0px', padding: '2px', borderTopLeftRadius: '4px', backgroundColor: inlineBg }}
+                  title="Remove from history"
+                >
+                  <X size={10} />
+                </button>
+              )}
               <span
                 onClick={() => onClickCode && onClickCode(item.code)}
                 role="link"
@@ -80,6 +115,9 @@ export function SearchHistoryTable({ historyStocks, onClickCode, onReload, loadi
                 tabIndex={0}
                 className="text-xs font-bold text-white cursor-pointer hover:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
               >{pct > 0 ? '+' : ''}{pct.toFixed(2)}%</span>
+              <span className="text-[10px] italic text-gray-500 mt-1">
+                {formatTimestamp(item.lastUpdated)}
+              </span>
             </div>
           );
         })}

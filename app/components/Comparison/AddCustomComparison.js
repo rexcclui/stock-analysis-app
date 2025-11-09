@@ -47,7 +47,8 @@ export function AddCustomComparison({
               { value: 'industry', label: 'Industry' },
               { value: 'sector', label: 'Sector' },
               { value: 'competitor', label: 'Competitor' },
-              { value: 'etf', label: 'ETF' }
+              { value: 'etf', label: 'ETF' },
+              { value: 'recent', label: 'Recent Search' }
             ].map(option => (
               <label key={option.value} className="flex items-center cursor-pointer">
                 <input

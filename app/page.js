@@ -148,8 +148,9 @@ export default function StockAnalysisDashboard() {
   const [selectedStock, setSelectedStock] = useState(null);
   const [chartPeriod, setChartPeriod] = useState('1M');
   const [comparisonStocks, setComparisonStocks] = useState([]);
+  const [searchHistoryFullStocks, setSearchHistoryFullStocks] = useState([]); // Full stock data for search history
   const [comparisonType, setComparisonType] = useState('industry'); // 'industry' or 'sector'
-  const [relationshipTypeFilter, setRelationshipTypeFilter] = useState('all'); // 'all', 'industry', 'sector', 'competitor', 'etf'
+  const [relationshipTypeFilter, setRelationshipTypeFilter] = useState('all'); // 'all', 'industry', 'sector', 'competitor', 'etf', 'recent'
   const [comparisonRowSize, setComparisonRowSize] = useState(30); // 10, 30, 50, 100
   const [manualStock, setManualStock] = useState('');
   const [savedComparisons, setSavedComparisons] = useState({});
@@ -202,7 +203,11 @@ export default function StockAnalysisDashboard() {
   const addSearchHistoryStock = (entry) => {
     setSearchHistoryStocks(prev => {
       const filtered = prev.filter(e => e.code !== entry.code); // dedupe
-      const updated = [{ code: entry.code, dayChange: normalizeDayChange(entry.dayChange) }, ...filtered];
+      const updated = [{
+        code: entry.code,
+        dayChange: normalizeDayChange(entry.dayChange),
+        lastUpdated: entry.lastUpdated || new Date().toISOString()
+      }, ...filtered];
       const capacity = maxCapacity();
       if (updated.length > capacity) {
         return updated.slice(0, capacity); // drop oldest beyond capacity
@@ -210,6 +215,11 @@ export default function StockAnalysisDashboard() {
       return updated;
     });
   };
+
+  const removeSearchHistoryStock = (code) => {
+    setSearchHistoryStocks(prev => prev.filter(e => e.code !== code));
+  };
+
   const [isClient, setIsClient] = useState(false);
   // Chart comparison input & stocks (for overlay lines)
   const [chartCompareInput, setChartCompareInput] = useState('');
@@ -257,7 +267,11 @@ export default function StockAnalysisDashboard() {
       try {
         const parsed = JSON.parse(savedDetailed);
         if (Array.isArray(parsed)) {
-          setSearchHistoryStocks(parsed.map(e => ({ code: e.code, dayChange: normalizeDayChange(e.dayChange) })));
+          setSearchHistoryStocks(parsed.map(e => ({
+            code: e.code,
+            dayChange: normalizeDayChange(e.dayChange),
+            lastUpdated: e.lastUpdated || e.timestamp || new Date().toISOString() // support old 'timestamp' field
+          })));
         }
       } catch {}
     }
@@ -327,6 +341,37 @@ export default function StockAnalysisDashboard() {
       localStorage.setItem('stockSearchHistoryDetailed', JSON.stringify(searchHistoryStocks));
     } catch {}
   }, [searchHistoryStocks, isClient]);
+
+  // Load full stock data for search history when "Recent Search" mode is selected
+  React.useEffect(() => {
+    if (relationshipTypeFilter === 'recent' && searchHistoryStocks.length > 0) {
+      const loadSearchHistoryStocks = async () => {
+        try {
+          const codes = searchHistoryStocks.map(s => s.code);
+          // Fetch basic stock data only (no sentiment, news, etc.) for comparison table
+          const promises = codes.map(async (code) => {
+            try {
+              const response = await fetch(`/api/stock?symbol=${code}&nocache=${Date.now()}`);
+              const data = await response.json();
+              return data.error ? null : data;
+            } catch (err) {
+              console.error(`Failed to fetch ${code}:`, err);
+              return null;
+            }
+          });
+          const results = await Promise.all(promises);
+          const validStocks = results.filter(s => s !== null);
+          setSearchHistoryFullStocks(validStocks);
+        } catch (error) {
+          console.error('Error loading search history stocks:', error);
+        }
+      };
+      loadSearchHistoryStocks();
+    } else if (relationshipTypeFilter !== 'recent') {
+      // Clear when switching away from recent mode
+      setSearchHistoryFullStocks([]);
+    }
+  }, [relationshipTypeFilter, searchHistoryStocks]);
 
   // Persist selected stock whenever it changes
   React.useEffect(() => {
@@ -546,7 +591,11 @@ export default function StockAnalysisDashboard() {
       setComparisonStocks(uniqueStocks);
 
       // Add to detailed history table
-      addSearchHistoryStock({ code: stockData.code, dayChange: stockData.dayChange || 0 });
+      addSearchHistoryStock({
+        code: stockData.code,
+        dayChange: stockData.dayChange || 0,
+        lastUpdated: stockData.lastUpdated
+      });
 
       // Also update existing chart compare series baseline to new period
       setChartCompareStocks(prev => prev.map(s => ({
@@ -935,7 +984,9 @@ export default function StockAnalysisDashboard() {
                   onHeatmapSizeByChange={setHeatmapSizeBy}
                   periods={periods}
                   searchHistoryStocks={searchHistoryStocks}
+                  searchHistoryFullStocks={searchHistoryFullStocks}
                   onSearchHistoryCodeClick={(code)=> { handleSearch(code); }}
+                  onRemoveSearchHistoryStock={removeSearchHistoryStock}
                   onReloadSearchHistory={reloadRecentSearches}
                   onAddToChart={handleAddToChart}
                   chartCompareStocks={chartCompareStocks}

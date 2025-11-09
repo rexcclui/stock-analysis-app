@@ -169,6 +169,7 @@ export async function GET(request) {
       exchange: profile?.exchangeShortName || profile?.exchange || 'N/A',
       currentPrice: price,
       dayChange: quote?.changesPercentage || 0,
+      lastUpdated: quote?.timestamp ? new Date(quote.timestamp * 1000).toISOString() : new Date().toISOString(),
       marketCap: (typeof profile?.mktCap === 'number')
         ? (profile.mktCap / 1e9).toFixed(1) + 'B'
         : (profile?.mktCap ? String(profile.mktCap) : 'N/A'),
