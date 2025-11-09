@@ -26,7 +26,7 @@ const fetchWithTimeout = (url, timeout = 10000) => {
 };
 
 // Fetch complete stock data from API routes
-const fetchCompleteStockData = async (symbol, apiCounts = null, forceReload = false) => {
+const fetchCompleteStockData = async (symbol, apiCounts = null, forceReload = false, skipNews = false) => {
   try {
     // Fetch stock data (required) - NO CACHE for live stock data
     if (apiCounts) apiCounts.stock++;
@@ -67,60 +67,65 @@ const fetchCompleteStockData = async (symbol, apiCounts = null, forceReload = fa
       console.warn('Related stocks fetch failed:', err.message);
     }
 
-    // Fetch news (optional) - 4 HOUR CACHE
+    // Initialize empty news arrays
     let news = [];
-    try {
-        if (apiCounts) apiCounts.news++;
-        news = await fetchWithCache(
-          `/api/news?symbol=${symbol}`,
-          { forceReload },
-          CACHE_DURATIONS.FOUR_HOURS
-        );
-        console.log(`[PAGE] News received: ${Array.isArray(news) ? news.length : 0} articles`);
-    } catch (err) {
-        console.warn('[PAGE] News fetch failed:', err.message);
-    }
-
-    // Fetch Google News (optional) - 4 HOUR CACHE
     let googleNews = [];
-    try {
-        if (apiCounts) apiCounts.googleNews = (apiCounts.googleNews || 0) + 1;
-        googleNews = await fetchWithCache(
-          `/api/google-news?symbol=${symbol}`,
-          { forceReload },
-          CACHE_DURATIONS.FOUR_HOURS
-        );
-        console.log(`[PAGE] Google News received: ${Array.isArray(googleNews) ? googleNews.length : 0} articles`);
-    } catch (err) {
-        console.warn('[PAGE] Google News fetch failed:', err.message);
-    }
-
-    // Fetch Yahoo News (optional) - 4 HOUR CACHE
     let yahooNews = [];
-    try {
-        if (apiCounts) apiCounts.yahooNews = (apiCounts.yahooNews || 0) + 1;
-        yahooNews = await fetchWithCache(
-          `/api/yahoo-news?symbol=${symbol}`,
-          { forceReload },
-          CACHE_DURATIONS.FOUR_HOURS
-        );
-        console.log(`[PAGE] Yahoo News received: ${Array.isArray(yahooNews) ? yahooNews.length : 0} articles`);
-    } catch (err) {
-        console.warn('[PAGE] Yahoo News fetch failed:', err.message);
-    }
-
-    // Fetch Bloomberg News (optional) - 4 HOUR CACHE
     let bloombergNews = [];
-    try {
-        if (apiCounts) apiCounts.bloombergNews = (apiCounts.bloombergNews || 0) + 1;
-        bloombergNews = await fetchWithCache(
-          `/api/bloomberg-news?symbol=${symbol}`,
-          { forceReload },
-          CACHE_DURATIONS.FOUR_HOURS
-        );
-        console.log(`[PAGE] Bloomberg News received: ${Array.isArray(bloombergNews) ? bloombergNews.length : 0} articles`);
-    } catch (err) {
-        console.warn('[PAGE] Bloomberg News fetch failed:', err.message);
+
+    // Only fetch news if skipNews is false (for main searched stock)
+    if (!skipNews) {
+      // Fetch news (optional) - 4 HOUR CACHE
+      try {
+          if (apiCounts) apiCounts.news++;
+          news = await fetchWithCache(
+            `/api/news?symbol=${symbol}`,
+            { forceReload },
+            CACHE_DURATIONS.FOUR_HOURS
+          );
+          console.log(`[PAGE] News received: ${Array.isArray(news) ? news.length : 0} articles`);
+      } catch (err) {
+          console.warn('[PAGE] News fetch failed:', err.message);
+      }
+
+      // Fetch Google News (optional) - 4 HOUR CACHE
+      try {
+          if (apiCounts) apiCounts.googleNews = (apiCounts.googleNews || 0) + 1;
+          googleNews = await fetchWithCache(
+            `/api/google-news?symbol=${symbol}`,
+            { forceReload },
+            CACHE_DURATIONS.FOUR_HOURS
+          );
+          console.log(`[PAGE] Google News received: ${Array.isArray(googleNews) ? googleNews.length : 0} articles`);
+      } catch (err) {
+          console.warn('[PAGE] Google News fetch failed:', err.message);
+      }
+
+      // Fetch Yahoo News (optional) - 4 HOUR CACHE
+      try {
+          if (apiCounts) apiCounts.yahooNews = (apiCounts.yahooNews || 0) + 1;
+          yahooNews = await fetchWithCache(
+            `/api/yahoo-news?symbol=${symbol}`,
+            { forceReload },
+            CACHE_DURATIONS.FOUR_HOURS
+          );
+          console.log(`[PAGE] Yahoo News received: ${Array.isArray(yahooNews) ? yahooNews.length : 0} articles`);
+      } catch (err) {
+          console.warn('[PAGE] Yahoo News fetch failed:', err.message);
+      }
+
+      // Fetch Bloomberg News (optional) - 4 HOUR CACHE
+      try {
+          if (apiCounts) apiCounts.bloombergNews = (apiCounts.bloombergNews || 0) + 1;
+          bloombergNews = await fetchWithCache(
+            `/api/bloomberg-news?symbol=${symbol}`,
+            { forceReload },
+            CACHE_DURATIONS.FOUR_HOURS
+          );
+          console.log(`[PAGE] Bloomberg News received: ${Array.isArray(bloombergNews) ? bloombergNews.length : 0} articles`);
+      } catch (err) {
+          console.warn('[PAGE] Bloomberg News fetch failed:', err.message);
+      }
     }
 
     return {
@@ -556,7 +561,7 @@ export default function StockAnalysisDashboard() {
 
       // Always fetch SPY and QQQ for comparison (unless the selected stock is SPY or QQQ)
       const benchmarkCodes = ['SPY', 'QQQ'].filter(code => code !== stockCode);
-      const benchmarkPromises = benchmarkCodes.map(code => fetchCompleteStockData(code, apiCounts));
+      const benchmarkPromises = benchmarkCodes.map(code => fetchCompleteStockData(code, apiCounts, false, true));
       const benchmarkData = await Promise.all(benchmarkPromises);
       const validBenchmarks = benchmarkData.filter(b => b !== null);
 
@@ -564,7 +569,7 @@ export default function StockAnalysisDashboard() {
       const relatedPromises = (stockData.relatedStocks || [])
         .filter(item => item.symbol !== 'SPY' && item.symbol !== 'QQQ')
         .map(item =>
-          fetchCompleteStockData(item.symbol, apiCounts).then(stock =>
+          fetchCompleteStockData(item.symbol, apiCounts, false, true).then(stock =>
             stock ? { ...stock, relationshipType: item.relationshipType } : null
           )
         );
@@ -575,7 +580,7 @@ export default function StockAnalysisDashboard() {
       // Filter out SPY and QQQ from saved comparisons to avoid duplicates
       const savedPromises = saved
         .filter(code => code !== 'SPY' && code !== 'QQQ')
-        .map(code => fetchCompleteStockData(code, apiCounts));
+        .map(code => fetchCompleteStockData(code, apiCounts, false, true));
       const savedData = await Promise.all(savedPromises);
       const validSaved = savedData.filter(s => s !== null);
 
@@ -674,7 +679,7 @@ export default function StockAnalysisDashboard() {
       return;
     }
     setLoading(true);
-    const stock = await fetchCompleteStockData(code, null);
+    const stock = await fetchCompleteStockData(code, null, false, true);
     setLoading(false);
     if (!stock) {
       alert('Stock not found');
@@ -724,7 +729,7 @@ export default function StockAnalysisDashboard() {
     } else {
       // Fetch the stock data
       setLoading(true);
-      const stock = await fetchCompleteStockData(code, null);
+      const stock = await fetchCompleteStockData(code, null, false, true);
       setLoading(false);
       if (!stock) {
         alert('Stock not found');
@@ -754,10 +759,10 @@ export default function StockAnalysisDashboard() {
       alert('Stock already in comparison');
       return;
     }
-    
+
     setLoading(true);
-    const stock = await fetchCompleteStockData(code, null);
-    
+    const stock = await fetchCompleteStockData(code, null, false, true);
+
     if (stock) {
       setComparisonStocks([...comparisonStocks, stock]);
       
