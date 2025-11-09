@@ -152,16 +152,11 @@ const freshData = await fetchWithCache(
 
 ## Console Logging
 
-The cache system provides detailed console logging for debugging:
+The cache system provides console logging when cache is actively being used:
 
 ### Cache Hit
 ```
 [Client Cache] ✓ Cache HIT for key: cache-/api/sentiment-symbol=AAPL (age: 15min)
-```
-
-### Cache Miss
-```
-[Client Cache] ✗ Cache MISS for key: cache-/api/sentiment-symbol=AAPL - Fetching from server...
 ```
 
 ### Cache Set
@@ -174,6 +169,8 @@ The cache system provides detailed console logging for debugging:
 [Client Cache] ✓ Cache CLEARED for key: cache-/api/sentiment-symbol=AAPL
 [Client Cache] ✓ Cleared 5 cache entries matching: sentiment
 ```
+
+**Note**: Cache misses (when data is fetched from server) are not logged to keep the console clean. Only successful cache usage is logged.
 
 ## Modified Files
 
@@ -280,7 +277,7 @@ const freshData = await fetchWithCache(
 1. Open browser DevTools → Console
 2. Search for stock (e.g., AAPL)
 3. Look for cache logs:
-   - First load: "Cache MISS" (fetches from server)
+   - First load: No cache logs (fetches from server, then sets cache)
    - Second load: "Cache HIT" (loads from localStorage)
 
 ### Verify Cache Storage
@@ -296,10 +293,11 @@ const freshData = await fetchWithCache(
 ```
 
 ### Test Cache Expiration
-1. Load data (creates cache)
-2. Wait for TTL to expire
-3. Reload page
-4. Should see "Cache MISS" (cache expired)
+1. Load data (creates cache with "Cache SET" log)
+2. Reload within TTL
+3. Should see "Cache HIT" log
+4. Wait for TTL to expire and reload
+5. No cache logs (cache expired, fetching fresh data)
 
 ## Best Practices
 
