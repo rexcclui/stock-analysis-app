@@ -216,6 +216,11 @@ Updated all analysis functions:
 ### 8. **`app/components/HistoricalPerformance/StockCorrelation/StockCorrelationSection.js`**
 - Related stocks fetching with 4-hour cache
 
+### 9. **`app/api/clear-cache/route.js`** (NEW)
+- Server endpoint to clear all server-side cache
+- GET `/api/clear-cache`
+- Returns success/error response
+
 ## Benefits
 
 ### Performance Improvements
@@ -245,10 +250,27 @@ Updated all analysis functions:
 - Cache entries automatically expire based on TTL
 - Expired entries are removed on next access
 
-### Manual Invalidation
+### Force Reload Button (UI)
+The easiest way to clear all caches and reload fresh data:
+
+1. **Location**: Orange "Force Reload" button next to Search button
+2. **Functionality**:
+   - Clears ALL client cache (localStorage)
+   - Clears ALL server cache (in-memory)
+   - Reloads current stock with fresh data
+3. **Requirements**: A stock must be loaded first
+4. **Confirmation**: Asks for user confirmation before clearing
+5. **Feedback**: Shows success/error alert after operation
+
+**Button State**:
+- Enabled: When stock is loaded and not loading
+- Disabled: When no stock loaded or data is loading
+- Tooltip: "Clear all caches and reload fresh data"
+
+### Manual Invalidation (Programmatic)
 
 ```javascript
-import { clearClientCache, clearClientCachePattern } from './lib/clientCache';
+import { clearClientCache, clearClientCachePattern, clearAllClientCache } from './lib/clientCache';
 
 // Clear specific cache entry
 clearClientCache('cache-/api/sentiment-symbol=AAPL');
@@ -258,10 +280,13 @@ clearClientCachePattern('sentiment');
 
 // Clear all caches for a symbol
 clearClientCachePattern('AAPL');
+
+// Clear ALL client caches
+clearAllClientCache();
 ```
 
-### Force Reload
-Pass `forceReload: true` to bypass cache and fetch fresh data:
+### Force Reload (Per Request)
+Pass `forceReload: true` to bypass cache for a specific request:
 
 ```javascript
 const freshData = await fetchWithCache(
@@ -269,6 +294,15 @@ const freshData = await fetchWithCache(
   { forceReload: true },
   CACHE_DURATIONS.FOUR_HOURS
 );
+```
+
+### Clear Server Cache (API)
+Call the clear-cache endpoint:
+
+```javascript
+const response = await fetch('/api/clear-cache');
+const result = await response.json();
+// { success: true, message: 'Server cache cleared successfully' }
 ```
 
 ## Testing Cache Behavior
@@ -320,6 +354,7 @@ const freshData = await fetchWithCache(
 ### Issue: Data not updating
 **Cause**: Cache TTL too long or forceReload not working
 **Solution**:
+- Use the **Force Reload** button (easiest method)
 - Clear cache manually: `clearClientCachePattern('pattern')`
 - Verify forceReload parameter is passed correctly
 - Check cache TTL settings
