@@ -506,6 +506,44 @@ export function PricePerformanceChart({
             ))}
           </div>
         )}
+
+        {/* RVI Color Legend */}
+        {colorMode === 'rvi' && chartCompareStocks.length === 0 && selectedStock && (
+          <div className="mb-3 px-4">
+            <div className="flex items-center justify-between mb-1">
+              <div className="text-xs font-semibold text-purple-400">
+                📊 RVI Color Legend (Relative Volume Index)
+              </div>
+              <div className="text-xs text-gray-400">
+                Color intensity indicates volume levels
+              </div>
+            </div>
+            <div className="flex items-center gap-1 h-8 rounded-lg overflow-hidden border-2 border-purple-600/30 shadow-lg">
+              <div className="flex-1 h-full flex items-center justify-center text-[10px] font-semibold" style={{ backgroundColor: '#93C5FD', color: '#1E3A8A' }}>
+                Low<br/>(&lt;0.7)
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[10px] font-semibold" style={{ backgroundColor: '#60A5FA', color: '#1E3A8A' }}>
+                Below Avg<br/>(0.7-1.0)
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[10px] font-semibold" style={{ backgroundColor: '#3B82F6', color: '#FFFFFF' }}>
+                Normal<br/>(1.0-1.3)
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[10px] font-semibold" style={{ backgroundColor: '#2563EB', color: '#FFFFFF' }}>
+                Above Avg<br/>(1.3-1.7)
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[10px] font-semibold" style={{ backgroundColor: '#1D4ED8', color: '#FFFFFF' }}>
+                High<br/>(1.7-2.2)
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[10px] font-semibold" style={{ backgroundColor: '#1E40AF', color: '#FFFFFF' }}>
+                Very High<br/>(&gt;2.2)
+              </div>
+            </div>
+            <div className="text-[10px] text-gray-500 mt-1 text-center italic">
+              RVI = Avg volume ({getRviN(chartPeriod)} days) / Avg volume ({getRviN(chartPeriod) * 5} days)
+            </div>
+          </div>
+        )}
+
         {/* Cycle Timeline Visualization */}
         {showCycleAnalysis && cycleAnalysis && cycleAnalysis.cycles && (() => {
           // Get current visible data slice
