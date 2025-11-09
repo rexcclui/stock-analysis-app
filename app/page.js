@@ -169,6 +169,7 @@ export default function StockAnalysisDashboard() {
   const [searchHistoryStocks, setSearchHistoryStocks] = useState([]); // array of { code, dayChange }
   const HISTORY_COL_WIDTH = 140; // approximate width for each cell
   const [activeTab, setActiveTab] = useState('main'); // 'main' or 'historical-data-analysis'
+  const [showPriceChart, setShowPriceChart] = useState(true);
 
   // Normalize possible percentage string or numeric into clean number
   const normalizeDayChange = (val) => {
@@ -789,9 +790,9 @@ export default function StockAnalysisDashboard() {
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-800 p-6 pl-20">
       <div className="w-full">
         <div className="bg-gray-800 rounded-2xl shadow-2xl p-8 mb-6 border border-gray-700">
-          <h1 className="text-4xl font-bold text-white mb-6 flex items-center gap-3">
-            <BarChart3 className="text-blue-400" size={40} />
-            Stock Performance Analysis
+          <h1 className="text-4xl font-bold text-white mb-2 flex items-center gap-3">
+          <BarChart3 className="text-blue-400" size={40} />
+          Stock Performance Analysis
           </h1>
           
           <div className="flex gap-3 mb-6">
@@ -879,75 +880,95 @@ export default function StockAnalysisDashboard() {
               />
 
               <TabPanel activeTab={activeTab} tabId="main">
-                <PricePerformanceChart
-                selectedStock={selectedStock}
-                chartPeriod={chartPeriod}
-                setChartPeriod={setChartPeriod}
-                periods={periods}
-                chartCompareStocks={chartCompareStocks}
-                addChartCompareStock={addChartCompareStock}
-                removeChartCompareStock={removeChartCompareStock}
-                chartCompareInput={chartCompareInput}
-                setChartCompareInput={setChartCompareInput}
-                buildNormalizedSeries={buildNormalizedSeries}
-                buildMultiStockDataset={buildMultiStockDataset}
-                loading={loading}
-              />
-
-              <SentimentTimeSeriesChart
-                sentimentTimeSeries={selectedStock.sentimentTimeSeries}
-                loading={loading}
-              />
-
-              <ComparisonSection
-                selectedStock={selectedStock}
-                comparisonStocks={comparisonStocks}
-                comparisonType={comparisonType}
-                relationshipTypeFilter={relationshipTypeFilter}
-                onRelationshipTypeFilterChange={setRelationshipTypeFilter}
-                comparisonRowSize={comparisonRowSize}
-                onComparisonRowSizeChange={setComparisonRowSize}
-                manualStock={manualStock}
-                onManualStockChange={setManualStock}
-                onAddComparison={addManualComparison}
-                onRemoveComparison={removeComparison}
-                loading={loading}
-                viewMode={viewMode}
-                onViewModeChange={setViewMode}
-                heatmapColorBy={heatmapColorBy}
-                onHeatmapColorByChange={setHeatmapColorBy}
-                heatmapSizeBy={heatmapSizeBy}
-                onHeatmapSizeByChange={setHeatmapSizeBy}
-                periods={periods}
-                searchHistoryStocks={searchHistoryStocks}
-                onSearchHistoryCodeClick={(code)=> { handleSearch(code); }}
-                onRemoveSearchHistoryStock={removeSearchHistoryStock}
-                onReloadSearchHistory={reloadRecentSearches}
-                onAddToChart={handleAddToChart}
-                chartCompareStocks={chartCompareStocks}
-              />
-
-              <SentimentSection sentiment={selectedStock.sentiment} loading={loading} />
-
-              <AINewsSummary
-                analysis={aiNewsAnalysis}
-                loading={aiAnalysisLoading}
-                error={aiAnalysisError}
-                onAnalyze={handleAnalyzeNews}
-                hasNews={news.length > 0 || googleNews.length > 0 || yahooNews.length > 0 || bloombergNews.length > 0}
-                symbol={selectedStock.code}
-              />
-
-              <NewsSection newsApiNews={news} googleNews={googleNews} yahooNews={yahooNews} bloombergNews={bloombergNews} loading={loading} symbol={selectedStock.code} />
+                <div className="mb-4">
+                  <div
+                    className="cursor-pointer select-none flex items-center justify-between px-4 py-2 bg-blue-700 text-white font-semibold rounded-t-lg"
+                    onClick={() => setShowPriceChart(v => !v)}
+                    style={{ userSelect: 'none' }}
+                  >
+                    <h3 className="text-xl font-bold text-center" style={{ color: '#3B82F6' }}>Price Chart</h3>
+                    <span style={{ fontSize: '1.5em', transition: 'transform 0.2s', transform: showPriceChart ? 'rotate(90deg)' : 'rotate(0deg)' }}>
+                      ▶
+                    </span>
+                  </div>
+                  <div
+                    style={{
+                      maxHeight: showPriceChart ? '1000px' : '0px',
+                      overflow: 'hidden',
+                      transition: 'max-height 0.4s cubic-bezier(0.4,0,0.2,1)',
+                      background: '#1e293b',
+                      borderRadius: showPriceChart ? '0 0 0.75rem 0.75rem' : '0 0 0.75rem 0.75rem',
+                      padding: showPriceChart ? '24px' : '0px',
+                    }}
+                  >
+                    {showPriceChart && (
+                      <PricePerformanceChart
+                        selectedStock={selectedStock}
+                        chartPeriod={chartPeriod}
+                        setChartPeriod={setChartPeriod}
+                        periods={periods}
+                        chartCompareStocks={chartCompareStocks}
+                        addChartCompareStock={addChartCompareStock}
+                        removeChartCompareStock={removeChartCompareStock}
+                        chartCompareInput={chartCompareInput}
+                        setChartCompareInput={setChartCompareInput}
+                        buildNormalizedSeries={buildNormalizedSeries}
+                        buildMultiStockDataset={buildMultiStockDataset}
+                        loading={loading}
+                      />
+                    )}
+                  </div>
+                </div>
+                <SentimentTimeSeriesChart
+                  sentimentTimeSeries={selectedStock.sentimentTimeSeries}
+                  loading={loading}
+                />
+                <ComparisonSection
+                  selectedStock={selectedStock}
+                  comparisonStocks={comparisonStocks}
+                  comparisonType={comparisonType}
+                  relationshipTypeFilter={relationshipTypeFilter}
+                  onRelationshipTypeFilterChange={setRelationshipTypeFilter}
+                  comparisonRowSize={comparisonRowSize}
+                  onComparisonRowSizeChange={setComparisonRowSize}
+                  manualStock={manualStock}
+                  onManualStockChange={setManualStock}
+                  onAddComparison={addManualComparison}
+                  onRemoveComparison={removeComparison}
+                  loading={loading}
+                  viewMode={viewMode}
+                  onViewModeChange={setViewMode}
+                  heatmapColorBy={heatmapColorBy}
+                  onHeatmapColorByChange={setHeatmapColorBy}
+                  heatmapSizeBy={heatmapSizeBy}
+                  onHeatmapSizeByChange={setHeatmapSizeBy}
+                  periods={periods}
+                  searchHistoryStocks={searchHistoryStocks}
+                  onSearchHistoryCodeClick={(code)=> { handleSearch(code); }}
+                  onRemoveSearchHistoryStock={removeSearchHistoryStock}
+                  onReloadSearchHistory={reloadRecentSearches}
+                  onAddToChart={handleAddToChart}
+                  chartCompareStocks={chartCompareStocks}
+                />
+                <SentimentSection sentiment={selectedStock.sentiment} loading={loading} />
+                <AINewsSummary
+                  analysis={aiNewsAnalysis}
+                  loading={aiAnalysisLoading}
+                  error={aiAnalysisError}
+                  onAnalyze={handleAnalyzeNews}
+                  hasNews={news.length > 0 || googleNews.length > 0 || yahooNews.length > 0 || bloombergNews.length > 0}
+                  symbol={selectedStock.code}
+                />
+                <NewsSection newsApiNews={news} googleNews={googleNews} yahooNews={yahooNews} bloombergNews={bloombergNews} loading={loading} symbol={selectedStock.code} />
               </TabPanel>
 
               <TabPanel activeTab={activeTab} tabId="historical-data-analysis">
                 <HistoricalPerformanceCheck stockCode={selectedStock.code} />
               </TabPanel>
-            </>
-          )}
-        </div>
+          </> // closes fragment for selectedStock
+        )}
       </div>
     </div>
-  );
+  </div>
+);
 }
