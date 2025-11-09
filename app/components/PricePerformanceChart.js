@@ -283,7 +283,7 @@ export function PricePerformanceChart({
   <div className="mb-6" style={{ marginTop: '1rem' }}>
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3 w-full">
-          <h3 className="text-xl font-bold text-center" style={{ color: '#3B82F6' }}>Price Chart</h3>
+          
 
           {/* AI Analysis Button */}
           <AIPriceAnalysisButton
