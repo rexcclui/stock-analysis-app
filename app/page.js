@@ -346,14 +346,30 @@ export default function StockAnalysisDashboard() {
   React.useEffect(() => {
     if (relationshipTypeFilter === 'recent' && searchHistoryStocks.length > 0) {
       const loadSearchHistoryStocks = async () => {
-        const apiCounts = { stock: 0, sentiment: 0, news: 0, competitors: 0 };
-        const codes = searchHistoryStocks.map(s => s.code);
-        const promises = codes.map(code => fetchCompleteStockData(code, apiCounts));
-        const results = await Promise.all(promises);
-        const validStocks = results.filter(s => s !== null);
-        setSearchHistoryFullStocks(validStocks);
+        try {
+          const codes = searchHistoryStocks.map(s => s.code);
+          // Fetch basic stock data only (no sentiment, news, etc.) for comparison table
+          const promises = codes.map(async (code) => {
+            try {
+              const response = await fetch(`/api/stock?symbol=${code}&nocache=${Date.now()}`);
+              const data = await response.json();
+              return data.error ? null : data;
+            } catch (err) {
+              console.error(`Failed to fetch ${code}:`, err);
+              return null;
+            }
+          });
+          const results = await Promise.all(promises);
+          const validStocks = results.filter(s => s !== null);
+          setSearchHistoryFullStocks(validStocks);
+        } catch (error) {
+          console.error('Error loading search history stocks:', error);
+        }
       };
       loadSearchHistoryStocks();
+    } else if (relationshipTypeFilter !== 'recent') {
+      // Clear when switching away from recent mode
+      setSearchHistoryFullStocks([]);
     }
   }, [relationshipTypeFilter, searchHistoryStocks]);
 
