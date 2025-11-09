@@ -32,7 +32,7 @@ const getRelativeHeatmapColor = (value, min, max, allValues) => {
   }
 
   // Color stops
-  const deepGreen = [52, 211, 153]; // bright green (#34d399)
+  const deepGreen = [34, 197, 94]; // softer green (#22c55e, Tailwind green-500)
   const lightGreen = [187, 247, 208];
   const deepRed = [239, 68, 68]; // bright red (#ef4444)
   const lightRed = [254, 202, 202];
