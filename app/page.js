@@ -202,7 +202,11 @@ export default function StockAnalysisDashboard() {
   const addSearchHistoryStock = (entry) => {
     setSearchHistoryStocks(prev => {
       const filtered = prev.filter(e => e.code !== entry.code); // dedupe
-      const updated = [{ code: entry.code, dayChange: normalizeDayChange(entry.dayChange), timestamp: new Date().toISOString() }, ...filtered];
+      const updated = [{
+        code: entry.code,
+        dayChange: normalizeDayChange(entry.dayChange),
+        lastUpdated: entry.lastUpdated || new Date().toISOString()
+      }, ...filtered];
       const capacity = maxCapacity();
       if (updated.length > capacity) {
         return updated.slice(0, capacity); // drop oldest beyond capacity
@@ -265,7 +269,7 @@ export default function StockAnalysisDashboard() {
           setSearchHistoryStocks(parsed.map(e => ({
             code: e.code,
             dayChange: normalizeDayChange(e.dayChange),
-            timestamp: e.timestamp || new Date().toISOString() // fallback for old data
+            lastUpdated: e.lastUpdated || e.timestamp || new Date().toISOString() // support old 'timestamp' field
           })));
         }
       } catch {}
@@ -555,7 +559,11 @@ export default function StockAnalysisDashboard() {
       setComparisonStocks(uniqueStocks);
 
       // Add to detailed history table
-      addSearchHistoryStock({ code: stockData.code, dayChange: stockData.dayChange || 0 });
+      addSearchHistoryStock({
+        code: stockData.code,
+        dayChange: stockData.dayChange || 0,
+        lastUpdated: stockData.lastUpdated
+      });
 
       // Also update existing chart compare series baseline to new period
       setChartCompareStocks(prev => prev.map(s => ({

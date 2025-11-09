@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { RefreshCw, X } from 'lucide-react';
 import { LoadingState } from './LoadingState';
 
-// props: historyStocks: array of { code, dayChange, timestamp }
+// props: historyStocks: array of { code, dayChange, lastUpdated }
 // onClickCode(code): optional callback to trigger a search again
 // onRemoveStock(code): optional callback to remove a stock from history
 // onReload: optional callback to reload all stocks
@@ -112,7 +112,7 @@ export function SearchHistoryTable({ historyStocks, onClickCode, onRemoveStock, 
                 className="text-xs font-bold text-white cursor-pointer hover:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
               >{pct > 0 ? '+' : ''}{pct.toFixed(2)}%</span>
               <span className="text-[10px] italic text-gray-500 mt-1">
-                {formatTimestamp(item.timestamp)}
+                {formatTimestamp(item.lastUpdated)}
               </span>
             </div>
           );
