@@ -586,7 +586,7 @@ export function PricePerformanceChart({
           }}
           onMouseLeave={handleMouseUp}
         >
-          <ResponsiveContainer width="100%" height={320} style={{ margin: 0, padding: 0 }}>
+          <ResponsiveContainer width="100%" height={400} style={{ margin: 0, padding: 0 }}>
             {(() => {
               // Get current data slice based on offset
               const currentData = getCurrentDataSlice();
