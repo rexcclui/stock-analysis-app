@@ -103,19 +103,20 @@ export async function GET(request) {
       const fullHistoricalData = historical.historical.slice().reverse().map(d => ({
         date: d.date,
         price: d.close,
+        volume: d.volume || 0,
         rawDate: d.date
       }));
 
       // Prepare chart data for different periods (for backward compatibility and initial view)
       chartData = {
-        '1D': historical.historical.slice(0, 1).reverse().map(d => ({ date: formatDate(d.date, false), price: d.close })),
-        '7D': historical.historical.slice(0, 7).reverse().map(d => ({ date: formatDate(d.date, false), price: d.close })),
-        '1M': historical.historical.slice(0, 30).reverse().map(d => ({ date: formatDate(d.date, false), price: d.close })),
-        '3M': historical.historical.slice(0, 90).reverse().map(d => ({ date: formatDate(d.date, false), price: d.close })),
-        '6M': historical.historical.slice(0, 180).reverse().map(d => ({ date: formatDate(d.date, false), price: d.close })),
-        '1Y': historical.historical.slice(0, 252).reverse().map(d => ({ date: formatDate(d.date, false), price: d.close })),
-        '3Y': historical.historical.slice(0, 756).reverse().map(d => ({ date: formatDate(d.date, true), price: d.close })),
-        '5Y': historical.historical.slice(0, 1260).reverse().map(d => ({ date: formatDate(d.date, true), price: d.close }))
+        '1D': historical.historical.slice(0, 1).reverse().map(d => ({ date: formatDate(d.date, false), price: d.close, volume: d.volume || 0 })),
+        '7D': historical.historical.slice(0, 7).reverse().map(d => ({ date: formatDate(d.date, false), price: d.close, volume: d.volume || 0 })),
+        '1M': historical.historical.slice(0, 30).reverse().map(d => ({ date: formatDate(d.date, false), price: d.close, volume: d.volume || 0 })),
+        '3M': historical.historical.slice(0, 90).reverse().map(d => ({ date: formatDate(d.date, false), price: d.close, volume: d.volume || 0 })),
+        '6M': historical.historical.slice(0, 180).reverse().map(d => ({ date: formatDate(d.date, false), price: d.close, volume: d.volume || 0 })),
+        '1Y': historical.historical.slice(0, 252).reverse().map(d => ({ date: formatDate(d.date, false), price: d.close, volume: d.volume || 0 })),
+        '3Y': historical.historical.slice(0, 756).reverse().map(d => ({ date: formatDate(d.date, true), price: d.close, volume: d.volume || 0 })),
+        '5Y': historical.historical.slice(0, 1260).reverse().map(d => ({ date: formatDate(d.date, true), price: d.close, volume: d.volume || 0 }))
       };
 
       // Add full historical data

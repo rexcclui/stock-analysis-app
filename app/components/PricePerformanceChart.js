@@ -41,6 +41,7 @@ export function PricePerformanceChart({
   const chartData = useMemo(() => selectedStock?.chartData?.[chartPeriod] || [], [selectedStock, chartPeriod]);
   const fullHistoricalData = useMemo(() => selectedStock?.chartData?.fullHistorical || [], [selectedStock]);
   const [dataOffset, setDataOffset] = useState(0); // Offset in days from most recent
+  const [colorMode, setColorMode] = useState('default'); // 'default' or 'rvi'
 
   // AI Analysis using custom hook
   const {
@@ -87,6 +88,40 @@ export function PricePerformanceChart({
     return periodMap[period] || 30;
   };
 
+  // Helper to get N value for RVI calculation based on period
+  const getRviN = (period) => {
+    const nMap = { '1D': 1, '7D': 2, '1M': 3, '3M': 5, '6M': 6, '1Y': 7, '3Y': 10, '5Y': 20 };
+    return nMap[period] || 5;
+  };
+
+  // Calculate RVI (Relative Volume Index) for each data point
+  const calculateRVI = (data, period) => {
+    if (!data || data.length === 0) return data;
+
+    const N = getRviN(period);
+    const longWindow = N * 5;
+
+    return data.map((point, idx) => {
+      // Need enough data for the long window
+      if (idx < longWindow - 1) {
+        return { ...point, rvi: 1 }; // Default RVI = 1
+      }
+
+      // Calculate average volume for N days (short window)
+      const shortWindowData = data.slice(Math.max(0, idx - N + 1), idx + 1);
+      const shortAvg = shortWindowData.reduce((sum, d) => sum + (d.volume || 0), 0) / shortWindowData.length;
+
+      // Calculate average volume for N * 5 days (long window)
+      const longWindowData = data.slice(Math.max(0, idx - longWindow + 1), idx + 1);
+      const longAvg = longWindowData.reduce((sum, d) => sum + (d.volume || 0), 0) / longWindowData.length;
+
+      // RVI = short average / long average
+      const rvi = longAvg > 0 ? shortAvg / longAvg : 1;
+
+      return { ...point, rvi };
+    });
+  };
+
   // Helper to format date based on period
   const formatChartDate = (dateStr, period) => {
     const d = new Date(dateStr);
@@ -95,6 +130,63 @@ export function PricePerformanceChart({
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
     return `${yy}-${mm}-${dd}`;
+  };
+
+  // Map RVI value to color (higher RVI = deeper/more saturated blue)
+  const getRviColor = (rvi) => {
+    // RVI typically ranges from 0.5 to 2.0, with 1.0 being average
+    // Clamp RVI to reasonable range
+    const clampedRvi = Math.max(0.3, Math.min(3.0, rvi));
+
+    // Map to opacity/intensity: 0.3 = light, 1.0 = normal, 3.0 = very deep
+    // Using blue color scale
+    if (clampedRvi < 0.7) {
+      return '#93C5FD'; // Light blue (low volume)
+    } else if (clampedRvi < 1.0) {
+      return '#60A5FA'; // Medium-light blue
+    } else if (clampedRvi < 1.3) {
+      return '#3B82F6'; // Standard blue (normal volume)
+    } else if (clampedRvi < 1.7) {
+      return '#2563EB'; // Medium-deep blue
+    } else if (clampedRvi < 2.2) {
+      return '#1D4ED8'; // Deep blue (high volume)
+    } else {
+      return '#1E40AF'; // Very deep blue (very high volume)
+    }
+  };
+
+  // Create line segments based on RVI values for colored rendering
+  const createRviSegments = (data) => {
+    if (!data || data.length === 0) return [];
+
+    const segments = [];
+    let currentSegment = {
+      color: getRviColor(data[0].rvi || 1),
+      data: [data[0]]
+    };
+
+    for (let i = 1; i < data.length; i++) {
+      const color = getRviColor(data[i].rvi || 1);
+
+      if (color === currentSegment.color) {
+        // Continue current segment
+        currentSegment.data.push(data[i]);
+      } else {
+        // Start new segment, but include the previous point for continuity
+        segments.push(currentSegment);
+        currentSegment = {
+          color: color,
+          data: [data[i - 1], data[i]]
+        };
+      }
+    }
+
+    // Add the last segment
+    if (currentSegment.data.length > 0) {
+      segments.push(currentSegment);
+    }
+
+    return segments;
   };
 
   // Get current data slice based on offset and period
@@ -113,8 +205,14 @@ export function PricePerformanceChart({
     // Slice and format the data
     const slicedData = fullHistoricalData.slice(startIndex, endIndex).map(d => ({
       date: formatChartDate(d.date, chartPeriod),
-      price: d.price
+      price: d.price,
+      volume: d.volume || 0
     }));
+
+    // Apply RVI calculation if in RVI color mode
+    if (colorMode === 'rvi') {
+      return calculateRVI(slicedData, chartPeriod);
+    }
 
     return slicedData;
   };
@@ -322,6 +420,22 @@ export function PricePerformanceChart({
               {showCycleAnalysis ? 'Hide Cycles' : 'Show Cycles'}
             </button>
           )}
+
+          {/* Color Mode Toggle */}
+          {chartCompareStocks.length === 0 && selectedStock && (
+            <button
+              onClick={() => setColorMode(colorMode === 'default' ? 'rvi' : 'default')}
+              className={`px-3 py-2 rounded-lg text-xs font-medium transition ${
+                colorMode === 'rvi'
+                  ? 'bg-purple-700 hover:bg-purple-600 text-white'
+                  : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+              }`}
+              title={colorMode === 'rvi' ? 'Disable RVI coloring' : 'Enable RVI coloring'}
+            >
+              {colorMode === 'rvi' ? 'RVI: ON' : 'RVI: OFF'}
+            </button>
+          )}
+
           <div className="flex items-center" style={{ marginLeft: '12px' }}>
             <input
               type="text"
@@ -818,7 +932,29 @@ export function PricePerformanceChart({
                   </>
                 )}
                 {chartCompareStocks.length === 0 ? (
-                  <Line type="monotone" dataKey="price" name={`${selectedStock?.code || ''} Price`} stroke="#3B82F6" strokeWidth={2} dot={false} />
+                  colorMode === 'rvi' ? (
+                    // RVI Mode: Render colored segments based on volume
+                    (() => {
+                      const segments = createRviSegments(multiData);
+                      return segments.map((segment, idx) => (
+                        <Line
+                          key={`rvi-segment-${idx}`}
+                          type="monotone"
+                          dataKey="price"
+                          data={segment.data}
+                          name={idx === 0 ? `${selectedStock?.code || ''} Price (RVI)` : undefined}
+                          stroke={segment.color}
+                          strokeWidth={2}
+                          dot={false}
+                          connectNulls={false}
+                          isAnimationActive={false}
+                        />
+                      ));
+                    })()
+                  ) : (
+                    // Default Mode: Single blue line
+                    <Line type="monotone" dataKey="price" name={`${selectedStock?.code || ''} Price`} stroke="#3B82F6" strokeWidth={2} dot={false} />
+                  )
                 ) : (
                   <>
                     <Line type="monotone" dataKey={selectedStock.code} name={selectedStock.code} stroke="#3B82F6" strokeWidth={2} dot={false} />
