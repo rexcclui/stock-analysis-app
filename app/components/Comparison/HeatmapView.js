@@ -411,7 +411,7 @@ export function HeatmapView({
   });
 
   // Calculate layout based on actual container width
-  const containerHeight = 600; // Initial height estimate
+  const containerHeight = 900; // Increased height by 50%
   const { layout, actualHeight } = calculateTileLayout(stocksWithSize, containerWidth, containerHeight);
 
   // Identify top 10 stocks by size
