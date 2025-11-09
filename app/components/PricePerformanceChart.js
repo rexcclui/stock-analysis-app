@@ -155,44 +155,49 @@ export function PricePerformanceChart({
     }
   };
 
-  // Create continuous line segments based on RVI color changes
-  const createRviSegments = (data) => {
-    if (!data || data.length === 0) return [];
+  // Add RVI-based dataKeys to chart data for colored segments
+  const addRviDataKeys = (data) => {
+    if (!data || data.length === 0) return data;
 
-    const segments = [];
+    // Identify color changes and assign segment IDs
+    let segmentId = 0;
     let currentColor = getRviColor(data[0].rvi || 1);
-    let currentSegment = [data[0]];
+    const colorMap = {}; // Maps segment ID to color
+    colorMap[0] = currentColor;
 
-    for (let i = 1; i < data.length; i++) {
-      const pointColor = getRviColor(data[i].rvi || 1);
+    const dataWithSegments = data.map((point, idx) => {
+      const pointColor = getRviColor(point.rvi || 1);
+      const newPoint = { ...point };
 
-      if (pointColor === currentColor) {
-        // Continue current segment
-        currentSegment.push(data[i]);
-      } else {
-        // Color changed - close current segment and start new one
-        // Add current point to current segment for continuity
-        currentSegment.push(data[i]);
-        segments.push({
-          color: currentColor,
-          data: currentSegment
-        });
-
-        // Start new segment with current point
+      if (pointColor !== currentColor && idx > 0) {
+        // Color changed - this point belongs to new segment
+        // But also add it to previous segment for continuity
+        newPoint[`price_seg_${segmentId}`] = point.price; // End of previous segment
+        segmentId++;
         currentColor = pointColor;
-        currentSegment = [data[i]];
+        colorMap[segmentId] = currentColor;
+        newPoint[`price_seg_${segmentId}`] = point.price; // Start of new segment
+      } else {
+        // Normal point within segment
+        newPoint[`price_seg_${segmentId}`] = point.price;
       }
-    }
 
-    // Add the last segment
-    if (currentSegment.length > 0) {
-      segments.push({
-        color: currentColor,
-        data: currentSegment
-      });
-    }
+      return newPoint;
+    });
 
-    return segments;
+    // Add null values for all other segments
+    const maxSegmentId = segmentId;
+    const enhancedData = dataWithSegments.map(point => {
+      const newPoint = { ...point };
+      for (let i = 0; i <= maxSegmentId; i++) {
+        if (newPoint[`price_seg_${i}`] === undefined) {
+          newPoint[`price_seg_${i}`] = null;
+        }
+      }
+      return newPoint;
+    });
+
+    return { data: enhancedData, colorMap, maxSegmentId };
   };
 
   // Get current data slice based on offset and period
@@ -685,7 +690,14 @@ export function PricePerformanceChart({
               // Apply zoom by slicing data based on domain
               const startIndex = Math.floor((zoomDomain.start / 100) * fullData.length);
               const endIndex = Math.ceil((zoomDomain.end / 100) * fullData.length);
-              const multiData = fullData.slice(startIndex, endIndex);
+              let multiData = fullData.slice(startIndex, endIndex);
+
+              // For RVI mode, add segment dataKeys
+              let rviSegments = null;
+              if (colorMode === 'rvi' && chartCompareStocks.length === 0) {
+                rviSegments = addRviDataKeys(multiData);
+                multiData = rviSegments.data;
+              }
 
               console.log('Rendering chart with offset:', dataOffset, 'dataLength:', fullData.length, 'showing:', startIndex, 'to', endIndex, 'RVI mode:', colorMode === 'rvi');
 
@@ -977,26 +989,27 @@ export function PricePerformanceChart({
                   </>
                 )}
                 {chartCompareStocks.length === 0 ? (
-                  colorMode === 'rvi' ? (
+                  colorMode === 'rvi' && rviSegments ? (
                     // RVI Mode: Render colored segments that form a single continuous line
                     (() => {
-                      const segments = createRviSegments(multiData);
-                      console.log('RVI Segments created:', segments.length);
-
-                      return segments.map((segment, idx) => (
-                        <Line
-                          key={`rvi-seg-${idx}`}
-                          type="monotone"
-                          dataKey="price"
-                          data={segment.data}
-                          stroke={segment.color}
-                          strokeWidth={2}
-                          dot={false}
-                          isAnimationActive={false}
-                          name={idx === 0 ? `${selectedStock?.code || ''} Price` : undefined}
-                          legendType={idx === 0 ? 'line' : 'none'}
-                        />
-                      ));
+                      const lines = [];
+                      for (let i = 0; i <= rviSegments.maxSegmentId; i++) {
+                        lines.push(
+                          <Line
+                            key={`rvi-seg-${i}`}
+                            type="monotone"
+                            dataKey={`price_seg_${i}`}
+                            stroke={rviSegments.colorMap[i]}
+                            strokeWidth={2}
+                            dot={false}
+                            connectNulls={false}
+                            isAnimationActive={false}
+                            name={i === 0 ? `${selectedStock?.code || ''} Price` : undefined}
+                            legendType={i === 0 ? 'line' : 'none'}
+                          />
+                        );
+                      }
+                      return lines;
                     })()
                   ) : (
                     // Default Mode: Single blue line
