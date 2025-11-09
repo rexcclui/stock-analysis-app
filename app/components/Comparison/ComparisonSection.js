@@ -26,6 +26,7 @@ export function ComparisonSection({
   periods,
   searchHistoryStocks,
   onSearchHistoryCodeClick,
+  onRemoveSearchHistoryStock,
   onReloadSearchHistory,
   onAddToChart,
   chartCompareStocks
@@ -42,6 +43,7 @@ export function ComparisonSection({
       <SearchHistoryTable
         historyStocks={searchHistoryStocks}
         onClickCode={onSearchHistoryCodeClick}
+        onRemoveStock={onRemoveSearchHistoryStock}
         onReload={onReloadSearchHistory}
         loading={loading}
       />
@@ -73,6 +75,7 @@ export function ComparisonSection({
         onStockCodeClick={onSearchHistoryCodeClick}
         onAddToChart={onAddToChart}
         chartCompareStocks={chartCompareStocks}
+        searchHistoryStocks={searchHistoryStocks}
         loading={loading}
       />
     </>

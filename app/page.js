@@ -201,7 +201,7 @@ export default function StockAnalysisDashboard() {
   const addSearchHistoryStock = (entry) => {
     setSearchHistoryStocks(prev => {
       const filtered = prev.filter(e => e.code !== entry.code); // dedupe
-      const updated = [{ code: entry.code, dayChange: normalizeDayChange(entry.dayChange) }, ...filtered];
+      const updated = [{ code: entry.code, dayChange: normalizeDayChange(entry.dayChange), timestamp: new Date().toISOString() }, ...filtered];
       const capacity = maxCapacity();
       if (updated.length > capacity) {
         return updated.slice(0, capacity); // drop oldest beyond capacity
@@ -209,6 +209,11 @@ export default function StockAnalysisDashboard() {
       return updated;
     });
   };
+
+  const removeSearchHistoryStock = (code) => {
+    setSearchHistoryStocks(prev => prev.filter(e => e.code !== code));
+  };
+
   const [isClient, setIsClient] = useState(false);
   // Chart comparison input & stocks (for overlay lines)
   const [chartCompareInput, setChartCompareInput] = useState('');
@@ -256,7 +261,11 @@ export default function StockAnalysisDashboard() {
       try {
         const parsed = JSON.parse(savedDetailed);
         if (Array.isArray(parsed)) {
-          setSearchHistoryStocks(parsed.map(e => ({ code: e.code, dayChange: normalizeDayChange(e.dayChange) })));
+          setSearchHistoryStocks(parsed.map(e => ({
+            code: e.code,
+            dayChange: normalizeDayChange(e.dayChange),
+            timestamp: e.timestamp || new Date().toISOString() // fallback for old data
+          })));
         }
       } catch {}
     }
@@ -912,6 +921,7 @@ export default function StockAnalysisDashboard() {
                 periods={periods}
                 searchHistoryStocks={searchHistoryStocks}
                 onSearchHistoryCodeClick={(code)=> { handleSearch(code); }}
+                onRemoveSearchHistoryStock={removeSearchHistoryStock}
                 onReloadSearchHistory={reloadRecentSearches}
                 onAddToChart={handleAddToChart}
                 chartCompareStocks={chartCompareStocks}

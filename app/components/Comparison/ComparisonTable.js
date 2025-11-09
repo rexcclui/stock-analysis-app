@@ -70,6 +70,7 @@ export function ComparisonTable({
   onStockCodeClick,
   onAddToChart,
   chartCompareStocks,
+  searchHistoryStocks,
   loading = false
 }) {
   const [colorMode, setColorMode] = useState('historical'); // 'historical' | 'relative'
@@ -92,6 +93,13 @@ export function ComparisonTable({
 
   // Filter comparison stocks based on relationship type
   let filteredComparisonStocks = comparisonStocks.filter(stock => {
+    // For 'recent' mode, show stocks from search history
+    if (relationshipTypeFilter === 'recent') {
+      if (!searchHistoryStocks || searchHistoryStocks.length === 0) return false;
+      const recentCodes = searchHistoryStocks.map(s => s.code);
+      return recentCodes.includes(stock.code);
+    }
+
     // SPY and QQQ are always shown (benchmarks)
     if (stock.code === 'SPY' || stock.code === 'QQQ') return true;
 
@@ -113,10 +121,24 @@ export function ComparisonTable({
   const benchmarks = filteredComparisonStocks.filter(s => s.code === 'SPY' || s.code === 'QQQ');
   const nonBenchmarks = filteredComparisonStocks.filter(s => s.code !== 'SPY' && s.code !== 'QQQ');
 
-  // Sort non-benchmarks by market cap (descending) and limit to comparisonRowSize
-  const sortedLimitedNonBenchmarks = nonBenchmarks
-    .sort((a, b) => getMarketCapValue(b.marketCap) - getMarketCapValue(a.marketCap))
-    .slice(0, comparisonRowSize);
+  // Sort non-benchmarks based on mode
+  let sortedLimitedNonBenchmarks;
+  if (relationshipTypeFilter === 'recent' && searchHistoryStocks && searchHistoryStocks.length > 0) {
+    // For 'recent' mode, sort by search history order (most recent first)
+    const searchHistoryCodes = searchHistoryStocks.map(s => s.code);
+    sortedLimitedNonBenchmarks = nonBenchmarks
+      .sort((a, b) => {
+        const indexA = searchHistoryCodes.indexOf(a.code);
+        const indexB = searchHistoryCodes.indexOf(b.code);
+        return indexA - indexB;
+      })
+      .slice(0, comparisonRowSize);
+  } else {
+    // Default: sort by market cap (descending) and limit to comparisonRowSize
+    sortedLimitedNonBenchmarks = nonBenchmarks
+      .sort((a, b) => getMarketCapValue(b.marketCap) - getMarketCapValue(a.marketCap))
+      .slice(0, comparisonRowSize);
+  }
 
   // Combine benchmarks + limited sorted stocks
   filteredComparisonStocks = [...benchmarks, ...sortedLimitedNonBenchmarks];

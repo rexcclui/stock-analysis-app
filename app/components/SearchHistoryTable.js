@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, X } from 'lucide-react';
 import { LoadingState } from './LoadingState';
 
-// props: historyStocks: array of { code, dayChange }
+// props: historyStocks: array of { code, dayChange, timestamp }
 // onClickCode(code): optional callback to trigger a search again
+// onRemoveStock(code): optional callback to remove a stock from history
 // onReload: optional callback to reload all stocks
 // loading: boolean to show loading state
-export function SearchHistoryTable({ historyStocks, onClickCode, onReload, loading }) {
+export function SearchHistoryTable({ historyStocks, onClickCode, onRemoveStock, onReload, loading }) {
   const [isMobile, setIsMobile] = useState(false);
 
   useEffect(() => {
@@ -62,12 +63,42 @@ export function SearchHistoryTable({ historyStocks, onClickCode, onReload, loadi
             ? 'bg-red-700 hover:bg-red-600 border-red-600 hover:border-red-500'
             : 'bg-gray-700 hover:bg-gray-600 border-gray-600 hover:border-gray-500';
           const inlineBg = pct > 0 ? '#047857' : pct < 0 ? '#7f1d1d' : '#374151';
+
+          // Format timestamp
+          const formatTimestamp = (timestamp) => {
+            if (!timestamp) return '';
+            const date = new Date(timestamp);
+            const now = new Date();
+            const diffMs = now - date;
+            const diffMins = Math.floor(diffMs / 60000);
+            const diffHours = Math.floor(diffMs / 3600000);
+            const diffDays = Math.floor(diffMs / 86400000);
+
+            if (diffMins < 1) return 'just now';
+            if (diffMins < 60) return `${diffMins}m ago`;
+            if (diffHours < 24) return `${diffHours}h ago`;
+            if (diffDays < 7) return `${diffDays}d ago`;
+            return date.toLocaleDateString();
+          };
+
           return (
             <div
               key={item.code + pct}
-              className={`group flex flex-col items-center justify-center min-w-[120px] h-20 px-3 py-2 rounded-lg border transition ${trendBg}`}
+              className={`group relative flex flex-col items-center justify-center min-w-[120px] h-24 px-3 py-2 rounded-lg border transition ${trendBg}`}
               style={{ backgroundColor: inlineBg }}
             >
+              {onRemoveStock && (
+                <button
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onRemoveStock(item.code);
+                  }}
+                  className="absolute top-1 right-1 p-0.5 text-white/60 hover:text-white hover:bg-black/30 rounded transition"
+                  title="Remove from history"
+                >
+                  <X size={14} />
+                </button>
+              )}
               <span
                 onClick={() => onClickCode && onClickCode(item.code)}
                 role="link"
@@ -80,6 +111,9 @@ export function SearchHistoryTable({ historyStocks, onClickCode, onReload, loadi
                 tabIndex={0}
                 className="text-xs font-bold text-white cursor-pointer hover:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
               >{pct > 0 ? '+' : ''}{pct.toFixed(2)}%</span>
+              <span className="text-[10px] italic text-gray-500 mt-1">
+                {formatTimestamp(item.timestamp)}
+              </span>
             </div>
           );
         })}
