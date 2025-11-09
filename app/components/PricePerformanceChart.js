@@ -132,26 +132,36 @@ export function PricePerformanceChart({
     return `${yy}-${mm}-${dd}`;
   };
 
-  // Map RVI value to color (higher RVI = deeper/more saturated blue)
+  // Map RVI value to color (higher RVI = deeper/more saturated blue to purple to red)
   const getRviColor = (rvi) => {
-    // RVI typically ranges from 0.5 to 2.0, with 1.0 being average
-    // Clamp RVI to reasonable range
-    const clampedRvi = Math.max(0.3, Math.min(3.0, rvi));
-
-    // Map to opacity/intensity: 0.3 = light, 1.0 = normal, 3.0 = very deep
-    // Using blue color scale
-    if (clampedRvi < 0.7) {
-      return '#93C5FD'; // Light blue (low volume)
-    } else if (clampedRvi < 1.0) {
+    // RVI ranges from very low to extremely high volume
+    // Blue scale for normal ranges, purple for extreme, purple-red for very extreme
+    if (rvi < 0.5) {
+      return '#DBEAFE'; // Very light blue (very low volume)
+    } else if (rvi < 0.7) {
+      return '#BFDBFE'; // Extra light blue (low volume)
+    } else if (rvi < 0.85) {
+      return '#93C5FD'; // Light blue
+    } else if (rvi < 1.0) {
       return '#60A5FA'; // Medium-light blue
-    } else if (clampedRvi < 1.3) {
+    } else if (rvi < 1.15) {
       return '#3B82F6'; // Standard blue (normal volume)
-    } else if (clampedRvi < 1.7) {
-      return '#2563EB'; // Medium-deep blue
-    } else if (clampedRvi < 2.2) {
-      return '#1D4ED8'; // Deep blue (high volume)
+    } else if (rvi < 1.3) {
+      return '#2563EB'; // Medium blue
+    } else if (rvi < 1.5) {
+      return '#1D4ED8'; // Medium-deep blue
+    } else if (rvi < 1.8) {
+      return '#1E40AF'; // Deep blue (high volume)
+    } else if (rvi < 2.2) {
+      return '#1E3A8A'; // Very deep blue
+    } else if (rvi < 2.8) {
+      return '#172554'; // Darkest blue
+    } else if (rvi < 3.0) {
+      return '#312E81'; // Blue-purple transition
+    } else if (rvi < 4.0) {
+      return '#6B21A8'; // Purple (extreme volume)
     } else {
-      return '#1E40AF'; // Very deep blue (very high volume)
+      return '#BE185D'; // Purple-red (very extreme volume)
     }
   };
 
@@ -526,27 +536,48 @@ export function PricePerformanceChart({
                 📊 RVI Color Legend (Relative Volume Index)
               </div>
               <div className="text-xs text-gray-400">
-                Color intensity indicates volume levels
+                Blue → Purple → Pink (volume intensity)
               </div>
             </div>
-            <div className="flex items-center gap-1 h-8 rounded-lg overflow-hidden border-2 border-purple-600/30 shadow-lg">
-              <div className="flex-1 h-full flex items-center justify-center text-[10px] font-semibold" style={{ backgroundColor: '#93C5FD', color: '#1E3A8A' }}>
-                Low<br/>(&lt;0.7)
+            <div className="flex items-center gap-0.5 h-8 rounded-lg overflow-hidden border-2 border-purple-600/30 shadow-lg">
+              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#DBEAFE', color: '#1E3A8A' }}>
+                &lt;0.5
               </div>
-              <div className="flex-1 h-full flex items-center justify-center text-[10px] font-semibold" style={{ backgroundColor: '#60A5FA', color: '#1E3A8A' }}>
-                Below Avg<br/>(0.7-1.0)
+              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#BFDBFE', color: '#1E3A8A' }}>
+                0.5-0.7
               </div>
-              <div className="flex-1 h-full flex items-center justify-center text-[10px] font-semibold" style={{ backgroundColor: '#3B82F6', color: '#FFFFFF' }}>
-                Normal<br/>(1.0-1.3)
+              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#93C5FD', color: '#1E3A8A' }}>
+                0.7-0.85
               </div>
-              <div className="flex-1 h-full flex items-center justify-center text-[10px] font-semibold" style={{ backgroundColor: '#2563EB', color: '#FFFFFF' }}>
-                Above Avg<br/>(1.3-1.7)
+              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#60A5FA', color: '#1E3A8A' }}>
+                0.85-1.0
               </div>
-              <div className="flex-1 h-full flex items-center justify-center text-[10px] font-semibold" style={{ backgroundColor: '#1D4ED8', color: '#FFFFFF' }}>
-                High<br/>(1.7-2.2)
+              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#3B82F6', color: '#FFFFFF' }}>
+                1.0-1.15
               </div>
-              <div className="flex-1 h-full flex items-center justify-center text-[10px] font-semibold" style={{ backgroundColor: '#1E40AF', color: '#FFFFFF' }}>
-                Very High<br/>(&gt;2.2)
+              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#2563EB', color: '#FFFFFF' }}>
+                1.15-1.3
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#1D4ED8', color: '#FFFFFF' }}>
+                1.3-1.5
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#1E40AF', color: '#FFFFFF' }}>
+                1.5-1.8
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#1E3A8A', color: '#FFFFFF' }}>
+                1.8-2.2
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#172554', color: '#FFFFFF' }}>
+                2.2-2.8
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#312E81', color: '#FFFFFF' }}>
+                2.8-3.0
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#6B21A8', color: '#FFFFFF' }}>
+                3.0-4.0
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#BE185D', color: '#FFFFFF' }}>
+                &gt;4.0
               </div>
             </div>
             <div className="text-[10px] text-gray-500 mt-1 text-center italic">
