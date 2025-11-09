@@ -78,8 +78,9 @@ export function ComparisonTable({
   const [sentimentExpanded, setSentimentExpanded] = useState(false); // Start collapsed
   const [periodMode, setPeriodMode] = useState('accumulated'); // 'accumulated' | 'non-accumulated'
   const [nDays, setNDays] = useState(7); // Default N days for non-accumulated mode
-  const [showNameColumn, setShowNameColumn] = useState(true); // Show name column by default
-  const [showMarketDetail, setShowMarketDetail] = useState(true); // Show market detail columns by default
+  const isMobile = typeof window !== 'undefined' ? window.innerWidth <= 768 : false;
+  const [showNameColumn, setShowNameColumn] = useState(() => !isMobile); // Hide by default on mobile
+  const [showMarketDetail, setShowMarketDetail] = useState(() => !isMobile); // Hide by default on mobile
 
   if (!comparisonStocks || comparisonStocks.length === 0) {
     if (loading) {
@@ -153,7 +154,7 @@ export function ComparisonTable({
           <span className="text-lg font-semibold text-white">{comparisonHeading}</span>
           {viewMode === 'table' && (
             <>
-              <div className="flex bg-gray-700 rounded-lg p-1 ml-2">
+              <div className="flex bg-gray-700 rounded-lg p-1 ml-10">
                 <button
                   onClick={() => setShowNameColumn(!showNameColumn)}
                   className={`px-3 py-1 rounded-md text-sm font-semibold transition ${
@@ -163,7 +164,7 @@ export function ComparisonTable({
                   title="Toggle Name and Type columns"
                 >Name</button>
               </div>
-              <div className="flex bg-gray-700 rounded-lg p-1 mr-2">
+              <div className="flex bg-gray-700 rounded-lg p-1 mr-2 ml-2">
                 <button
                   onClick={() => setShowMarketDetail(!showMarketDetail)}
                   className={`px-3 py-1 rounded-md text-sm font-semibold transition ${
@@ -177,7 +178,7 @@ export function ComparisonTable({
           )}
           {viewMode === 'table' && (
             <div className="flex items-center gap-3">
-              <div className="flex bg-gray-700 rounded-lg p-1">
+              <div className="flex bg-gray-700 rounded-lg p-1 ml-10">
                 <button
                   onClick={() => setPeriodMode('accumulated')}
                   className={`px-3 py-1 rounded-md text-sm font-semibold transition ${
@@ -194,8 +195,8 @@ export function ComparisonTable({
                 >Non-accumulated</button>
               </div>
               {periodMode === 'non-accumulated' && (
-                <div className="flex items-center gap-2">
-                  <span className="text-gray-300 text-sm">Period:</span>
+                <div className="flex items-center gap-2 ml-6">
+                  <span className="text-gray-300 text-sm ml-2">Period:</span>
                   <div className="flex bg-gray-700 rounded-lg p-1 gap-1">
                     {[3, 7, 14, 30, 90].map(days => (
                       <button
