@@ -23,55 +23,37 @@ const getRelativeHeatmapColor = (value, min, max, allValues) => {
   const minNegative = negativeValues.length > 0 ? Math.min(...negativeValues) : 0;  // Most negative
   const maxNegative = negativeValues.length > 0 ? Math.max(...negativeValues) : 0;  // Closest to 0
 
+  // Helper for smooth interpolation
+  function interpolateColor(color1, color2, ratio) {
+    const r = Math.round(color1[0] + (color2[0] - color1[0]) * ratio);
+    const g = Math.round(color1[1] + (color2[1] - color1[1]) * ratio);
+    const b = Math.round(color1[2] + (color2[2] - color1[2]) * ratio);
+    return `rgb(${r}, ${g}, ${b})`;
+  }
+
+  // Color stops
+  const deepGreen = [52, 211, 153]; // bright green (#34d399)
+  const lightGreen = [187, 247, 208];
+  const deepRed = [239, 68, 68]; // bright red (#ef4444)
+  const lightRed = [254, 202, 202];
+
   if (value > 0) {
     // Positive values: light green (lowest) to deep green (highest)
     const ratio = maxPositive > minPositive ? (value - minPositive) / (maxPositive - minPositive) : 0.5;
-
-    // Interpolate from light green (#bbf7d0) to deep green (#14532d)
-    const r = Math.round(187 - (187 - 20) * ratio);
-    const g = Math.round(247 - (247 - 83) * ratio);
-    const b = Math.round(208 - (208 - 45) * ratio);
-    return `rgb(${r}, ${g}, ${b})`;
+    return interpolateColor(lightGreen, deepGreen, ratio);
   } else if (value < 0) {
-    // Negative values: light red (highest/closest to 0) to deep red (most negative)
+    // Negative values: light red (closest to 0) to deep red (most negative)
     const ratio = minNegative < maxNegative ? (value - maxNegative) / (minNegative - maxNegative) : 0.5;
-
-    // Interpolate from light red (#fecaca) to deep red (#7f1d1d)
-    const r = Math.round(254 - (254 - 127) * ratio);
-    const g = Math.round(202 - (202 - 29) * ratio);
-    const b = Math.round(202 - (202 - 29) * ratio);
-    return `rgb(${r}, ${g}, ${b})`;
+    return interpolateColor(lightRed, deepRed, ratio);
   } else {
-    // Value is 0 - neutral gray
-    return "#e5e7eb";
+  // Value is 0 - very lightest green
+  return "#f0fdf4"; // Tailwind green-50
   }
 };
 
-// Keep old function for legend generation, but will be replaced by relative colors
+// Always use relative coloring
 const getHeatmapColor = (value, min, max, allValues) => {
-  if (min !== undefined && max !== undefined && allValues) {
-    return getRelativeHeatmapColor(value, min, max, allValues);
-  }
-  // Fallback to absolute if min/max not provided
-  if (value >= 500) return "#064e3b";
-  if (value >= 200) return "#065f46";
-  if (value >= 100) return "#047857";
-  if (value >= 50) return "#059669";
-  if (value >= 30) return "#10b981";
-  if (value >= 20) return "#34d399";
-  if (value >= 10) return "#6ee7b7";
-  if (value >= 5) return "#a7f3d0";
-  if (value >= 2) return "#d1fae5";
-  if (value >= 0) return "#ecfdf5";
-  if (value >= -2) return "#fee2e2";
-  if (value >= -5) return "#fecaca";
-  if (value >= -10) return "#fca5a5";
-  if (value >= -20) return "#f87171";
-  if (value >= -30) return "#ef4444";
-  if (value >= -50) return "#dc2626";
-  if (value >= -100) return "#b91c1c";
-  if (value >= -200) return "#7f1d1d";
-  return "#450a0a";
+  return getRelativeHeatmapColor(value, min, max, allValues);
 };
 
 // Helper to calculate luminance from RGB
@@ -447,30 +429,14 @@ export function HeatmapView({
     const range = max - min;
     const stops = [];
 
-    if (range < 20) {
-      // Small range - use fine granularity
-      const step = Math.ceil(range / 8);
-      for (let i = 0; i <= 8; i++) {
-        const value = Math.round(min + (i * step));
-        stops.push(value);
-      }
-    } else if (range < 100) {
-      // Medium range
-      const step = Math.ceil(range / 8 / 5) * 5; // Round to nearest 5
-      for (let i = 0; i <= 8; i++) {
-        const value = Math.round((min + (i * step)) / 5) * 5;
-        stops.push(value);
-      }
-    } else {
-      // Large range
-      const step = Math.ceil(range / 8 / 10) * 10; // Round to nearest 10
-      for (let i = 0; i <= 8; i++) {
-        const value = Math.round((min + (i * step)) / 10) * 10;
-        stops.push(value);
-      }
+    // Increase to 16 steps for smoother legend
+    const steps = 16;
+    const step = range / steps;
+    for (let i = 0; i <= steps; i++) {
+      const value = min + (i * step);
+      stops.push(Math.round(value * 100) / 100); // round to 2 decimals
     }
-
-    return [...new Set(stops)].sort((a, b) => a - b); // Remove duplicates and sort
+    return stops;
   };
 
   const legendStops = generateLegendStops(minPerformance, maxPerformance);
@@ -639,7 +605,7 @@ export function HeatmapView({
                     tabIndex={0}
                     className="font-bold underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 rounded block mb-1"
                     style={{
-                      color: stock.code === selectedStock.code ? '#fbbf24' : textColor,
+                      color: stock.code === selectedStock.code ? '#3b82f6' : textColor,
                       fontSize: codeFontSize,
                     }}
                   >

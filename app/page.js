@@ -270,8 +270,9 @@ export default function StockAnalysisDashboard() {
     if (savedStock) {
       try {
         const stockData = JSON.parse(savedStock);
-        setSelectedStock(stockData);
-        setSearchInput(stockData.code);
+        if (stockData && stockData.code) {
+          handleSearch(stockData.code);
+        }
       } catch {}
     }
     const savedNews = localStorage.getItem('selectedStockNews');
