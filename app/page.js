@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 // Chart now extracted to PricePerformanceChart component
-import { Search, BarChart3 } from 'lucide-react';
+import { Search, BarChart3, RotateCcw } from 'lucide-react';
 import { ComparisonSection } from './components/Comparison/ComparisonSection';
 import { PricePerformanceChart } from './components/PricePerformanceChart';
 import { NewsSection } from './components/NewsSection';
@@ -13,7 +13,7 @@ import { HistoricalPerformanceCheck } from './components/HistoricalPerformanceCh
 import { LoadingState } from './components/LoadingState';
 import { Tabs, TabPanel } from './components/Tabs';
 import { AINewsSummary } from './components/AINewsSummary';
-import { fetchWithCache, fetchPostWithCache, CACHE_DURATIONS } from '../lib/clientCache';
+import { fetchWithCache, fetchPostWithCache, CACHE_DURATIONS, clearAllClientCache } from '../lib/clientCache';
 
 // Helper function to fetch with timeout
 const fetchWithTimeout = (url, timeout = 10000) => {
@@ -571,6 +571,41 @@ export default function StockAnalysisDashboard() {
     setLoading(false);
   };
 
+  // Force reload: Clear all caches (client + server) and reload current stock
+  const handleForceReload = async () => {
+    if (!selectedStock) {
+      alert('No stock loaded. Please search for a stock first.');
+      return;
+    }
+
+    if (!confirm('This will clear all cached data and reload fresh data. Continue?')) {
+      return;
+    }
+
+    setLoading(true);
+
+    try {
+      // Clear client cache
+      const clientCleared = clearAllClientCache();
+      console.log(`[Force Reload] Cleared ${clientCleared} client cache entries`);
+
+      // Clear server cache
+      const response = await fetch('/api/clear-cache');
+      const result = await response.json();
+      console.log('[Force Reload] Server cache clear result:', result);
+
+      // Reload current stock with force reload
+      await handleSearch(selectedStock.code);
+
+      alert('Cache cleared and data reloaded successfully!');
+    } catch (error) {
+      console.error('[Force Reload] Error:', error);
+      alert('Error clearing cache. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Add stock for chart-only comparison (percentage lines)
   const addChartCompareStock = async () => {
     const code = chartCompareInput.toUpperCase().trim();
@@ -765,6 +800,15 @@ export default function StockAnalysisDashboard() {
             >
               <Search size={20} />
               {loading ? <span className="italic" style={{ color: '#22d3ee' }}>Loading...</span> : 'Search'}
+            </button>
+            <button
+              onClick={handleForceReload}
+              disabled={loading || !selectedStock}
+              className="px-6 py-3 bg-orange-600 text-white rounded-lg hover:bg-orange-700 transition flex items-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+              title="Clear all caches and reload fresh data"
+            >
+              <RotateCcw size={20} />
+              Force Reload
             </button>
           </div>
 
