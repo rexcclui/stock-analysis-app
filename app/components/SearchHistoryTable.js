@@ -90,6 +90,13 @@ export function SearchHistoryTable({ historyStocks, onClickCode, onRemoveStock, 
               className={`group relative flex flex-col items-center justify-center min-w-[120px] h-24 px-3 py-2 rounded-lg border transition ${trendBg}`}
               style={{ backgroundColor: inlineBg }}
             >
+              {/* Top right datetime */}
+              <span
+                className="absolute top-1 right-2 text-[10px] italic text-gray-400 z-20"
+                style={{ fontSize: '10px', color: '#9ca3af', textShadow: '0 1px 2px #fff' }}
+              >
+                {formatTimestamp(item.lastUpdated)}
+              </span>
               {onRemoveStock && (
                 <button
                   onClick={(e) => {
@@ -115,9 +122,6 @@ export function SearchHistoryTable({ historyStocks, onClickCode, onRemoveStock, 
                 tabIndex={0}
                 className="text-xs font-bold text-white cursor-pointer hover:text-gray-100 focus:outline-none focus:ring-2 focus:ring-blue-500 rounded"
               >{pct > 0 ? '+' : ''}{pct.toFixed(2)}%</span>
-              <span className="text-[10px] italic text-gray-500 mt-1">
-                {formatTimestamp(item.lastUpdated)}
-              </span>
             </div>
           );
         })}

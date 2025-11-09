@@ -240,13 +240,19 @@ export function ComparisonTable({
               <span className="text-gray-300 text-sm">Colorize:</span>
               <div className="flex bg-gray-700 rounded-lg p-1">
                 <button
-                  onClick={() => setColorMode('historical')}
+                  onClick={() => {
+                    setColorMode('historical');
+                    setPeriodMode('accumulated');
+                  }}
                   className={`px-3 py-1 rounded-md text-sm font-semibold transition ${colorMode === 'historical' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-300 hover:text-white hover:bg-gray-600'}`}
                   style={colorMode === 'historical' ? { backgroundColor: '#FBBF24', color: '#0ea5ff', boxShadow: '0 6px 12px rgba(0,0,0,0.06)' } : undefined}
                   title="Historical: Colors based on absolute performance thresholds (green for gains, red for losses)"
                 >Historical</button>
                 <button
-                  onClick={() => setColorMode('relative')}
+                  onClick={() => {
+                    setColorMode('relative');
+                    setPeriodMode('non-accumulated');
+                  }}
                   className={`px-3 py-1 rounded-md text-sm font-semibold transition ${colorMode === 'relative' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-300 hover:text-white hover:bg-gray-600'}`}
                   style={colorMode === 'relative' ? { backgroundColor: '#FBBF24', color: '#0ea5ff', boxShadow: '0 6px 12px rgba(0,0,0,0.06)' } : undefined}
                   title="Relative: Colors based on relative performance within the comparison group (green for best, red for worst)"
@@ -986,16 +992,13 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 })()
               )}
               <td className="pl-1 pr-2 py-3 text-center">
-                {stock.code !== 'SPY' && stock.code !== 'QQQ' ? (
-                  <button
-                    onClick={() => onRemoveComparison(stock.code)}
-                    className="p-1 text-red-400 hover:bg-red-900/30 rounded transition"
-                  >
-                    <X size={18} />
-                  </button>
-                ) : (
-                  <span className="text-gray-600 text-xs">Benchmark</span>
-                )}
+                <button
+                  onClick={() => onRemoveComparison(stock.code)}
+                  className="p-1 text-red-400 hover:bg-red-900/30 rounded transition"
+                  title="Remove from comparison"
+                >
+                  <X size={18} />
+                </button>
               </td>
             </tr>
           ))}
