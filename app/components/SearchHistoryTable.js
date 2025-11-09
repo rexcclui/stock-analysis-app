@@ -66,22 +66,19 @@ export function SearchHistoryTable({ historyStocks, onClickCode, onRemoveStock, 
 
           // Format timestamp
           const formatTimestamp = (timestamp) => {
-            if (!timestamp) return '';
-            const date = new Date(timestamp);
+            if (!timestamp) return { date: '', time: '', isToday: true };
+            const dateObj = new Date(timestamp);
             const now = new Date();
-            const isToday = date.toDateString() === now.toDateString();
-
-            const hours = date.getHours().toString().padStart(2, '0');
-            const minutes = date.getMinutes().toString().padStart(2, '0');
+            const isToday = dateObj.toDateString() === now.toDateString();
+            const hours = dateObj.getHours().toString().padStart(2, '0');
+            const minutes = dateObj.getMinutes().toString().padStart(2, '0');
             const timeStr = `${hours}:${minutes}`;
-
             if (isToday) {
-              return timeStr;
-            } else {
-              const month = (date.getMonth() + 1).toString().padStart(2, '0');
-              const day = date.getDate().toString().padStart(2, '0');
-              return `${month}/${day} ${timeStr}`;
+              return { date: '', time: timeStr, isToday };
             }
+            const month = (dateObj.getMonth() + 1).toString().padStart(2, '0');
+            const day = dateObj.getDate().toString().padStart(2, '0');
+            return { date: `${month}/${day}`, time: timeStr, isToday };
           };
 
           return (
@@ -90,13 +87,22 @@ export function SearchHistoryTable({ historyStocks, onClickCode, onRemoveStock, 
               className={`group relative flex flex-col items-center justify-center min-w-[120px] h-24 px-3 py-2 rounded-lg border transition ${trendBg}`}
               style={{ backgroundColor: inlineBg }}
             >
-              {/* Top right datetime */}
-              <span
-                className="absolute top-1 right-2 text-[10px] italic text-gray-400 z-20"
-                style={{ fontSize: '10px', color: '#9ca3af', textShadow: '0 1px 2px #fff' }}
-              >
-                {formatTimestamp(item.lastUpdated)}
-              </span>
+              {/* Top right datetime refined positioning */}
+              {(() => {
+                const ts = formatTimestamp(item.lastUpdated);
+                return (
+                  <span
+                    className="absolute text-[10px] italic text-gray-400 z-20 text-right leading-tight"
+                    style={{ top: '2px', right: '6px', position: 'absolute', fontSize: '10px', color: '#9ca3af', fontWeight: 600, lineHeight: '11px', whiteSpace: 'normal' }}
+                  >
+                    {ts.isToday ? (
+                      <>{ts.time}</>
+                    ) : (
+                      <><span style={{display:'block'}}>{ts.date}</span><span style={{display:'block'}}>{ts.time}</span></>
+                    )}
+                  </span>
+                );
+              })()}
               {onRemoveStock && (
                 <button
                   onClick={(e) => {
