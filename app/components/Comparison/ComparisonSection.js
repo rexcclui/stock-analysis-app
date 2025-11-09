@@ -25,6 +25,7 @@ export function ComparisonSection({
   onHeatmapSizeByChange,
   periods,
   searchHistoryStocks,
+  searchHistoryFullStocks,
   onSearchHistoryCodeClick,
   onRemoveSearchHistoryStock,
   onReloadSearchHistory,
@@ -76,6 +77,7 @@ export function ComparisonSection({
         onAddToChart={onAddToChart}
         chartCompareStocks={chartCompareStocks}
         searchHistoryStocks={searchHistoryStocks}
+        searchHistoryFullStocks={searchHistoryFullStocks}
         loading={loading}
       />
     </>

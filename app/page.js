@@ -148,8 +148,9 @@ export default function StockAnalysisDashboard() {
   const [selectedStock, setSelectedStock] = useState(null);
   const [chartPeriod, setChartPeriod] = useState('1M');
   const [comparisonStocks, setComparisonStocks] = useState([]);
+  const [searchHistoryFullStocks, setSearchHistoryFullStocks] = useState([]); // Full stock data for search history
   const [comparisonType, setComparisonType] = useState('industry'); // 'industry' or 'sector'
-  const [relationshipTypeFilter, setRelationshipTypeFilter] = useState('all'); // 'all', 'industry', 'sector', 'competitor', 'etf'
+  const [relationshipTypeFilter, setRelationshipTypeFilter] = useState('all'); // 'all', 'industry', 'sector', 'competitor', 'etf', 'recent'
   const [comparisonRowSize, setComparisonRowSize] = useState(30); // 10, 30, 50, 100
   const [manualStock, setManualStock] = useState('');
   const [savedComparisons, setSavedComparisons] = useState({});
@@ -340,6 +341,21 @@ export default function StockAnalysisDashboard() {
       localStorage.setItem('stockSearchHistoryDetailed', JSON.stringify(searchHistoryStocks));
     } catch {}
   }, [searchHistoryStocks, isClient]);
+
+  // Load full stock data for search history when "Recent Search" mode is selected
+  React.useEffect(() => {
+    if (relationshipTypeFilter === 'recent' && searchHistoryStocks.length > 0) {
+      const loadSearchHistoryStocks = async () => {
+        const apiCounts = { stock: 0, sentiment: 0, news: 0, competitors: 0 };
+        const codes = searchHistoryStocks.map(s => s.code);
+        const promises = codes.map(code => fetchCompleteStockData(code, apiCounts));
+        const results = await Promise.all(promises);
+        const validStocks = results.filter(s => s !== null);
+        setSearchHistoryFullStocks(validStocks);
+      };
+      loadSearchHistoryStocks();
+    }
+  }, [relationshipTypeFilter, searchHistoryStocks]);
 
   // Persist selected stock whenever it changes
   React.useEffect(() => {
@@ -952,6 +968,7 @@ export default function StockAnalysisDashboard() {
                   onHeatmapSizeByChange={setHeatmapSizeBy}
                   periods={periods}
                   searchHistoryStocks={searchHistoryStocks}
+                  searchHistoryFullStocks={searchHistoryFullStocks}
                   onSearchHistoryCodeClick={(code)=> { handleSearch(code); }}
                   onRemoveSearchHistoryStock={removeSearchHistoryStock}
                   onReloadSearchHistory={reloadRecentSearches}

@@ -71,6 +71,7 @@ export function ComparisonTable({
   onAddToChart,
   chartCompareStocks,
   searchHistoryStocks,
+  searchHistoryFullStocks,
   loading = false
 }) {
   const [colorMode, setColorMode] = useState('historical'); // 'historical' | 'relative'
@@ -91,31 +92,30 @@ export function ComparisonTable({
     );
   }
 
-  // Filter comparison stocks based on relationship type
-  let filteredComparisonStocks = comparisonStocks.filter(stock => {
-    // For 'recent' mode, show stocks from search history
-    if (relationshipTypeFilter === 'recent') {
-      if (!searchHistoryStocks || searchHistoryStocks.length === 0) return false;
-      const recentCodes = searchHistoryStocks.map(s => s.code);
-      return recentCodes.includes(stock.code);
-    }
+  // For 'recent' mode, use searchHistoryFullStocks directly
+  let filteredComparisonStocks;
+  if (relationshipTypeFilter === 'recent') {
+    filteredComparisonStocks = searchHistoryFullStocks || [];
+  } else {
+    // Filter comparison stocks based on relationship type
+    filteredComparisonStocks = comparisonStocks.filter(stock => {
+      // SPY and QQQ are always shown (benchmarks)
+      if (stock.code === 'SPY' || stock.code === 'QQQ') return true;
 
-    // SPY and QQQ are always shown (benchmarks)
-    if (stock.code === 'SPY' || stock.code === 'QQQ') return true;
+      // Filter based on relationshipTypeFilter
+      if (relationshipTypeFilter === 'all') return true;
 
-    // Filter based on relationshipTypeFilter
-    if (relationshipTypeFilter === 'all') return true;
+      if (!stock.relationshipType) return false;
 
-    if (!stock.relationshipType) return false;
+      const type = stock.relationshipType.toLowerCase();
+      if (relationshipTypeFilter === 'industry' && type.includes('industry')) return true;
+      if (relationshipTypeFilter === 'sector' && type.includes('sector')) return true;
+      if (relationshipTypeFilter === 'competitor' && type.includes('competitor')) return true;
+      if (relationshipTypeFilter === 'etf' && (type.includes('co-held') || type.includes('etf'))) return true;
 
-    const type = stock.relationshipType.toLowerCase();
-    if (relationshipTypeFilter === 'industry' && type.includes('industry')) return true;
-    if (relationshipTypeFilter === 'sector' && type.includes('sector')) return true;
-    if (relationshipTypeFilter === 'competitor' && type.includes('competitor')) return true;
-    if (relationshipTypeFilter === 'etf' && (type.includes('co-held') || type.includes('etf'))) return true;
-
-    return false;
-  });
+      return false;
+    });
+  }
 
   // Separate benchmarks from other stocks for row size limiting
   const benchmarks = filteredComparisonStocks.filter(s => s.code === 'SPY' || s.code === 'QQQ');
