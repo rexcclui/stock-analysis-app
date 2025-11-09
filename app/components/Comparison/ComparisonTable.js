@@ -315,7 +315,7 @@ export function ComparisonTable({
       ) : (
         <HeatmapView
           selectedStock={selectedStock}
-          comparisonStocks={comparisonStocks}
+          comparisonStocks={filteredComparisonStocks}
           heatmapColorBy={heatmapColorBy}
           heatmapSizeBy={heatmapSizeBy}
           onRemoveComparison={onRemoveComparison}
