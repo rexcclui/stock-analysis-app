@@ -97,7 +97,7 @@ export function SearchHistoryTable({ historyStocks, onClickCode, onRemoveStock, 
                   style={{ bottom: '0px', right: '0px', padding: '2px', borderTopLeftRadius: '4px' }}
                   title="Remove from history"
                 >
-                  <X size={12} />
+                  <X size={10} />
                 </button>
               )}
               <span
