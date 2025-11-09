@@ -347,36 +347,23 @@ export default function StockAnalysisDashboard() {
     if (relationshipTypeFilter === 'recent' && searchHistoryStocks.length > 0) {
       const loadSearchHistoryStocks = async () => {
         try {
-          console.log('[Recent Search] Loading stocks:', searchHistoryStocks.map(s => s.code));
           const codes = searchHistoryStocks.map(s => s.code);
           // Fetch basic stock data only (no sentiment, news, etc.) for comparison table
           const promises = codes.map(async (code) => {
             try {
               const response = await fetch(`/api/stock?symbol=${code}&nocache=${Date.now()}`);
               const data = await response.json();
-              if (data.error) {
-                console.error(`[Recent Search] Error for ${code}:`, data.error);
-                return null;
-              }
-              console.log(`[Recent Search] Loaded ${code}:`, {
-                hasPerformance: !!data.performance,
-                hasChartData: !!data.chartData,
-                performance: data.performance,
-                code: data.code,
-                name: data.name
-              });
-              return data;
+              return data.error ? null : data;
             } catch (err) {
-              console.error(`[Recent Search] Failed to fetch ${code}:`, err);
+              console.error(`Failed to fetch ${code}:`, err);
               return null;
             }
           });
           const results = await Promise.all(promises);
           const validStocks = results.filter(s => s !== null);
-          console.log('[Recent Search] Valid stocks loaded:', validStocks.length, validStocks.map(s => s.code));
           setSearchHistoryFullStocks(validStocks);
         } catch (error) {
-          console.error('[Recent Search] Error loading search history stocks:', error);
+          console.error('Error loading search history stocks:', error);
         }
       };
       loadSearchHistoryStocks();

@@ -96,11 +96,6 @@ export function ComparisonTable({
   let filteredComparisonStocks;
   if (relationshipTypeFilter === 'recent') {
     filteredComparisonStocks = searchHistoryFullStocks || [];
-    console.log('[ComparisonTable] Recent mode - searchHistoryFullStocks:', searchHistoryFullStocks?.length, searchHistoryFullStocks?.map(s => ({
-      code: s.code,
-      hasPerformance: !!s.performance,
-      performance: s.performance
-    })));
   } else {
     // Filter comparison stocks based on relationship type
     filteredComparisonStocks = comparisonStocks.filter(stock => {
