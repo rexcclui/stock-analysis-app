@@ -76,6 +76,10 @@ const parseRGB = (colorStr) => {
 };
 
 const getTextColor = (backgroundColor) => {
+  // Special case: 0.0% value background (#f0fdf4) should always have black text
+  if (backgroundColor === '#f0fdf4' || backgroundColor === 'rgb(240, 253, 244)') {
+    return '#111827'; // Black for visibility
+  }
   // Calculate luminance of background
   const [r, g, b] = parseRGB(backgroundColor);
   const bgLuminance = getLuminance(r, g, b);
