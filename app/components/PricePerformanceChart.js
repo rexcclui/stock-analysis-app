@@ -276,12 +276,12 @@ export function PricePerformanceChart({
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
   if (shouldShowLoading) {
-    return <LoadingState message="Loading price performance chart..." className="mb-6" />;
+    return <LoadingState message="Loading price performance chart..." className="mb-0" style={{ marginTop: 0, marginBottom: 0 }} />;
   }
 
   return (
-  <div className="mb-6" style={{ marginTop: '1rem' }}>
-      <div className="flex items-center justify-between mb-4">
+  <div className="mb-0" style={{ marginTop: 0, marginBottom: 0 }}>
+  <div className="flex items-center justify-between mb-0">
         <div className="flex items-center gap-3 w-full">
           
 
