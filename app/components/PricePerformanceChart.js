@@ -646,71 +646,64 @@ export function PricePerformanceChart({
     const bottoms = turningPoints.filter(tp => tp.type === 'bottom');
     const peaks = turningPoints.filter(tp => tp.type === 'peak');
 
-    if (bottoms.length < 2) return null; // Need at least 2 bottoms for a trend
+    if (bottoms.length < 2) return null;
 
-    // Find the most recent sequence of higher lows (uptrend)
-    const trendBottoms = [];
-    let currentBottom = bottoms[bottoms.length - 1];
-    trendBottoms.unshift(currentBottom);
+    // Take more bottoms to capture bigger trend (up to 5 most recent bottoms)
+    const numBottomsToUse = Math.min(5, bottoms.length);
+    const trendBottoms = bottoms.slice(-numBottomsToUse);
 
-    // Look backwards for bottoms that are lower than current (creating higher lows pattern)
-    for (let i = bottoms.length - 2; i >= 0; i--) {
-      const prevBottom = bottoms[i];
-      if (prevBottom.price < currentBottom.price) {
-        trendBottoms.unshift(prevBottom);
-        currentBottom = prevBottom;
-      } else {
-        break; // Trend broken
-      }
-    }
+    // Use linear regression to find best-fit trendline through the bottoms
+    const n = trendBottoms.length;
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
 
-    if (trendBottoms.length < 2) return null;
+    trendBottoms.forEach(bottom => {
+      sumX += bottom.index;
+      sumY += bottom.price;
+      sumXY += bottom.index * bottom.price;
+      sumX2 += bottom.index * bottom.index;
+    });
 
-    // Get index range for this trend
+    // Calculate slope and intercept of best-fit line
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+
+    // Only proceed if slope is positive (uptrend)
+    if (slope <= 0) return null;
+
+    // Get start and end points for the trendline
     const firstBottomIndex = trendBottoms[0].index;
     const lastBottomIndex = trendBottoms[trendBottoms.length - 1].index;
 
-    // Lower trendline: connect first and last bottom (support line)
-    const lowerStart = {
-      date: trendBottoms[0].date,
-      price: trendBottoms[0].price,
-      index: trendBottoms[0].index
-    };
-    const lowerEnd = {
-      date: trendBottoms[trendBottoms.length - 1].date,
-      price: trendBottoms[trendBottoms.length - 1].price,
-      index: trendBottoms[trendBottoms.length - 1].index
-    };
-
-    // Extend to current if price is still rising
+    // Extend the trendline to current if price is above the line
+    let endIndex = lastBottomIndex;
     const lastDataPoint = data[data.length - 1];
-    const expectedPriceAtEnd = lowerStart.price +
-      ((lowerEnd.price - lowerStart.price) / (lowerEnd.index - lowerStart.index)) *
-      (lastBottomIndex - lowerStart.index);
+    const currentExpectedPrice = slope * (data.length - 1) + intercept;
 
-    if (lastDataPoint && data.length - 1 > lastBottomIndex && lastDataPoint.price > expectedPriceAtEnd) {
-      lowerEnd.date = lastDataPoint.date;
-      lowerEnd.index = data.length - 1;
-      // Project the price along the trendline
-      lowerEnd.price = lowerStart.price +
-        ((trendBottoms[trendBottoms.length - 1].price - lowerStart.price) /
-        (trendBottoms[trendBottoms.length - 1].index - lowerStart.index)) *
-        (data.length - 1 - lowerStart.index);
+    if (lastDataPoint && data.length - 1 > lastBottomIndex && lastDataPoint.price > currentExpectedPrice * 0.95) {
+      endIndex = data.length - 1;
     }
 
-    // Calculate slope of lower trendline
-    const lowerSlope = (lowerEnd.price - lowerStart.price) / (lowerEnd.index - lowerStart.index);
+    // Calculate support line (lower bound)
+    const lowerStart = {
+      date: trendBottoms[0].date,
+      price: slope * firstBottomIndex + intercept,
+      index: firstBottomIndex
+    };
+    const lowerEnd = {
+      date: endIndex === data.length - 1 ? lastDataPoint.date : trendBottoms[trendBottoms.length - 1].date,
+      price: slope * endIndex + intercept,
+      index: endIndex
+    };
 
-    // Find maximum distance above the lower trendline (for upper channel line)
+    // Find maximum distance above the support line (for resistance line)
     let maxDistanceAbove = 0;
-    const extendedEndIndex = Math.min(data.length - 1, lowerEnd.index + 50);
+    const extendedEndIndex = Math.min(data.length - 1, endIndex + 50);
     const trendData = data.slice(firstBottomIndex, extendedEndIndex + 1);
 
     for (let i = 0; i < trendData.length; i++) {
       const point = trendData[i];
       const actualIndex = firstBottomIndex + i;
-      const indexOffset = actualIndex - lowerStart.index;
-      const expectedPrice = lowerStart.price + (lowerSlope * indexOffset);
+      const expectedPrice = slope * actualIndex + intercept;
       const distance = point.price - expectedPrice;
 
       if (distance > maxDistanceAbove) {
@@ -720,7 +713,7 @@ export function PricePerformanceChart({
 
     if (maxDistanceAbove === 0) return null;
 
-    // Upper trendline: parallel to lower, offset by maxDistance
+    // Upper resistance line: parallel to support
     const upperStart = {
       date: lowerStart.date,
       price: lowerStart.price + maxDistanceAbove,
@@ -745,71 +738,64 @@ export function PricePerformanceChart({
     const bottoms = turningPoints.filter(tp => tp.type === 'bottom');
     const peaks = turningPoints.filter(tp => tp.type === 'peak');
 
-    if (peaks.length < 2) return null; // Need at least 2 peaks for a trend
+    if (peaks.length < 2) return null;
 
-    // Find the most recent sequence of lower highs (downtrend)
-    const trendPeaks = [];
-    let currentPeak = peaks[peaks.length - 1];
-    trendPeaks.unshift(currentPeak);
+    // Take more peaks to capture bigger trend (up to 5 most recent peaks)
+    const numPeaksToUse = Math.min(5, peaks.length);
+    const trendPeaks = peaks.slice(-numPeaksToUse);
 
-    // Look backwards for peaks that are higher than current (creating lower highs pattern)
-    for (let i = peaks.length - 2; i >= 0; i--) {
-      const prevPeak = peaks[i];
-      if (prevPeak.price > currentPeak.price) {
-        trendPeaks.unshift(prevPeak);
-        currentPeak = prevPeak;
-      } else {
-        break; // Trend broken
-      }
-    }
+    // Use linear regression to find best-fit trendline through the peaks
+    const n = trendPeaks.length;
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
 
-    if (trendPeaks.length < 2) return null;
+    trendPeaks.forEach(peak => {
+      sumX += peak.index;
+      sumY += peak.price;
+      sumXY += peak.index * peak.price;
+      sumX2 += peak.index * peak.index;
+    });
 
-    // Get index range for this trend
+    // Calculate slope and intercept of best-fit line
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+
+    // Only proceed if slope is negative (downtrend)
+    if (slope >= 0) return null;
+
+    // Get start and end points for the trendline
     const firstPeakIndex = trendPeaks[0].index;
     const lastPeakIndex = trendPeaks[trendPeaks.length - 1].index;
 
-    // Upper trendline: connect first and last peak (resistance line)
-    const upperStart = {
-      date: trendPeaks[0].date,
-      price: trendPeaks[0].price,
-      index: trendPeaks[0].index
-    };
-    const upperEnd = {
-      date: trendPeaks[trendPeaks.length - 1].date,
-      price: trendPeaks[trendPeaks.length - 1].price,
-      index: trendPeaks[trendPeaks.length - 1].index
-    };
-
-    // Extend to current if price is still falling
+    // Extend the trendline to current if price is below the line
+    let endIndex = lastPeakIndex;
     const lastDataPoint = data[data.length - 1];
-    const expectedPriceAtEnd = upperStart.price +
-      ((upperEnd.price - upperStart.price) / (upperEnd.index - upperStart.index)) *
-      (lastPeakIndex - upperStart.index);
+    const currentExpectedPrice = slope * (data.length - 1) + intercept;
 
-    if (lastDataPoint && data.length - 1 > lastPeakIndex && lastDataPoint.price < expectedPriceAtEnd) {
-      upperEnd.date = lastDataPoint.date;
-      upperEnd.index = data.length - 1;
-      // Project the price along the trendline
-      upperEnd.price = upperStart.price +
-        ((trendPeaks[trendPeaks.length - 1].price - upperStart.price) /
-        (trendPeaks[trendPeaks.length - 1].index - upperStart.index)) *
-        (data.length - 1 - upperStart.index);
+    if (lastDataPoint && data.length - 1 > lastPeakIndex && lastDataPoint.price < currentExpectedPrice * 1.05) {
+      endIndex = data.length - 1;
     }
 
-    // Calculate slope of upper trendline
-    const upperSlope = (upperEnd.price - upperStart.price) / (upperEnd.index - upperStart.index);
+    // Calculate resistance line (upper bound)
+    const upperStart = {
+      date: trendPeaks[0].date,
+      price: slope * firstPeakIndex + intercept,
+      index: firstPeakIndex
+    };
+    const upperEnd = {
+      date: endIndex === data.length - 1 ? lastDataPoint.date : trendPeaks[trendPeaks.length - 1].date,
+      price: slope * endIndex + intercept,
+      index: endIndex
+    };
 
-    // Find maximum distance below the upper trendline (for lower channel line)
+    // Find maximum distance below the resistance line (for support line)
     let maxDistanceBelow = 0;
-    const extendedEndIndex = Math.min(data.length - 1, upperEnd.index + 50);
+    const extendedEndIndex = Math.min(data.length - 1, endIndex + 50);
     const trendData = data.slice(firstPeakIndex, extendedEndIndex + 1);
 
     for (let i = 0; i < trendData.length; i++) {
       const point = trendData[i];
       const actualIndex = firstPeakIndex + i;
-      const indexOffset = actualIndex - upperStart.index;
-      const expectedPrice = upperStart.price + (upperSlope * indexOffset);
+      const expectedPrice = slope * actualIndex + intercept;
       const distance = expectedPrice - point.price;
 
       if (distance > maxDistanceBelow) {
@@ -819,7 +805,7 @@ export function PricePerformanceChart({
 
     if (maxDistanceBelow === 0) return null;
 
-    // Lower trendline: parallel to upper, offset by maxDistance
+    // Lower support line: parallel to resistance
     const lowerStart = {
       date: upperStart.date,
       price: upperStart.price - maxDistanceBelow,
