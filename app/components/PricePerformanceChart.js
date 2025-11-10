@@ -43,6 +43,7 @@ export function PricePerformanceChart({
   const [dataOffset, setDataOffset] = useState(0); // Offset in days from most recent
   const [colorMode, setColorMode] = useState('default'); // 'default', 'rvi', or 'sma'
   const [smaPeriod, setSmaPeriod] = useState(20); // SMA period for peak/bottom mode
+  const [maxSmaGain, setMaxSmaGain] = useState({ gain: 0, period: 20, percentage: 0 }); // Track maximum gain
 
   // AI Analysis using custom hook
   const {
@@ -82,6 +83,11 @@ export function PricePerformanceChart({
   useEffect(() => {
     setDataOffset(0);
   }, [chartPeriod]);
+
+  // Reset max SMA gain when stock or period changes
+  useEffect(() => {
+    setMaxSmaGain({ gain: 0, period: 20, percentage: 0 });
+  }, [selectedStock?.code, chartPeriod]);
 
   // Helper to get period size in days
   const getPeriodDays = (period) => {
@@ -752,14 +758,25 @@ export function PricePerformanceChart({
           const smaAnalysis = detectTurningPoints(currentData);
           const startPrice = currentData.length > 0 ? currentData[0].price : 1;
           const gainPercentage = startPrice > 0 ? (smaAnalysis.totalGain / startPrice) * 100 : 0;
+
+          // Update max gain if current is higher
+          if (gainPercentage > maxSmaGain.percentage) {
+            setMaxSmaGain({ gain: smaAnalysis.totalGain, period: smaPeriod, percentage: gainPercentage });
+          }
+
           return (
             <div className="mb-3 px-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-xs font-semibold text-emerald-400">
                   📈 SMA Peak/Bottom Analysis (SMA Period: {smaPeriod})
                 </div>
-                <div className="text-xs font-bold text-emerald-300">
-                  Total Bottom-to-Peak Gain: {gainPercentage.toFixed(2)}% (${smaAnalysis.totalGain.toFixed(2)})
+                <div className="flex flex-col items-end gap-1">
+                  <div className="text-xs font-bold text-emerald-300">
+                    Current Gain: {gainPercentage.toFixed(2)}% (${smaAnalysis.totalGain.toFixed(2)})
+                  </div>
+                  <div className="text-xs font-semibold text-yellow-400">
+                    Max Gain: {maxSmaGain.percentage.toFixed(2)}% (${maxSmaGain.gain.toFixed(2)}) @ SMA {maxSmaGain.period}
+                  </div>
                 </div>
               </div>
               <div className="flex items-center gap-4 text-[10px] text-gray-400">
