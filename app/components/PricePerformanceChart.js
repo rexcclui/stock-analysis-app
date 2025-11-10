@@ -1700,33 +1700,6 @@ export function PricePerformanceChart({
                   </>
                 )}
 
-                {/* SMA Marker at Last Data Point */}
-                {colorMode === 'sma' && chartCompareStocks.length === 0 && multiData.length > 0 && (() => {
-                  // Find the last data point with a valid SMA value
-                  const lastPointWithSMA = [...multiData].reverse().find(point => point.sma !== null && point.sma !== undefined);
-
-                  if (!lastPointWithSMA) return null;
-
-                  return (
-                    <ReferenceDot
-                      key="sma-marker"
-                      x={lastPointWithSMA.date}
-                      y={lastPointWithSMA.sma}
-                      r={5}
-                      fill="#10b981"
-                      stroke="#ffffff"
-                      strokeWidth={2}
-                      label={{
-                        value: `SMA: $${lastPointWithSMA.sma.toFixed(2)}`,
-                        position: 'top',
-                        fill: '#10b981',
-                        fontSize: 10,
-                        fontWeight: 'bold'
-                      }}
-                    />
-                  );
-                })()}
-
                 {chartCompareStocks.length === 0 ? (
                   (colorMode === 'rvi' || colorMode === 'vspy') && rviSegments ? (
                     // RVI/VSPY Mode: Render colored segments that form a single continuous line
