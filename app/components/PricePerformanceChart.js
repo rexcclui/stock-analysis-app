@@ -1149,63 +1149,6 @@ export function PricePerformanceChart({
           </div>
         )}
 
-        {/* SMA Peak/Bottom Info Display */}
-        {colorMode === 'sma' && chartCompareStocks.length === 0 && selectedStock && (() => {
-          const currentData = getCurrentDataSlice();
-          const smaAnalysis = detectTurningPoints(currentData);
-          const startPrice = currentData.length > 0 ? currentData[0].price : 1;
-          const endPrice = currentData.length > 0 ? currentData[currentData.length - 1].price : 1;
-          const gainPercentage = startPrice > 0 ? (smaAnalysis.totalGain / startPrice) * 100 : 0;
-          const marketChange = startPrice > 0 ? ((endPrice - startPrice) / startPrice) * 100 : 0;
-          const marketChangeAmount = endPrice - startPrice;
-
-          // Update max gain if current is higher
-          if (gainPercentage > maxSmaGain.percentage) {
-            setMaxSmaGain({ gain: smaAnalysis.totalGain, period: smaPeriod, percentage: gainPercentage });
-          }
-
-          return (
-            <div className="mb-3 px-4">
-              <div className="flex items-center justify-between mb-2">
-                <div className="text-xs font-semibold text-emerald-400">
-                  📈 SMA Peak/Bottom Analysis (SMA Period: {smaPeriod})
-                </div>
-                <div className="flex flex-col items-end gap-1">
-                  <div
-                    className="text-xs font-bold"
-                    style={{ color: gainPercentage > marketChange ? '#22c55e' : '#ef4444' }}
-                  >
-                    Current Gain: {gainPercentage.toFixed(2)}% (${smaAnalysis.totalGain.toFixed(2)})
-                  </div>
-                  <div className={`text-xs font-semibold ${marketChange >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
-                    Market Change: {marketChange >= 0 ? '+' : ''}{marketChange.toFixed(2)}% (${marketChangeAmount >= 0 ? '+' : ''}${marketChangeAmount.toFixed(2)})
-                  </div>
-                  <div
-                    className="text-xs font-semibold text-yellow-400 cursor-pointer hover:text-yellow-300 transition"
-                    onClick={() => setSmaPeriod(maxSmaGain.period)}
-                    title="Click to set SMA slider to this period"
-                  >
-                    Max Gain: {maxSmaGain.percentage.toFixed(2)}% (${maxSmaGain.gain.toFixed(2)}) @ SMA {maxSmaGain.period}
-                  </div>
-                </div>
-              </div>
-              <div className="flex items-center gap-4 text-[10px] text-gray-400">
-                <div className="flex items-center gap-1">
-                  <div className="w-4 h-2 bg-blue-400 rounded"></div>
-                  <span>Uptrend (Bottom to Peak)</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-4 h-2 bg-gray-400 rounded"></div>
-                  <span>Downtrend (Peak to Bottom)</span>
-                </div>
-                <div className="text-gray-500 italic">
-                  {smaAnalysis.turningPoints.length} turning points detected
-                </div>
-              </div>
-            </div>
-          );
-        })()}
-
         {/* Cycle Timeline Visualization */}
         {showCycleAnalysis && cycleAnalysis && cycleAnalysis.cycles && (() => {
           // Get current visible data slice
