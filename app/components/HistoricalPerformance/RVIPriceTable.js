@@ -145,6 +145,14 @@ export default function RVIPriceTable({ historicalData }) {
       <div className="flex items-center gap-4">
         <label className="text-gray-300 font-medium">Period Length (N days):</label>
         <div className="flex items-center gap-3 flex-1 max-w-md">
+          <button
+            onClick={() => setNDays(Math.max(3, nDays - 1))}
+            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={nDays <= 3}
+            title="Decrease by 1 day"
+          >
+            −
+          </button>
           <span className="text-gray-400 text-sm">3</span>
           <input
             type="range"
@@ -159,6 +167,14 @@ export default function RVIPriceTable({ historicalData }) {
             }}
           />
           <span className="text-gray-400 text-sm">60</span>
+          <button
+            onClick={() => setNDays(Math.min(60, nDays + 1))}
+            className="px-3 py-1 bg-blue-600 hover:bg-blue-700 text-white rounded-lg font-bold text-lg transition disabled:opacity-50 disabled:cursor-not-allowed"
+            disabled={nDays >= 60}
+            title="Increase by 1 day"
+          >
+            +
+          </button>
           <span className="text-green-400 font-bold text-lg min-w-[3rem] text-center">
             {nDays}d
           </span>
