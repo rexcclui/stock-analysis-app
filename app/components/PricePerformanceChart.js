@@ -809,24 +809,23 @@ export function PricePerformanceChart({
           {chartCompareStocks.length === 0 && selectedStock && (
             <button
               onClick={() => {
-                if (colorMode === 'default') {
+                if (colorMode === 'default' || colorMode === 'sma') {
                   setColorMode('rvi');
                 } else if (colorMode === 'rvi') {
                   setColorMode('vspy');
-                } else if (colorMode === 'vspy') {
-                  setColorMode('default');
                 } else {
                   setColorMode('default');
                 }
               }}
               className="px-3 py-2 rounded-lg text-xs font-medium transition"
               style={{
-                backgroundColor: colorMode === 'rvi' || colorMode === 'vspy' ? '#EAB308' : colorMode === 'sma' ? '#047857' : '#374151',
-                color: colorMode === 'rvi' || colorMode === 'vspy' ? '#111827' : '#FFFFFF'
+                backgroundColor: colorMode === 'rvi' || colorMode === 'vspy' ? '#FBBF24' : '#374151',
+                color: colorMode === 'rvi' || colorMode === 'vspy' ? '#000000' : '#D1D5DB',
+                fontWeight: 'bold'
               }}
-              title={colorMode === 'rvi' ? 'Switch to VSPY coloring' : colorMode === 'vspy' ? 'Switch to default' : colorMode === 'sma' ? 'Disable coloring' : 'Enable RVI coloring'}
+              title={colorMode === 'rvi' ? 'Switch to VSPY coloring' : colorMode === 'vspy' ? 'Switch to Color OFF' : 'Enable RVI coloring'}
             >
-              {colorMode === 'rvi' ? 'RVI' : colorMode === 'vspy' ? 'VSPY' : colorMode === 'sma' ? 'SMA P/B: ON' : 'Color: OFF'}
+              {colorMode === 'rvi' ? 'RVI' : colorMode === 'vspy' ? 'VSPY' : 'Color: OFF'}
             </button>
           )}
 
