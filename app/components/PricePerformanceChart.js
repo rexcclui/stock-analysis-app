@@ -46,6 +46,8 @@ export function PricePerformanceChart({
   const [spyLoading, setSpyLoading] = useState(false); // Loading state for SPY data
   const [smaPeriod, setSmaPeriod] = useState(20); // SMA period for peak/bottom mode
   const [maxSmaGain, setMaxSmaGain] = useState({ gain: 0, period: 20, percentage: 0 }); // Track maximum gain
+  const [isSimulating, setIsSimulating] = useState(false); // Simulation running state
+  const [simulationResults, setSimulationResults] = useState([]); // Track all simulation results
 
   // AI Analysis using custom hook
   const {
@@ -601,6 +603,66 @@ export function PricePerformanceChart({
     return slicedData;
   };
 
+  // Run simulation to find optimal SMA period
+  const runSimulation = async () => {
+    if (isSimulating) return; // Prevent multiple simultaneous simulations
+
+    setIsSimulating(true);
+    setSimulationResults([]);
+    setMaxSmaGain({ gain: 0, period: 20, percentage: 0 }); // Reset max gain
+
+    const results = [];
+    let bestResult = { gain: 0, period: 20, percentage: 0 };
+
+    // Iterate through SMA periods from 5 to 100
+    for (let period = 5; period <= 100; period++) {
+      // Update the SMA period
+      setSmaPeriod(period);
+
+      // Small delay to allow UI to update and show progress
+      await new Promise(resolve => setTimeout(resolve, 50));
+
+      // Calculate gain for this period
+      // We need to get the data with this SMA period
+      const periodDays = getPeriodDays(chartPeriod);
+      const totalDays = fullHistoricalData.length;
+      const endIndex = totalDays - dataOffset;
+      const startIndex = Math.max(0, endIndex - periodDays);
+      const slicedData = fullHistoricalData.slice(startIndex, endIndex).map(d => ({
+        date: formatChartDate(d.date, chartPeriod),
+        price: d.price,
+        volume: d.volume || 0
+      }));
+
+      const dataWithSMA = calculateSMA(slicedData, period);
+      const smaAnalysis = detectTurningPoints(dataWithSMA);
+      const startPrice = dataWithSMA.length > 0 ? dataWithSMA[0].price : 1;
+      const gainPercentage = startPrice > 0 ? (smaAnalysis.totalGain / startPrice) * 100 : 0;
+
+      const result = {
+        period,
+        gain: smaAnalysis.totalGain,
+        percentage: gainPercentage
+      };
+
+      results.push(result);
+
+      // Track best result
+      if (gainPercentage > bestResult.percentage) {
+        bestResult = result;
+        setMaxSmaGain(result);
+      }
+    }
+
+    setSimulationResults(results);
+    setIsSimulating(false);
+
+    // Set the slider to the best result
+    if (bestResult.period) {
+      setSmaPeriod(bestResult.period);
+    }
+  };
+
   const handleWheel = useCallback((e) => {
     e.preventDefault();
     e.stopPropagation();
@@ -871,6 +933,18 @@ export function PricePerformanceChart({
                 title="Increment SMA period"
               >
                 +
+              </button>
+              <button
+                onClick={runSimulation}
+                disabled={isSimulating}
+                className={`px-3 py-1 rounded text-xs font-bold transition ${
+                  isSimulating
+                    ? 'bg-gray-500 text-gray-300 cursor-not-allowed'
+                    : 'bg-emerald-600 hover:bg-emerald-500 text-white'
+                }`}
+                title={isSimulating ? 'Simulation in progress...' : 'Run simulation to find optimal SMA period'}
+              >
+                {isSimulating ? 'Simulating...' : 'Simulate'}
               </button>
             </div>
           )}
