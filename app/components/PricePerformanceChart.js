@@ -41,7 +41,8 @@ export function PricePerformanceChart({
   const chartData = useMemo(() => selectedStock?.chartData?.[chartPeriod] || [], [selectedStock, chartPeriod]);
   const fullHistoricalData = useMemo(() => selectedStock?.chartData?.fullHistorical || [], [selectedStock]);
   const [dataOffset, setDataOffset] = useState(0); // Offset in days from most recent
-  const [colorMode, setColorMode] = useState('default'); // 'default' or 'rvi'
+  const [colorMode, setColorMode] = useState('default'); // 'default', 'rvi', or 'sma'
+  const [smaPeriod, setSmaPeriod] = useState(20); // SMA period for peak/bottom mode
 
   // AI Analysis using custom hook
   const {
@@ -210,6 +211,81 @@ export function PricePerformanceChart({
     return { data: enhancedData, colorMap, maxSegmentId };
   };
 
+  // Calculate SMA (Simple Moving Average) for price data
+  const calculateSMA = (data, period) => {
+    if (!data || data.length === 0) return data;
+
+    return data.map((point, idx) => {
+      if (idx < period - 1) {
+        return { ...point, sma: null, smaSlope: null };
+      }
+
+      // Calculate SMA for the current window
+      const windowData = data.slice(idx - period + 1, idx + 1);
+      const sma = windowData.reduce((sum, d) => sum + (d.price || 0), 0) / period;
+
+      // Calculate slope (derivative) of SMA
+      let smaSlope = null;
+      if (idx >= period) {
+        const prevWindowData = data.slice(idx - period, idx);
+        const prevSma = prevWindowData.reduce((sum, d) => sum + (d.price || 0), 0) / period;
+        smaSlope = sma - prevSma;
+      }
+
+      return { ...point, sma, smaSlope };
+    });
+  };
+
+  // Detect turning points (peaks and bottoms) in SMA and calculate price differences
+  const detectTurningPoints = (data) => {
+    if (!data || data.length === 0) return { data, turningPoints: [], totalGain: 0 };
+
+    const turningPoints = [];
+    let lastBottom = null;
+    let totalGain = 0;
+
+    // Detect turning points where slope changes sign
+    for (let i = 1; i < data.length; i++) {
+      const curr = data[i];
+      const prev = data[i - 1];
+
+      if (!curr.smaSlope || !prev.smaSlope) continue;
+
+      // Bottom: slope changes from negative to positive
+      if (prev.smaSlope < 0 && curr.smaSlope >= 0) {
+        const turningPoint = {
+          index: i,
+          date: curr.date,
+          price: curr.price,
+          type: 'bottom'
+        };
+        turningPoints.push(turningPoint);
+        lastBottom = turningPoint;
+      }
+
+      // Peak: slope changes from positive to negative
+      if (prev.smaSlope > 0 && curr.smaSlope <= 0) {
+        const turningPoint = {
+          index: i,
+          date: curr.date,
+          price: curr.price,
+          type: 'peak'
+        };
+        turningPoints.push(turningPoint);
+
+        // Calculate gain from last bottom to this peak
+        if (lastBottom) {
+          const gain = turningPoint.price - lastBottom.price;
+          totalGain += gain;
+          turningPoint.gain = gain;
+          lastBottom = null;
+        }
+      }
+    }
+
+    return { data, turningPoints, totalGain };
+  };
+
   // Get current data slice based on offset and period
   const getCurrentDataSlice = () => {
     if (fullHistoricalData.length === 0) {
@@ -233,6 +309,11 @@ export function PricePerformanceChart({
     // Apply RVI calculation if in RVI color mode
     if (colorMode === 'rvi') {
       return calculateRVI(slicedData, chartPeriod);
+    }
+
+    // Apply SMA calculation if in SMA mode
+    if (colorMode === 'sma') {
+      return calculateSMA(slicedData, smaPeriod);
     }
 
     return slicedData;
@@ -457,6 +538,37 @@ export function PricePerformanceChart({
             </button>
           )}
 
+          {/* SMA Peak/Bottom Mode Toggle */}
+          {chartCompareStocks.length === 0 && selectedStock && (
+            <button
+              onClick={() => setColorMode(colorMode === 'default' ? 'sma' : 'default')}
+              className={`px-3 py-2 rounded-lg text-xs font-medium transition ${
+                colorMode === 'sma'
+                  ? 'bg-emerald-700 hover:bg-emerald-600 text-white'
+                  : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+              }`}
+              title={colorMode === 'sma' ? 'Disable SMA Peak/Bottom mode' : 'Enable SMA Peak/Bottom mode'}
+            >
+              {colorMode === 'sma' ? 'SMA P/B: ON' : 'SMA P/B: OFF'}
+            </button>
+          )}
+
+          {/* SMA Period Slider */}
+          {colorMode === 'sma' && chartCompareStocks.length === 0 && selectedStock && (
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-300 font-medium">SMA: {smaPeriod}</label>
+              <input
+                type="range"
+                min="5"
+                max="100"
+                value={smaPeriod}
+                onChange={(e) => setSmaPeriod(parseInt(e.target.value))}
+                className="w-24 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                title={`SMA Period: ${smaPeriod} days`}
+              />
+            </div>
+          )}
+
           <div className="flex items-center" style={{ marginLeft: '12px' }}>
             <input
               type="text"
@@ -585,6 +697,37 @@ export function PricePerformanceChart({
             </div>
           </div>
         )}
+
+        {/* SMA Peak/Bottom Info Display */}
+        {colorMode === 'sma' && chartCompareStocks.length === 0 && selectedStock && (() => {
+          const currentData = getCurrentDataSlice();
+          const smaAnalysis = detectTurningPoints(currentData);
+          return (
+            <div className="mb-3 px-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-xs font-semibold text-emerald-400">
+                  📈 SMA Peak/Bottom Analysis (SMA Period: {smaPeriod})
+                </div>
+                <div className="text-xs font-bold text-emerald-300">
+                  Total Bottom-to-Peak Gain: ${smaAnalysis.totalGain.toFixed(2)}
+                </div>
+              </div>
+              <div className="flex items-center gap-4 text-[10px] text-gray-400">
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                  <span>Bottom (Uptrend Start)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <span>Peak (Downtrend Start)</span>
+                </div>
+                <div className="text-gray-500 italic">
+                  {smaAnalysis.turningPoints.length} turning points detected
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Cycle Timeline Visualization */}
         {showCycleAnalysis && cycleAnalysis && cycleAnalysis.cycles && (() => {
@@ -1019,6 +1162,38 @@ export function PricePerformanceChart({
                     })}
                   </>
                 )}
+
+                {/* SMA Peak/Bottom Markers */}
+                {colorMode === 'sma' && chartCompareStocks.length === 0 && multiData.length > 0 && (() => {
+                  const smaAnalysis = detectTurningPoints(multiData);
+                  return (
+                    <>
+                      {smaAnalysis.turningPoints.map((point, idx) => (
+                        <ReferenceDot
+                          key={`sma-turning-${idx}`}
+                          x={point.date}
+                          y={point.price}
+                          r={7}
+                          fill={point.type === 'bottom' ? '#10b981' : '#ef4444'}
+                          stroke="#ffffff"
+                          strokeWidth={2}
+                          label={{
+                            value: point.type === 'bottom'
+                              ? `B $${point.price.toFixed(2)}`
+                              : point.gain
+                                ? `P $${point.price.toFixed(2)} (+$${point.gain.toFixed(2)})`
+                                : `P $${point.price.toFixed(2)}`,
+                            position: point.type === 'bottom' ? 'bottom' : 'top',
+                            fill: point.type === 'bottom' ? '#10b981' : '#ef4444',
+                            fontSize: 9,
+                            fontWeight: 'bold'
+                          }}
+                        />
+                      ))}
+                    </>
+                  );
+                })()}
+
                 {chartCompareStocks.length === 0 ? (
                   colorMode === 'rvi' && rviSegments ? (
                     // RVI Mode: Render colored segments that form a single continuous line
