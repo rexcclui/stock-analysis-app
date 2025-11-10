@@ -2,10 +2,15 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { getCache, setCache } from '@/lib/cache';
 
-// Initialize OpenAI client
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY,
-});
+// Lazy initialization of OpenAI client to avoid build-time errors
+function getOpenAIClient() {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY not configured');
+  }
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+  });
+}
 
 // Cache TTL for AI analysis: 4 hours (240 minutes)
 const AI_ANALYSIS_CACHE_TTL = 240;
@@ -120,6 +125,7 @@ Provide ONLY the JSON response, no additional text.`;
     console.log(`[AI News Analysis] Analyzing ${allNews.length} articles for ${symbol}`);
 
     // Call OpenAI API
+    const openai = getOpenAIClient();
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
       max_tokens: 2000,

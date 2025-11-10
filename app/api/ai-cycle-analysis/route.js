@@ -2,9 +2,15 @@ import { NextResponse } from 'next/server';
 import OpenAI from 'openai';
 import { getCache, setCache } from '../../../lib/cache';
 
-const openai = new OpenAI({
-  apiKey: process.env.OPENAI_API_KEY
-});
+// Lazy initialization of OpenAI client to avoid build-time errors
+function getOpenAIClient() {
+  if (!process.env.OPENAI_API_KEY) {
+    throw new Error('OPENAI_API_KEY not configured');
+  }
+  return new OpenAI({
+    apiKey: process.env.OPENAI_API_KEY
+  });
+}
 
 export async function POST(request) {
   try {
@@ -141,6 +147,7 @@ Please analyze this data to identify trend cycles, their characteristics, and pr
     // Call OpenAI API
     console.log(`AI Cycle Analysis: Analyzing ${symbol} with ${dataLength} data points`);
 
+    const openai = getOpenAIClient();
     const completion = await openai.chat.completions.create({
       model: 'gpt-4o',
       messages: [
