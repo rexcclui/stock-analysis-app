@@ -984,7 +984,7 @@ export function PricePerformanceChart({
               }}
               title={colorMode === 'rvi' ? 'Switch to VSPY coloring' : colorMode === 'vspy' ? 'Switch to Color OFF' : 'Enable RVI coloring'}
             >
-              {colorMode === 'rvi' ? 'RVI' : colorMode === 'vspy' ? 'VSPY' : 'Color: OFF'}
+              {colorMode === 'rvi' ? 'RVI' : colorMode === 'vspy' ? 'VSPY' : 'Color'}
             </button>
           )}
 
@@ -1000,7 +1000,7 @@ export function PricePerformanceChart({
               }}
               title={colorMode === 'sma' ? 'Disable SMA Peak/Bottom mode' : 'Enable SMA Peak/Bottom mode'}
             >
-              {colorMode === 'sma' ? 'SMA P/B' : 'SMA P/B: OFF'}
+              SMA P/B
             </button>
           )}
 
@@ -1016,7 +1016,7 @@ export function PricePerformanceChart({
               }}
               title={colorMode === 'volumeBar' ? 'Disable Volume Bar mode' : 'Enable Volume Bar mode'}
             >
-              {colorMode === 'volumeBar' ? 'Vol Bar' : 'Vol Bar: OFF'}
+              Vol Bar
             </button>
           )}
 
