@@ -643,95 +643,98 @@ export function PricePerformanceChart({
   const calculateUptrendChannel = (data, turningPoints) => {
     if (!data || data.length === 0 || !turningPoints || turningPoints.length === 0) return null;
 
-    // Find the last uptrend: from a bottom to a peak that comes after it
     const bottoms = turningPoints.filter(tp => tp.type === 'bottom');
     const peaks = turningPoints.filter(tp => tp.type === 'peak');
 
-    if (bottoms.length === 0) return null;
+    if (bottoms.length < 2) return null; // Need at least 2 bottoms for a trend
 
-    // Find the last bottom that has a peak after it, OR is currently in an uptrend
-    let trendBottom = null;
-    let trendPeak = null;
+    // Find the most recent sequence of higher lows (uptrend)
+    const trendBottoms = [];
+    let currentBottom = bottoms[bottoms.length - 1];
+    trendBottoms.unshift(currentBottom);
 
-    // Start from the most recent bottom and work backwards
-    for (let i = bottoms.length - 1; i >= 0; i--) {
-      const bottom = bottoms[i];
-      // Find if there's a peak after this bottom
-      const peakAfter = peaks.find(p => p.index > bottom.index);
-
-      if (peakAfter) {
-        // Found a bottom->peak pair, this is an uptrend
-        trendBottom = bottom;
-        trendPeak = peakAfter;
-        break;
-      } else if (i === bottoms.length - 1) {
-        // This is the most recent bottom with no peak after
-        // Check if we're currently above this bottom (potential ongoing uptrend)
-        const currentPrice = data[data.length - 1]?.price;
-        if (currentPrice && currentPrice > bottom.price) {
-          trendBottom = bottom;
-          trendPeak = null; // Ongoing uptrend to current price
-          break;
-        }
+    // Look backwards for bottoms that are lower than current (creating higher lows pattern)
+    for (let i = bottoms.length - 2; i >= 0; i--) {
+      const prevBottom = bottoms[i];
+      if (prevBottom.price < currentBottom.price) {
+        trendBottoms.unshift(prevBottom);
+        currentBottom = prevBottom;
+      } else {
+        break; // Trend broken
       }
     }
 
-    if (!trendBottom) return null;
+    if (trendBottoms.length < 2) return null;
 
-    // Determine trend end point
-    const endPoint = trendPeak || data[data.length - 1];
-    const endIndex = trendPeak ? trendPeak.index : data.length - 1;
+    // Get index range for this trend
+    const firstBottomIndex = trendBottoms[0].index;
+    const lastBottomIndex = trendBottoms[trendBottoms.length - 1].index;
 
-    // Get data points in the uptrend
-    const trendData = data.slice(trendBottom.index, endIndex + 1);
-    if (trendData.length < 2) return null;
-
-    // Verify this is actually going upward
-    if (endPoint.price <= trendBottom.price) return null;
-
-    // Find the main trend line (bottom to peak/current)
-    const startPoint = { date: trendBottom.date, price: trendBottom.price, index: trendBottom.index };
-    const endPointData = { date: endPoint.date, price: endPoint.price, index: endIndex };
-
-    // Find the point furthest below the main trend line to define channel width
-    let maxDistance = 0;
-    let parallelPoint = null;
-
-    trendData.forEach((point, idx) => {
-      const actualIndex = trendBottom.index + idx;
-      const progress = (actualIndex - startPoint.index) / (endPointData.index - startPoint.index);
-      const trendLinePrice = startPoint.price + progress * (endPointData.price - startPoint.price);
-      const distance = trendLinePrice - point.price;
-
-      if (distance > maxDistance) {
-        maxDistance = distance;
-        parallelPoint = { ...point, index: actualIndex };
-      }
-    });
-
-    if (!parallelPoint || maxDistance === 0) {
-      // No parallel needed, just return the main trend line
-      return {
-        mainLine: { start: startPoint, end: endPointData },
-        parallelLine: null
-      };
-    }
-
-    // Create parallel line below the main trend line
-    const parallelStart = {
-      date: startPoint.date,
-      price: startPoint.price - maxDistance,
-      index: startPoint.index
+    // Lower trendline: connect first and last bottom (support line)
+    const lowerStart = {
+      date: trendBottoms[0].date,
+      price: trendBottoms[0].price,
+      index: trendBottoms[0].index
     };
-    const parallelEnd = {
-      date: endPointData.date,
-      price: endPointData.price - maxDistance,
-      index: endPointData.index
+    const lowerEnd = {
+      date: trendBottoms[trendBottoms.length - 1].date,
+      price: trendBottoms[trendBottoms.length - 1].price,
+      index: trendBottoms[trendBottoms.length - 1].index
+    };
+
+    // Extend to current if price is still rising
+    const lastDataPoint = data[data.length - 1];
+    const expectedPriceAtEnd = lowerStart.price +
+      ((lowerEnd.price - lowerStart.price) / (lowerEnd.index - lowerStart.index)) *
+      (lastBottomIndex - lowerStart.index);
+
+    if (lastDataPoint && data.length - 1 > lastBottomIndex && lastDataPoint.price > expectedPriceAtEnd) {
+      lowerEnd.date = lastDataPoint.date;
+      lowerEnd.index = data.length - 1;
+      // Project the price along the trendline
+      lowerEnd.price = lowerStart.price +
+        ((trendBottoms[trendBottoms.length - 1].price - lowerStart.price) /
+        (trendBottoms[trendBottoms.length - 1].index - lowerStart.index)) *
+        (data.length - 1 - lowerStart.index);
+    }
+
+    // Calculate slope of lower trendline
+    const lowerSlope = (lowerEnd.price - lowerStart.price) / (lowerEnd.index - lowerStart.index);
+
+    // Find maximum distance above the lower trendline (for upper channel line)
+    let maxDistanceAbove = 0;
+    const extendedEndIndex = Math.min(data.length - 1, lowerEnd.index + 50);
+    const trendData = data.slice(firstBottomIndex, extendedEndIndex + 1);
+
+    for (let i = 0; i < trendData.length; i++) {
+      const point = trendData[i];
+      const actualIndex = firstBottomIndex + i;
+      const indexOffset = actualIndex - lowerStart.index;
+      const expectedPrice = lowerStart.price + (lowerSlope * indexOffset);
+      const distance = point.price - expectedPrice;
+
+      if (distance > maxDistanceAbove) {
+        maxDistanceAbove = distance;
+      }
+    }
+
+    if (maxDistanceAbove === 0) return null;
+
+    // Upper trendline: parallel to lower, offset by maxDistance
+    const upperStart = {
+      date: lowerStart.date,
+      price: lowerStart.price + maxDistanceAbove,
+      index: lowerStart.index
+    };
+    const upperEnd = {
+      date: lowerEnd.date,
+      price: lowerEnd.price + maxDistanceAbove,
+      index: lowerEnd.index
     };
 
     return {
-      mainLine: { start: startPoint, end: endPointData },
-      parallelLine: { start: parallelStart, end: parallelEnd }
+      mainLine: { start: lowerStart, end: lowerEnd },      // Lower support line
+      parallelLine: { start: upperStart, end: upperEnd }   // Upper resistance line
     };
   };
 
@@ -739,95 +742,98 @@ export function PricePerformanceChart({
   const calculateDowntrendChannel = (data, turningPoints) => {
     if (!data || data.length === 0 || !turningPoints || turningPoints.length === 0) return null;
 
-    // Find the last downtrend: from a peak to a bottom that comes after it
     const bottoms = turningPoints.filter(tp => tp.type === 'bottom');
     const peaks = turningPoints.filter(tp => tp.type === 'peak');
 
-    if (peaks.length === 0) return null;
+    if (peaks.length < 2) return null; // Need at least 2 peaks for a trend
 
-    // Find the last peak that has a bottom after it, OR is currently in a downtrend
-    let trendPeak = null;
-    let trendBottom = null;
+    // Find the most recent sequence of lower highs (downtrend)
+    const trendPeaks = [];
+    let currentPeak = peaks[peaks.length - 1];
+    trendPeaks.unshift(currentPeak);
 
-    // Start from the most recent peak and work backwards
-    for (let i = peaks.length - 1; i >= 0; i--) {
-      const peak = peaks[i];
-      // Find if there's a bottom after this peak
-      const bottomAfter = bottoms.find(b => b.index > peak.index);
-
-      if (bottomAfter) {
-        // Found a peak->bottom pair, this is a downtrend
-        trendPeak = peak;
-        trendBottom = bottomAfter;
-        break;
-      } else if (i === peaks.length - 1) {
-        // This is the most recent peak with no bottom after
-        // Check if we're currently below this peak (potential ongoing downtrend)
-        const currentPrice = data[data.length - 1]?.price;
-        if (currentPrice && currentPrice < peak.price) {
-          trendPeak = peak;
-          trendBottom = null; // Ongoing downtrend to current price
-          break;
-        }
+    // Look backwards for peaks that are higher than current (creating lower highs pattern)
+    for (let i = peaks.length - 2; i >= 0; i--) {
+      const prevPeak = peaks[i];
+      if (prevPeak.price > currentPeak.price) {
+        trendPeaks.unshift(prevPeak);
+        currentPeak = prevPeak;
+      } else {
+        break; // Trend broken
       }
     }
 
-    if (!trendPeak) return null;
+    if (trendPeaks.length < 2) return null;
 
-    // Determine trend end point
-    const endPoint = trendBottom || data[data.length - 1];
-    const endIndex = trendBottom ? trendBottom.index : data.length - 1;
+    // Get index range for this trend
+    const firstPeakIndex = trendPeaks[0].index;
+    const lastPeakIndex = trendPeaks[trendPeaks.length - 1].index;
 
-    // Get data points in the downtrend
-    const trendData = data.slice(trendPeak.index, endIndex + 1);
-    if (trendData.length < 2) return null;
-
-    // Verify this is actually going downward
-    if (endPoint.price >= trendPeak.price) return null;
-
-    // Find the main trend line (peak to bottom/current)
-    const startPoint = { date: trendPeak.date, price: trendPeak.price, index: trendPeak.index };
-    const endPointData = { date: endPoint.date, price: endPoint.price, index: endIndex };
-
-    // Find the point furthest above the main trend line to define channel width
-    let maxDistance = 0;
-    let parallelPoint = null;
-
-    trendData.forEach((point, idx) => {
-      const actualIndex = trendPeak.index + idx;
-      const progress = (actualIndex - startPoint.index) / (endPointData.index - startPoint.index);
-      const trendLinePrice = startPoint.price + progress * (endPointData.price - startPoint.price);
-      const distance = point.price - trendLinePrice;
-
-      if (distance > maxDistance) {
-        maxDistance = distance;
-        parallelPoint = { ...point, index: actualIndex };
-      }
-    });
-
-    if (!parallelPoint || maxDistance === 0) {
-      // No parallel needed, just return the main trend line
-      return {
-        mainLine: { start: startPoint, end: endPointData },
-        parallelLine: null
-      };
-    }
-
-    // Create parallel line above the main trend line
-    const parallelStart = {
-      date: startPoint.date,
-      price: startPoint.price + maxDistance,
-      index: startPoint.index
+    // Upper trendline: connect first and last peak (resistance line)
+    const upperStart = {
+      date: trendPeaks[0].date,
+      price: trendPeaks[0].price,
+      index: trendPeaks[0].index
     };
-    const parallelEnd = {
-      date: endPointData.date,
-      price: endPointData.price + maxDistance,
-      index: endPointData.index
+    const upperEnd = {
+      date: trendPeaks[trendPeaks.length - 1].date,
+      price: trendPeaks[trendPeaks.length - 1].price,
+      index: trendPeaks[trendPeaks.length - 1].index
+    };
+
+    // Extend to current if price is still falling
+    const lastDataPoint = data[data.length - 1];
+    const expectedPriceAtEnd = upperStart.price +
+      ((upperEnd.price - upperStart.price) / (upperEnd.index - upperStart.index)) *
+      (lastPeakIndex - upperStart.index);
+
+    if (lastDataPoint && data.length - 1 > lastPeakIndex && lastDataPoint.price < expectedPriceAtEnd) {
+      upperEnd.date = lastDataPoint.date;
+      upperEnd.index = data.length - 1;
+      // Project the price along the trendline
+      upperEnd.price = upperStart.price +
+        ((trendPeaks[trendPeaks.length - 1].price - upperStart.price) /
+        (trendPeaks[trendPeaks.length - 1].index - upperStart.index)) *
+        (data.length - 1 - upperStart.index);
+    }
+
+    // Calculate slope of upper trendline
+    const upperSlope = (upperEnd.price - upperStart.price) / (upperEnd.index - upperStart.index);
+
+    // Find maximum distance below the upper trendline (for lower channel line)
+    let maxDistanceBelow = 0;
+    const extendedEndIndex = Math.min(data.length - 1, upperEnd.index + 50);
+    const trendData = data.slice(firstPeakIndex, extendedEndIndex + 1);
+
+    for (let i = 0; i < trendData.length; i++) {
+      const point = trendData[i];
+      const actualIndex = firstPeakIndex + i;
+      const indexOffset = actualIndex - upperStart.index;
+      const expectedPrice = upperStart.price + (upperSlope * indexOffset);
+      const distance = expectedPrice - point.price;
+
+      if (distance > maxDistanceBelow) {
+        maxDistanceBelow = distance;
+      }
+    }
+
+    if (maxDistanceBelow === 0) return null;
+
+    // Lower trendline: parallel to upper, offset by maxDistance
+    const lowerStart = {
+      date: upperStart.date,
+      price: upperStart.price - maxDistanceBelow,
+      index: upperStart.index
+    };
+    const lowerEnd = {
+      date: upperEnd.date,
+      price: upperEnd.price - maxDistanceBelow,
+      index: upperEnd.index
     };
 
     return {
-      mainLine: { start: startPoint, end: endPointData },
-      parallelLine: { start: parallelStart, end: parallelEnd }
+      mainLine: { start: upperStart, end: upperEnd },      // Upper resistance line
+      parallelLine: { start: lowerStart, end: lowerEnd }   // Lower support line
     };
   };
 
