@@ -296,6 +296,56 @@ export function PricePerformanceChart({
     }
   };
 
+  // Map VSPY value to color with 21 levels for more granular visualization
+  const getVspyColor = (vspy) => {
+    // VSPY < 1 = underperforming SPY (light blues/reds)
+    // VSPY = 1 = matching SPY (standard blue)
+    // VSPY > 1 = outperforming SPY (deep blues/purples/pinks)
+    if (vspy < 0.3) {
+      return '#FCA5A5'; // Light red (severe underperformance)
+    } else if (vspy < 0.4) {
+      return '#F87171'; // Red (strong underperformance)
+    } else if (vspy < 0.5) {
+      return '#EF4444'; // Medium red (underperformance)
+    } else if (vspy < 0.6) {
+      return '#FDE68A'; // Light yellow (moderate underperformance)
+    } else if (vspy < 0.7) {
+      return '#FCD34D'; // Yellow (slight underperformance)
+    } else if (vspy < 0.8) {
+      return '#DBEAFE'; // Very light blue
+    } else if (vspy < 0.85) {
+      return '#BFDBFE'; // Extra light blue
+    } else if (vspy < 0.9) {
+      return '#93C5FD'; // Light blue
+    } else if (vspy < 0.95) {
+      return '#60A5FA'; // Medium-light blue
+    } else if (vspy < 1.0) {
+      return '#3B82F6'; // Standard blue (slightly below SPY)
+    } else if (vspy < 1.05) {
+      return '#2563EB'; // Medium blue (slightly above SPY)
+    } else if (vspy < 1.1) {
+      return '#1D4ED8'; // Medium-deep blue
+    } else if (vspy < 1.2) {
+      return '#1E40AF'; // Deep blue
+    } else if (vspy < 1.3) {
+      return '#1E3A8A'; // Very deep blue
+    } else if (vspy < 1.5) {
+      return '#172554'; // Darkest blue
+    } else if (vspy < 1.8) {
+      return '#312E81'; // Blue-purple transition
+    } else if (vspy < 2.0) {
+      return '#4C1D95'; // Purple (strong outperformance)
+    } else if (vspy < 2.5) {
+      return '#6B21A8'; // Deep purple
+    } else if (vspy < 3.0) {
+      return '#A21CAF'; // Magenta-purple
+    } else if (vspy < 4.0) {
+      return '#BE185D'; // Purple-red (very strong outperformance)
+    } else {
+      return '#9F1239'; // Dark red-pink (extreme outperformance)
+    }
+  };
+
   // Get the color index value based on the current color mode
   const getColorIndexValue = (point, mode) => {
     if (mode === 'rvi') {
@@ -310,14 +360,17 @@ export function PricePerformanceChart({
   const addRviDataKeys = (data, mode = 'rvi') => {
     if (!data || data.length === 0) return data;
 
+    // Use appropriate color function based on mode
+    const getColor = mode === 'vspy' ? getVspyColor : getRviColor;
+
     // Identify color changes and assign segment IDs
     let segmentId = 0;
-    let currentColor = getRviColor(getColorIndexValue(data[0], mode));
+    let currentColor = getColor(getColorIndexValue(data[0], mode));
     const colorMap = {}; // Maps segment ID to color
     colorMap[0] = currentColor;
 
     const dataWithSegments = data.map((point, idx) => {
-      const pointColor = getRviColor(getColorIndexValue(point, mode));
+      const pointColor = getColor(getColorIndexValue(point, mode));
       const newPoint = { ...point };
 
       if (pointColor !== currentColor && idx > 0) {
@@ -772,50 +825,74 @@ export function PricePerformanceChart({
           <div className="mb-3 px-4">
             <div className="flex items-center justify-between mb-1">
               <div className="text-xs font-semibold text-orange-400">
-                📊 VSPY Color Legend (Relative Performance vs SPY)
+                📊 VSPY Color Legend (Relative Performance vs SPY) - 21 Levels
               </div>
               <div className="text-xs text-gray-400">
-                Blue → Purple → Pink (relative outperformance)
+                Red (underperform) → Yellow → Blue → Purple → Pink (outperform)
               </div>
             </div>
             <div className="flex items-center gap-0.5 h-8 rounded-lg overflow-hidden border-2 border-orange-600/30 shadow-lg">
-              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#DBEAFE', color: '#1E3A8A' }}>
-                &lt;0.5
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#FCA5A5', color: '#7F1D1D' }} title="Severe underperformance">
+                &lt;0.3
               </div>
-              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#BFDBFE', color: '#1E3A8A' }}>
-                0.5-0.7
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#F87171', color: '#7F1D1D' }} title="Strong underperformance">
+                0.3
               </div>
-              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#93C5FD', color: '#1E3A8A' }}>
-                0.7-0.85
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#EF4444', color: '#FFFFFF' }} title="Underperformance">
+                0.4
               </div>
-              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#60A5FA', color: '#1E3A8A' }}>
-                0.85-1.0
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#FDE68A', color: '#78350F' }} title="Moderate underperformance">
+                0.5
               </div>
-              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#3B82F6', color: '#FFFFFF' }}>
-                1.0-1.15
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#FCD34D', color: '#78350F' }} title="Slight underperformance">
+                0.6
               </div>
-              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#2563EB', color: '#FFFFFF' }}>
-                1.15-1.3
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#DBEAFE', color: '#1E3A8A' }}>
+                0.7
               </div>
-              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#1D4ED8', color: '#FFFFFF' }}>
-                1.3-1.5
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#BFDBFE', color: '#1E3A8A' }}>
+                0.8
               </div>
-              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#1E40AF', color: '#FFFFFF' }}>
-                1.5-1.8
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#93C5FD', color: '#1E3A8A' }}>
+                0.85
               </div>
-              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#1E3A8A', color: '#FFFFFF' }}>
-                1.8-2.2
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#60A5FA', color: '#1E3A8A' }}>
+                0.9
               </div>
-              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#172554', color: '#FFFFFF' }}>
-                2.2-2.8
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#3B82F6', color: '#FFFFFF' }} title="Match SPY">
+                0.95
               </div>
-              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#312E81', color: '#FFFFFF' }}>
-                2.8-3.0
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#2563EB', color: '#FFFFFF' }} title="Match SPY">
+                1.0
               </div>
-              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#6B21A8', color: '#FFFFFF' }}>
-                3.0-4.0
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#1D4ED8', color: '#FFFFFF' }}>
+                1.05
               </div>
-              <div className="flex-1 h-full flex items-center justify-center text-[8px] font-semibold leading-tight" style={{ backgroundColor: '#BE185D', color: '#FFFFFF' }}>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#1E40AF', color: '#FFFFFF' }}>
+                1.1
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#1E3A8A', color: '#FFFFFF' }}>
+                1.2
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#172554', color: '#FFFFFF' }}>
+                1.3
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#312E81', color: '#FFFFFF' }}>
+                1.5
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#4C1D95', color: '#FFFFFF' }} title="Strong outperformance">
+                1.8
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#6B21A8', color: '#FFFFFF' }}>
+                2.0
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#A21CAF', color: '#FFFFFF' }}>
+                2.5
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#BE185D', color: '#FFFFFF' }} title="Very strong outperformance">
+                3.0
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#9F1239', color: '#FFFFFF' }} title="Extreme outperformance">
                 &gt;4.0
               </div>
             </div>
