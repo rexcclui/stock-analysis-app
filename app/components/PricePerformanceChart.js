@@ -2301,6 +2301,7 @@ export function PricePerformanceChart({
                         stroke="#ef4444"
                         strokeWidth={2}
                         strokeOpacity={0.8}
+                        strokeDasharray="5 5"
                         dot={false}
                         connectNulls={false}
                       />
@@ -2322,6 +2323,7 @@ export function PricePerformanceChart({
                         stroke="#10b981"
                         strokeWidth={2}
                         strokeOpacity={0.8}
+                        strokeDasharray="5 5"
                         dot={false}
                         connectNulls={false}
                       />
@@ -2470,17 +2472,17 @@ export function PricePerformanceChart({
             {/* Legend Explanation */}
             <div className="space-y-2 text-xs">
               <div className="flex items-center gap-2">
-                <div className="w-16 h-0.5 bg-red-500"></div>
+                <div className="w-16 h-0.5" style={{borderTop: '2px dashed #ef4444'}}></div>
                 <div className="text-red-400 font-bold">Upper Bound</div>
                 <div className="text-gray-400 text-[10px]">(Resistance - Center + {channelStdDevMultiplier.toFixed(1)}σ)</div>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-16 h-0.5 bg-purple-500" style={{borderTop: '2px dashed #8b5cf6'}}></div>
+                <div className="w-16 h-0.5" style={{borderTop: '2px dashed #8b5cf6'}}></div>
                 <div className="text-purple-400 font-bold">Center Line</div>
                 <div className="text-gray-400 text-[10px]">(Linear Regression Trend)</div>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-16 h-0.5 bg-green-500"></div>
+                <div className="w-16 h-0.5" style={{borderTop: '2px dashed #10b981'}}></div>
                 <div className="text-green-400 font-bold">Lower Bound</div>
                 <div className="text-gray-400 text-[10px]">(Support - Center - {channelStdDevMultiplier.toFixed(1)}σ)</div>
               </div>
