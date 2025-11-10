@@ -774,7 +774,7 @@ export function PricePerformanceChart({
                   📈 SMA Peak/Bottom Analysis (SMA Period: {smaPeriod})
                 </div>
                 <div className="flex flex-col items-end gap-1">
-                  <div className={`text-xs font-bold ${gainPercentage > marketChange ? 'text-green-400' : 'text-red-400'}`}>
+                  <div className="text-xs font-bold text-emerald-300">
                     Current Gain: {gainPercentage.toFixed(2)}% (${smaAnalysis.totalGain.toFixed(2)})
                   </div>
                   <div className={`text-xs font-semibold ${marketChange >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
