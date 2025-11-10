@@ -834,6 +834,21 @@ export function PricePerformanceChart({
             </button>
           )}
 
+          {/* SMA Peak/Bottom Mode Toggle */}
+          {chartCompareStocks.length === 0 && selectedStock && (
+            <button
+              onClick={() => setColorMode(colorMode === 'sma' ? 'default' : 'sma')}
+              className={`px-3 py-2 rounded-lg text-xs font-medium transition ${
+                colorMode === 'sma'
+                  ? 'bg-emerald-700 hover:bg-emerald-600 text-white'
+                  : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
+              }`}
+              title={colorMode === 'sma' ? 'Disable SMA Peak/Bottom mode' : 'Enable SMA Peak/Bottom mode'}
+            >
+              {colorMode === 'sma' ? 'SMA P/B: ON' : 'SMA P/B: OFF'}
+            </button>
+          )}
+
           {/* SMA Period Slider */}
           {colorMode === 'sma' && chartCompareStocks.length === 0 && selectedStock && (
             <div className="flex items-center gap-2">
