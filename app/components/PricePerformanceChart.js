@@ -1708,42 +1708,22 @@ export function PricePerformanceChart({
                   if (!lastPointWithSMA) return null;
 
                   return (
-                    <>
-                      {/* SMA Value Reference Dot */}
-                      <ReferenceDot
-                        key="sma-marker"
-                        x={lastPointWithSMA.date}
-                        y={lastPointWithSMA.sma}
-                        r={5}
-                        fill="#10b981"
-                        stroke="#ffffff"
-                        strokeWidth={2}
-                        label={{
-                          value: `SMA: $${lastPointWithSMA.sma.toFixed(2)}`,
-                          position: 'top',
-                          fill: '#10b981',
-                          fontSize: 10,
-                          fontWeight: 'bold'
-                        }}
-                      />
-                      {/* Current Price Reference Dot */}
-                      <ReferenceDot
-                        key="price-marker"
-                        x={lastPointWithSMA.date}
-                        y={lastPointWithSMA.price}
-                        r={5}
-                        fill="#3b82f6"
-                        stroke="#ffffff"
-                        strokeWidth={2}
-                        label={{
-                          value: `Price: $${lastPointWithSMA.price.toFixed(2)}`,
-                          position: 'bottom',
-                          fill: '#3b82f6',
-                          fontSize: 10,
-                          fontWeight: 'bold'
-                        }}
-                      />
-                    </>
+                    <ReferenceDot
+                      key="sma-marker"
+                      x={lastPointWithSMA.date}
+                      y={lastPointWithSMA.sma}
+                      r={5}
+                      fill="#10b981"
+                      stroke="#ffffff"
+                      strokeWidth={2}
+                      label={{
+                        value: `SMA: $${lastPointWithSMA.sma.toFixed(2)}`,
+                        position: 'top',
+                        fill: '#10b981',
+                        fontSize: 10,
+                        fontWeight: 'bold'
+                      }}
+                    />
                   );
                 })()}
 
