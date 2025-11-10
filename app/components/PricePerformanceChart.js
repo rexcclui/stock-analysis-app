@@ -1695,12 +1695,17 @@ export function PricePerformanceChart({
               let uptrendChannel = null;
               let downtrendChannel = null;
               if ((showUptrendChannel || showDowntrendChannel) && chartCompareStocks.length === 0) {
-                const channelAnalysis = detectTurningPoints(multiData);
+                // First calculate SMA to get smaSlope for turning point detection
+                const dataWithSMA = calculateSMA(multiData, smaPeriod);
+                const channelAnalysis = detectTurningPoints(dataWithSMA);
+                console.log('🔍 Channel Analysis - Turning points:', channelAnalysis.turningPoints?.length || 0, channelAnalysis.turningPoints);
                 if (showUptrendChannel) {
-                  uptrendChannel = calculateUptrendChannel(multiData, channelAnalysis.turningPoints);
+                  uptrendChannel = calculateUptrendChannel(dataWithSMA, channelAnalysis.turningPoints);
+                  console.log('📈 Uptrend Channel:', uptrendChannel);
                 }
                 if (showDowntrendChannel) {
-                  downtrendChannel = calculateDowntrendChannel(multiData, channelAnalysis.turningPoints);
+                  downtrendChannel = calculateDowntrendChannel(dataWithSMA, channelAnalysis.turningPoints);
+                  console.log('📉 Downtrend Channel:', downtrendChannel);
                 }
               }
 
@@ -1995,7 +2000,13 @@ export function PricePerformanceChart({
                 )}
 
                 {/* Parallel Channel for Uptrend */}
-                {showUptrendChannel && uptrendChannel && chartCompareStocks.length === 0 && (
+                {showUptrendChannel && uptrendChannel && chartCompareStocks.length === 0 && (() => {
+                  console.log('🎨 Rendering Uptrend Channel:', {
+                    mainStart: uptrendChannel.mainLine.start,
+                    mainEnd: uptrendChannel.mainLine.end,
+                    hasParallel: !!uptrendChannel.parallelLine
+                  });
+                  return (
                   <>
                     {/* Main trend line (bottom to peak) */}
                     <ReferenceLine
@@ -2005,6 +2016,7 @@ export function PricePerformanceChart({
                       ]}
                       stroke="#22c55e"
                       strokeWidth={2}
+                      ifOverflow="visible"
                       label={{
                         value: 'Uptrend',
                         position: 'top',
@@ -2023,13 +2035,21 @@ export function PricePerformanceChart({
                         stroke="#22c55e"
                         strokeWidth={2}
                         strokeDasharray="5 5"
+                        ifOverflow="visible"
                       />
                     )}
                   </>
-                )}
+                  );
+                })()}
 
                 {/* Parallel Channel for Downtrend */}
-                {showDowntrendChannel && downtrendChannel && chartCompareStocks.length === 0 && (
+                {showDowntrendChannel && downtrendChannel && chartCompareStocks.length === 0 && (() => {
+                  console.log('🎨 Rendering Downtrend Channel:', {
+                    mainStart: downtrendChannel.mainLine.start,
+                    mainEnd: downtrendChannel.mainLine.end,
+                    hasParallel: !!downtrendChannel.parallelLine
+                  });
+                  return (
                   <>
                     {/* Main trend line (peak to bottom) */}
                     <ReferenceLine
@@ -2039,6 +2059,7 @@ export function PricePerformanceChart({
                       ]}
                       stroke="#ef4444"
                       strokeWidth={2}
+                      ifOverflow="visible"
                       label={{
                         value: 'Downtrend',
                         position: 'bottom',
@@ -2057,10 +2078,12 @@ export function PricePerformanceChart({
                         stroke="#ef4444"
                         strokeWidth={2}
                         strokeDasharray="5 5"
+                        ifOverflow="visible"
                       />
                     )}
                   </>
-                )}
+                  );
+                })()}
 
                 {/* Volume Bar Mode - Horizontal background zones */}
                 {colorMode === 'volumeBar' && chartCompareStocks.length === 0 && multiData.length > 0 && (() => {
