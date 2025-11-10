@@ -652,27 +652,70 @@ export function PricePerformanceChart({
     const numBottomsToUse = Math.min(5, bottoms.length);
     const trendBottoms = bottoms.slice(-numBottomsToUse);
 
-    // Use linear regression to find best-fit trendline through the bottoms
-    const n = trendBottoms.length;
-    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-
-    trendBottoms.forEach(bottom => {
-      sumX += bottom.index;
-      sumY += bottom.price;
-      sumXY += bottom.index * bottom.price;
-      sumX2 += bottom.index * bottom.index;
-    });
-
-    // Calculate slope and intercept of best-fit line
-    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-    const intercept = (sumY - slope * sumX) / n;
-
-    // Only proceed if slope is positive (uptrend)
-    if (slope <= 0) return null;
-
-    // Get start and end points for the trendline
+    // Get the trend period for volume analysis
     const firstBottomIndex = trendBottoms[0].index;
     const lastBottomIndex = trendBottoms[trendBottoms.length - 1].index;
+    const trendPeriodData = data.slice(firstBottomIndex, Math.min(data.length, lastBottomIndex + 50));
+
+    // Analyze volume patterns: uptrend should have higher volume on up days
+    let upDayVolume = 0, downDayVolume = 0, upDays = 0, downDays = 0;
+    for (let i = 1; i < trendPeriodData.length; i++) {
+      const curr = trendPeriodData[i];
+      const prev = trendPeriodData[i - 1];
+      const volume = curr.volume || 0;
+
+      if (curr.price > prev.price) {
+        upDayVolume += volume;
+        upDays++;
+      } else if (curr.price < prev.price) {
+        downDayVolume += volume;
+        downDays++;
+      }
+    }
+
+    // Calculate volume ratio - higher on up days confirms uptrend
+    const avgUpVolume = upDays > 0 ? upDayVolume / upDays : 0;
+    const avgDownVolume = downDays > 0 ? downDayVolume / downDays : 0;
+    const volumeRatio = avgDownVolume > 0 ? avgUpVolume / avgDownVolume : 1;
+
+    console.log('📊 Uptrend Volume Analysis:', {
+      avgUpVolume: avgUpVolume.toFixed(0),
+      avgDownVolume: avgDownVolume.toFixed(0),
+      volumeRatio: volumeRatio.toFixed(2),
+      confirmed: volumeRatio > 0.8
+    });
+
+    // Only show uptrend if volume supports it (not requiring strict > 1, allowing 0.8+ for flexibility)
+    if (volumeRatio < 0.8) {
+      console.log('❌ Uptrend rejected: volume too low on up days');
+      return null;
+    }
+
+    // Use volume-weighted linear regression for better trend detection
+    const n = trendBottoms.length;
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumW = 0;
+
+    trendBottoms.forEach(bottom => {
+      // Find the volume at this bottom point
+      const bottomData = data[bottom.index];
+      const weight = Math.sqrt(bottomData?.volume || 1); // Square root to moderate extreme values
+
+      sumX += bottom.index * weight;
+      sumY += bottom.price * weight;
+      sumXY += bottom.index * bottom.price * weight;
+      sumX2 += bottom.index * bottom.index * weight;
+      sumW += weight;
+    });
+
+    // Calculate slope and intercept of volume-weighted best-fit line
+    const slope = (sumW * sumXY - sumX * sumY) / (sumW * sumX2 - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / sumW;
+
+    // Only proceed if slope is positive (uptrend)
+    if (slope <= 0) {
+      console.log('❌ Uptrend rejected: negative slope');
+      return null;
+    }
 
     // Extend the trendline to current if price is above the line
     let endIndex = lastBottomIndex;
@@ -725,6 +768,7 @@ export function PricePerformanceChart({
       index: lowerEnd.index
     };
 
+    console.log('✅ Uptrend channel confirmed');
     return {
       mainLine: { start: lowerStart, end: lowerEnd },      // Lower support line
       parallelLine: { start: upperStart, end: upperEnd }   // Upper resistance line
@@ -744,27 +788,70 @@ export function PricePerformanceChart({
     const numPeaksToUse = Math.min(5, peaks.length);
     const trendPeaks = peaks.slice(-numPeaksToUse);
 
-    // Use linear regression to find best-fit trendline through the peaks
-    const n = trendPeaks.length;
-    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-
-    trendPeaks.forEach(peak => {
-      sumX += peak.index;
-      sumY += peak.price;
-      sumXY += peak.index * peak.price;
-      sumX2 += peak.index * peak.index;
-    });
-
-    // Calculate slope and intercept of best-fit line
-    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
-    const intercept = (sumY - slope * sumX) / n;
-
-    // Only proceed if slope is negative (downtrend)
-    if (slope >= 0) return null;
-
-    // Get start and end points for the trendline
+    // Get the trend period for volume analysis
     const firstPeakIndex = trendPeaks[0].index;
     const lastPeakIndex = trendPeaks[trendPeaks.length - 1].index;
+    const trendPeriodData = data.slice(firstPeakIndex, Math.min(data.length, lastPeakIndex + 50));
+
+    // Analyze volume patterns: downtrend should have higher volume on down days
+    let upDayVolume = 0, downDayVolume = 0, upDays = 0, downDays = 0;
+    for (let i = 1; i < trendPeriodData.length; i++) {
+      const curr = trendPeriodData[i];
+      const prev = trendPeriodData[i - 1];
+      const volume = curr.volume || 0;
+
+      if (curr.price > prev.price) {
+        upDayVolume += volume;
+        upDays++;
+      } else if (curr.price < prev.price) {
+        downDayVolume += volume;
+        downDays++;
+      }
+    }
+
+    // Calculate volume ratio - higher on down days confirms downtrend
+    const avgUpVolume = upDays > 0 ? upDayVolume / upDays : 0;
+    const avgDownVolume = downDays > 0 ? downDayVolume / downDays : 0;
+    const volumeRatio = avgUpVolume > 0 ? avgDownVolume / avgUpVolume : 1;
+
+    console.log('📊 Downtrend Volume Analysis:', {
+      avgUpVolume: avgUpVolume.toFixed(0),
+      avgDownVolume: avgDownVolume.toFixed(0),
+      volumeRatio: volumeRatio.toFixed(2),
+      confirmed: volumeRatio > 0.8
+    });
+
+    // Only show downtrend if volume supports it (not requiring strict > 1, allowing 0.8+ for flexibility)
+    if (volumeRatio < 0.8) {
+      console.log('❌ Downtrend rejected: volume too low on down days');
+      return null;
+    }
+
+    // Use volume-weighted linear regression for better trend detection
+    const n = trendPeaks.length;
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumW = 0;
+
+    trendPeaks.forEach(peak => {
+      // Find the volume at this peak point
+      const peakData = data[peak.index];
+      const weight = Math.sqrt(peakData?.volume || 1); // Square root to moderate extreme values
+
+      sumX += peak.index * weight;
+      sumY += peak.price * weight;
+      sumXY += peak.index * peak.price * weight;
+      sumX2 += peak.index * peak.index * weight;
+      sumW += weight;
+    });
+
+    // Calculate slope and intercept of volume-weighted best-fit line
+    const slope = (sumW * sumXY - sumX * sumY) / (sumW * sumX2 - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / sumW;
+
+    // Only proceed if slope is negative (downtrend)
+    if (slope >= 0) {
+      console.log('❌ Downtrend rejected: positive slope');
+      return null;
+    }
 
     // Extend the trendline to current if price is below the line
     let endIndex = lastPeakIndex;
@@ -817,6 +904,7 @@ export function PricePerformanceChart({
       index: upperEnd.index
     };
 
+    console.log('✅ Downtrend channel confirmed');
     return {
       mainLine: { start: upperStart, end: upperEnd },      // Upper resistance line
       parallelLine: { start: lowerStart, end: lowerEnd }   // Lower support line
