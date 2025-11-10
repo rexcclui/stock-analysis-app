@@ -2199,84 +2199,12 @@ export function PricePerformanceChart({
                   );
                 })()}
 
-                {/* Standard Deviation Channel - Trend lines with volume profile validation */}
+                {/* Standard Deviation Channel - Volume profile reference lines */}
                 {colorMode === 'channel' && chartCompareStocks.length === 0 && multiData.length > 0 && (() => {
-                  // Get the last data point to determine current bound states
-                  const lastPoint = multiData[multiData.length - 1];
                   const volumeProfile = multiData._volumeProfile;
-                  const upperState = lastPoint?.upperBoundState || 'neutral';
-                  const lowerState = lastPoint?.lowerBoundState || 'neutral';
-
-                  // Style functions based on strength
-                  const getBoundStyle = (state) => {
-                    switch (state) {
-                      case 'strong':
-                        return { strokeWidth: 3, strokeDasharray: undefined, opacity: 1 };
-                      case 'weak':
-                        return { strokeWidth: 1.5, strokeDasharray: '3 3', opacity: 0.6 };
-                      case 'neutral':
-                      default:
-                        return { strokeWidth: 2, strokeDasharray: undefined, opacity: 0.8 };
-                    }
-                  };
-
-                  const upperStyle = getBoundStyle(upperState);
-                  const lowerStyle = getBoundStyle(lowerState);
 
                   return (
                     <>
-                      {/* Upper Bound */}
-                      {lastPoint?.upperBound && (
-                        <ReferenceLine
-                          y={lastPoint.upperBound}
-                          stroke="#ef4444"
-                          strokeWidth={upperStyle.strokeWidth}
-                          strokeDasharray={upperStyle.strokeDasharray}
-                          strokeOpacity={upperStyle.opacity}
-                          label={{
-                            value: `Upper (${upperState}): $${lastPoint.upperBound.toFixed(2)}`,
-                            position: 'right',
-                            fill: '#ef4444',
-                            fontSize: 10,
-                            fontWeight: upperState === 'strong' ? 'bold' : 'normal'
-                          }}
-                        />
-                      )}
-
-                      {/* Center Line */}
-                      {lastPoint?.centerLine && (
-                        <ReferenceLine
-                          y={lastPoint.centerLine}
-                          stroke="#3b82f6"
-                          strokeWidth={2}
-                          strokeOpacity={0.7}
-                          label={{
-                            value: `Center: $${lastPoint.centerLine.toFixed(2)}`,
-                            position: 'right',
-                            fill: '#3b82f6',
-                            fontSize: 10
-                          }}
-                        />
-                      )}
-
-                      {/* Lower Bound */}
-                      {lastPoint?.lowerBound && (
-                        <ReferenceLine
-                          y={lastPoint.lowerBound}
-                          stroke="#10b981"
-                          strokeWidth={lowerStyle.strokeWidth}
-                          strokeDasharray={lowerStyle.strokeDasharray}
-                          strokeOpacity={lowerStyle.opacity}
-                          label={{
-                            value: `Lower (${lowerState}): $${lastPoint.lowerBound.toFixed(2)}`,
-                            position: 'right',
-                            fill: '#10b981',
-                            fontSize: 10,
-                            fontWeight: lowerState === 'strong' ? 'bold' : 'normal'
-                          }}
-                        />
-                      )}
-
                       {/* Point of Control (POC) from Volume Profile */}
                       {volumeProfile && volumeProfile.poc && (
                         <ReferenceLine
@@ -2287,7 +2215,7 @@ export function PricePerformanceChart({
                           strokeOpacity={0.9}
                           label={{
                             value: `POC: $${volumeProfile.poc.priceLevel.toFixed(2)}`,
-                            position: 'left',
+                            position: 'insideTopLeft',
                             fill: '#fbbf24',
                             fontSize: 10,
                             fontWeight: 'bold'
@@ -2295,7 +2223,7 @@ export function PricePerformanceChart({
                         />
                       )}
 
-                      {/* High Volume Nodes (HVNs) */}
+                      {/* High Volume Nodes (HVNs) - subtle background lines */}
                       {volumeProfile && volumeProfile.hvns && volumeProfile.hvns.slice(0, 5).map((hvn, idx) => (
                         <ReferenceLine
                           key={`hvn-${idx}`}
@@ -2303,7 +2231,7 @@ export function PricePerformanceChart({
                           stroke="#a855f7"
                           strokeWidth={1}
                           strokeDasharray="2 2"
-                          strokeOpacity={0.5}
+                          strokeOpacity={0.4}
                         />
                       ))}
                     </>
@@ -2355,6 +2283,49 @@ export function PricePerformanceChart({
                       }
                       return lines;
                     })()
+                  ) : colorMode === 'channel' ? (
+                    // Channel Mode: Render price line + channel lines
+                    <>
+                      <Line
+                        type="monotone"
+                        dataKey="price"
+                        name={`${selectedStock?.code || ''} Price`}
+                        stroke="#3B82F6"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="upperBound"
+                        name="Upper Bound"
+                        stroke="#ef4444"
+                        strokeWidth={2}
+                        strokeOpacity={0.8}
+                        dot={false}
+                        connectNulls={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="centerLine"
+                        name="Center Line"
+                        stroke="#8b5cf6"
+                        strokeWidth={2}
+                        strokeOpacity={0.6}
+                        strokeDasharray="5 5"
+                        dot={false}
+                        connectNulls={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="lowerBound"
+                        name="Lower Bound"
+                        stroke="#10b981"
+                        strokeWidth={2}
+                        strokeOpacity={0.8}
+                        dot={false}
+                        connectNulls={false}
+                      />
+                    </>
                   ) : (
                     // Default Mode: Single blue line
                     <Line type="monotone" dataKey="price" name={`${selectedStock?.code || ''} Price`} stroke="#3B82F6" strokeWidth={2} dot={false} />
@@ -2499,54 +2470,47 @@ export function PricePerformanceChart({
             {/* Legend Explanation */}
             <div className="space-y-2 text-xs">
               <div className="flex items-center gap-2">
-                <div className="w-16 h-0.5 bg-red-500" style={{opacity: 1}}></div>
+                <div className="w-16 h-0.5 bg-red-500"></div>
                 <div className="text-red-400 font-bold">Upper Bound</div>
-                <div className="text-gray-400 text-[10px]">(Resistance - Price + {channelStdDevMultiplier.toFixed(1)}σ)</div>
+                <div className="text-gray-400 text-[10px]">(Resistance - Center + {channelStdDevMultiplier.toFixed(1)}σ)</div>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-16 h-0.5 bg-blue-500"></div>
-                <div className="text-blue-400 font-bold">Center Line</div>
+                <div className="w-16 h-0.5 bg-purple-500" style={{borderTop: '2px dashed #8b5cf6'}}></div>
+                <div className="text-purple-400 font-bold">Center Line</div>
                 <div className="text-gray-400 text-[10px]">(Linear Regression Trend)</div>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-16 h-0.5 bg-green-500" style={{opacity: 1}}></div>
+                <div className="w-16 h-0.5 bg-green-500"></div>
                 <div className="text-green-400 font-bold">Lower Bound</div>
-                <div className="text-gray-400 text-[10px]">(Support - Price - {channelStdDevMultiplier.toFixed(1)}σ)</div>
+                <div className="text-gray-400 text-[10px]">(Support - Center - {channelStdDevMultiplier.toFixed(1)}σ)</div>
               </div>
               <div className="flex items-center gap-2">
                 <div className="w-16 h-0.5 bg-yellow-500" style={{borderTop: '2px dashed #FBBF24'}}></div>
                 <div className="text-yellow-400 font-bold">POC</div>
-                <div className="text-gray-400 text-[10px]">(Point of Control - Highest Volume Zone)</div>
+                <div className="text-gray-400 text-[10px]">(Point of Control - Highest Volume Price)</div>
               </div>
               <div className="flex items-center gap-2">
-                <div className="w-16 h-0.5 bg-purple-500" style={{borderTop: '2px dashed #A855F7', opacity: 0.5}}></div>
-                <div className="text-purple-400 font-bold">HVN</div>
-                <div className="text-gray-400 text-[10px]">(High Volume Node - Strong Price Level)</div>
+                <div className="w-16 h-0.5 bg-purple-400" style={{borderTop: '2px dashed #c084fc', opacity: 0.6}}></div>
+                <div className="text-purple-300 font-bold">HVN</div>
+                <div className="text-gray-400 text-[10px]">(High Volume Nodes - Strong Price Levels)</div>
               </div>
             </div>
 
-            {/* Bound Strength Explanation */}
+            {/* How to Read */}
             <div className="mt-3 pt-3 border-t border-gray-700">
-              <div className="text-xs font-semibold text-cyan-400 mb-2">Bound Validation States:</div>
-              <div className="grid grid-cols-3 gap-2 text-[10px]">
-                <div className="bg-green-900/20 border border-green-600/30 rounded p-2">
-                  <div className="text-green-400 font-bold mb-1">✓ STRONG</div>
-                  <div className="text-gray-400">Bound overlaps POC or HVN. High validation from volume.</div>
-                </div>
-                <div className="bg-gray-900/20 border border-gray-600/30 rounded p-2">
-                  <div className="text-gray-400 font-bold mb-1">○ NEUTRAL</div>
-                  <div className="text-gray-400">No significant volume confluence. Normal bound.</div>
-                </div>
-                <div className="bg-red-900/20 border border-red-600/30 rounded p-2">
-                  <div className="text-red-400 font-bold mb-1">✗ WEAK</div>
-                  <div className="text-gray-400">Bound overlaps LVN. Low validation, possible breakout zone.</div>
-                </div>
+              <div className="text-xs font-semibold text-cyan-400 mb-2">💡 How to Read:</div>
+              <div className="space-y-1 text-[10px] text-gray-300">
+                <div>• <span className="text-purple-400 font-semibold">Center Line:</span> Shows the dominant price trend direction based on linear regression</div>
+                <div>• <span className="text-red-400 font-semibold">Upper/Lower Bounds:</span> Statistical boundaries ({channelStdDevMultiplier.toFixed(1)} standard deviations) where price is likely to stay within</div>
+                <div>• <span className="text-yellow-400 font-semibold">POC & HVNs:</span> Price levels with high trading volume indicate strong support/resistance zones</div>
+                <div>• <span className="text-green-400 font-semibold">Trading Signal:</span> When price touches a bound near POC/HVN, it's a stronger support/resistance level</div>
+                <div>• <span className="text-orange-400 font-semibold">Breakout Signal:</span> Price breaking through a bound suggests potential trend change</div>
               </div>
             </div>
 
-              <div className="text-[10px] text-gray-500 italic mt-3 text-center">
-                💡 Tip: Strong bounds indicate price levels with historical volume support. Weak bounds may be more easily broken through.
-              </div>
+            <div className="text-[10px] text-gray-500 italic mt-3 text-center">
+              The channel dynamically adjusts based on the last {channelLookback} periods of price action
+            </div>
             </div>
           </div>
         );
