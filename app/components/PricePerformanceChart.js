@@ -48,6 +48,8 @@ export function PricePerformanceChart({
   const [maxSmaGain, setMaxSmaGain] = useState({ gain: 0, period: 20, percentage: 0 }); // Track maximum gain
   const [isSimulating, setIsSimulating] = useState(false); // Simulation running state
   const [simulationResults, setSimulationResults] = useState([]); // Track all simulation results
+  const [showUptrendChannel, setShowUptrendChannel] = useState(false); // Show parallel channel for last uptrend
+  const [showDowntrendChannel, setShowDowntrendChannel] = useState(false); // Show parallel channel for last downtrend
 
   // AI Analysis using custom hook
   const {
@@ -637,6 +639,140 @@ export function PricePerformanceChart({
     return { data: enhancedData, colorMap, maxSegmentId };
   };
 
+  // Calculate parallel channel for last uptrend
+  const calculateUptrendChannel = (data, turningPoints) => {
+    if (!data || data.length === 0 || !turningPoints || turningPoints.length === 0) return null;
+
+    // Find the last uptrend: from last bottom to last peak (or current if still in uptrend)
+    const bottoms = turningPoints.filter(tp => tp.type === 'bottom');
+    const peaks = turningPoints.filter(tp => tp.type === 'peak');
+
+    if (bottoms.length === 0) return null;
+
+    const lastBottom = bottoms[bottoms.length - 1];
+    const lastPeak = peaks.length > 0 ? peaks[peaks.length - 1] : null;
+
+    // Determine if we're still in uptrend or ended
+    const trendEnd = lastPeak && lastPeak.index > lastBottom.index ? lastPeak : data[data.length - 1];
+    const trendEndIndex = lastPeak && lastPeak.index > lastBottom.index ? lastPeak.index : data.length - 1;
+
+    // Get data points in the uptrend
+    const trendData = data.slice(lastBottom.index, trendEndIndex + 1);
+    if (trendData.length < 2) return null;
+
+    // Find the main trend line (bottom to peak/current)
+    const startPoint = { date: lastBottom.date, price: lastBottom.price, index: lastBottom.index };
+    const endPoint = { date: trendEnd.date, price: trendEnd.price, index: trendEndIndex };
+
+    // Find the point furthest below the main trend line to define channel width
+    let maxDistance = 0;
+    let parallelPoint = null;
+
+    trendData.forEach((point, idx) => {
+      const actualIndex = lastBottom.index + idx;
+      const progress = (actualIndex - startPoint.index) / (endPoint.index - startPoint.index);
+      const trendLinePrice = startPoint.price + progress * (endPoint.price - startPoint.price);
+      const distance = trendLinePrice - point.price;
+
+      if (distance > maxDistance) {
+        maxDistance = distance;
+        parallelPoint = { ...point, index: actualIndex };
+      }
+    });
+
+    if (!parallelPoint || maxDistance === 0) {
+      // No parallel needed, just return the main trend line
+      return {
+        mainLine: { start: startPoint, end: endPoint },
+        parallelLine: null
+      };
+    }
+
+    // Create parallel line below the main trend line
+    const parallelStart = {
+      date: startPoint.date,
+      price: startPoint.price - maxDistance,
+      index: startPoint.index
+    };
+    const parallelEnd = {
+      date: endPoint.date,
+      price: endPoint.price - maxDistance,
+      index: endPoint.index
+    };
+
+    return {
+      mainLine: { start: startPoint, end: endPoint },
+      parallelLine: { start: parallelStart, end: parallelEnd }
+    };
+  };
+
+  // Calculate parallel channel for last downtrend
+  const calculateDowntrendChannel = (data, turningPoints) => {
+    if (!data || data.length === 0 || !turningPoints || turningPoints.length === 0) return null;
+
+    // Find the last downtrend: from last peak to last bottom (or current if still in downtrend)
+    const bottoms = turningPoints.filter(tp => tp.type === 'bottom');
+    const peaks = turningPoints.filter(tp => tp.type === 'peak');
+
+    if (peaks.length === 0) return null;
+
+    const lastPeak = peaks[peaks.length - 1];
+    const lastBottom = bottoms.length > 0 ? bottoms[bottoms.length - 1] : null;
+
+    // Determine if we're still in downtrend or ended
+    const trendEnd = lastBottom && lastBottom.index > lastPeak.index ? lastBottom : data[data.length - 1];
+    const trendEndIndex = lastBottom && lastBottom.index > lastPeak.index ? lastBottom.index : data.length - 1;
+
+    // Get data points in the downtrend
+    const trendData = data.slice(lastPeak.index, trendEndIndex + 1);
+    if (trendData.length < 2) return null;
+
+    // Find the main trend line (peak to bottom/current)
+    const startPoint = { date: lastPeak.date, price: lastPeak.price, index: lastPeak.index };
+    const endPoint = { date: trendEnd.date, price: trendEnd.price, index: trendEndIndex };
+
+    // Find the point furthest above the main trend line to define channel width
+    let maxDistance = 0;
+    let parallelPoint = null;
+
+    trendData.forEach((point, idx) => {
+      const actualIndex = lastPeak.index + idx;
+      const progress = (actualIndex - startPoint.index) / (endPoint.index - startPoint.index);
+      const trendLinePrice = startPoint.price + progress * (endPoint.price - startPoint.price);
+      const distance = point.price - trendLinePrice;
+
+      if (distance > maxDistance) {
+        maxDistance = distance;
+        parallelPoint = { ...point, index: actualIndex };
+      }
+    });
+
+    if (!parallelPoint || maxDistance === 0) {
+      // No parallel needed, just return the main trend line
+      return {
+        mainLine: { start: startPoint, end: endPoint },
+        parallelLine: null
+      };
+    }
+
+    // Create parallel line above the main trend line
+    const parallelStart = {
+      date: startPoint.date,
+      price: startPoint.price + maxDistance,
+      index: startPoint.index
+    };
+    const parallelEnd = {
+      date: endPoint.date,
+      price: endPoint.price + maxDistance,
+      index: endPoint.index
+    };
+
+    return {
+      mainLine: { start: startPoint, end: endPoint },
+      parallelLine: { start: parallelStart, end: parallelEnd }
+    };
+  };
+
   // Get current data slice based on offset and period
   const getCurrentDataSlice = () => {
     if (fullHistoricalData.length === 0) {
@@ -1017,6 +1153,38 @@ export function PricePerformanceChart({
               title={colorMode === 'volumeBar' ? 'Disable Volume Bar mode' : 'Enable Volume Bar mode'}
             >
               Vol Bar
+            </button>
+          )}
+
+          {/* Uptrend Channel Toggle */}
+          {chartCompareStocks.length === 0 && selectedStock && (
+            <button
+              onClick={() => setShowUptrendChannel(!showUptrendChannel)}
+              className="px-3 py-2 rounded-lg text-xs font-medium transition"
+              style={{
+                backgroundColor: showUptrendChannel ? '#22c55e' : '#374151',
+                color: showUptrendChannel ? '#000000' : '#D1D5DB',
+                fontWeight: 'bold'
+              }}
+              title={showUptrendChannel ? 'Hide uptrend channel' : 'Show parallel channel for last uptrend'}
+            >
+              Uptrend Ch
+            </button>
+          )}
+
+          {/* Downtrend Channel Toggle */}
+          {chartCompareStocks.length === 0 && selectedStock && (
+            <button
+              onClick={() => setShowDowntrendChannel(!showDowntrendChannel)}
+              className="px-3 py-2 rounded-lg text-xs font-medium transition"
+              style={{
+                backgroundColor: showDowntrendChannel ? '#ef4444' : '#374151',
+                color: showDowntrendChannel ? '#000000' : '#D1D5DB',
+                fontWeight: 'bold'
+              }}
+              title={showDowntrendChannel ? 'Hide downtrend channel' : 'Show parallel channel for last downtrend'}
+            >
+              Downtrend Ch
             </button>
           )}
 
@@ -1523,6 +1691,19 @@ export function PricePerformanceChart({
                 multiData = smaSegments.data;
               }
 
+              // Calculate parallel channels for uptrend/downtrend if enabled
+              let uptrendChannel = null;
+              let downtrendChannel = null;
+              if ((showUptrendChannel || showDowntrendChannel) && chartCompareStocks.length === 0) {
+                const channelAnalysis = detectTurningPoints(multiData);
+                if (showUptrendChannel) {
+                  uptrendChannel = calculateUptrendChannel(multiData, channelAnalysis.turningPoints);
+                }
+                if (showDowntrendChannel) {
+                  downtrendChannel = calculateDowntrendChannel(multiData, channelAnalysis.turningPoints);
+                }
+              }
+
               console.log('Rendering chart with offset:', dataOffset, 'dataLength:', fullData.length, 'showing:', startIndex, 'to', endIndex, 'Color mode:', colorMode, 'SMA mode:', colorMode === 'sma');
 
               // Debug cycle analysis state
@@ -1810,6 +1991,74 @@ export function PricePerformanceChart({
                         />
                       ) : null;
                     })}
+                  </>
+                )}
+
+                {/* Parallel Channel for Uptrend */}
+                {showUptrendChannel && uptrendChannel && chartCompareStocks.length === 0 && (
+                  <>
+                    {/* Main trend line (bottom to peak) */}
+                    <ReferenceLine
+                      segment={[
+                        { x: uptrendChannel.mainLine.start.date, y: uptrendChannel.mainLine.start.price },
+                        { x: uptrendChannel.mainLine.end.date, y: uptrendChannel.mainLine.end.price }
+                      ]}
+                      stroke="#22c55e"
+                      strokeWidth={2}
+                      label={{
+                        value: 'Uptrend',
+                        position: 'top',
+                        fill: '#22c55e',
+                        fontSize: 11,
+                        fontWeight: 'bold'
+                      }}
+                    />
+                    {/* Parallel line (channel bottom) */}
+                    {uptrendChannel.parallelLine && (
+                      <ReferenceLine
+                        segment={[
+                          { x: uptrendChannel.parallelLine.start.date, y: uptrendChannel.parallelLine.start.price },
+                          { x: uptrendChannel.parallelLine.end.date, y: uptrendChannel.parallelLine.end.price }
+                        ]}
+                        stroke="#22c55e"
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                      />
+                    )}
+                  </>
+                )}
+
+                {/* Parallel Channel for Downtrend */}
+                {showDowntrendChannel && downtrendChannel && chartCompareStocks.length === 0 && (
+                  <>
+                    {/* Main trend line (peak to bottom) */}
+                    <ReferenceLine
+                      segment={[
+                        { x: downtrendChannel.mainLine.start.date, y: downtrendChannel.mainLine.start.price },
+                        { x: downtrendChannel.mainLine.end.date, y: downtrendChannel.mainLine.end.price }
+                      ]}
+                      stroke="#ef4444"
+                      strokeWidth={2}
+                      label={{
+                        value: 'Downtrend',
+                        position: 'bottom',
+                        fill: '#ef4444',
+                        fontSize: 11,
+                        fontWeight: 'bold'
+                      }}
+                    />
+                    {/* Parallel line (channel top) */}
+                    {downtrendChannel.parallelLine && (
+                      <ReferenceLine
+                        segment={[
+                          { x: downtrendChannel.parallelLine.start.date, y: downtrendChannel.parallelLine.start.price },
+                          { x: downtrendChannel.parallelLine.end.date, y: downtrendChannel.parallelLine.end.price }
+                        ]}
+                        stroke="#ef4444"
+                        strokeWidth={2}
+                        strokeDasharray="5 5"
+                      />
+                    )}
                   </>
                 )}
 
