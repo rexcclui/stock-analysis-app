@@ -1293,24 +1293,66 @@ export function PricePerformanceChart({
           const volumeBarData = calculateVolumeBarData(currentData);
           const maxVolumeSlot = volumeBarData.reduce((max, slot) => slot.volume > max.volume ? slot : max, { volume: 0 });
 
+          // Calculate total volume and percentages
+          const totalVolume = volumeBarData.reduce((sum, slot) => sum + slot.volume, 0);
+
+          // Define opacity ranges for the legend (matching the calculation in calculateVolumeBarData)
+          // opacity = 0.1 + (0.4 * (volume / maxVolume)), so range is 0.1 to 0.5
+          const legendRanges = [
+            { label: '0-10%', min: 0, max: 0.1, opacity: 0.14 },
+            { label: '10-20%', min: 0.1, max: 0.2, opacity: 0.18 },
+            { label: '20-30%', min: 0.2, max: 0.3, opacity: 0.22 },
+            { label: '30-40%', min: 0.3, max: 0.4, opacity: 0.26 },
+            { label: '40-50%', min: 0.4, max: 0.5, opacity: 0.30 },
+            { label: '50-60%', min: 0.5, max: 0.6, opacity: 0.34 },
+            { label: '60-70%', min: 0.6, max: 0.7, opacity: 0.38 },
+            { label: '70-80%', min: 0.7, max: 0.8, opacity: 0.42 },
+            { label: '80-90%', min: 0.8, max: 0.9, opacity: 0.46 },
+            { label: '90-100%', min: 0.9, max: 1.0, opacity: 0.50 }
+          ];
+
+          // Calculate percentage of total volume in each range
+          const maxVolume = Math.max(...volumeBarData.map(s => s.volume));
+          const rangeStats = legendRanges.map(range => {
+            const slotsInRange = volumeBarData.filter(slot => {
+              const volumeRatio = slot.volume / maxVolume;
+              return volumeRatio >= range.min && volumeRatio < range.max;
+            });
+            const volumeInRange = slotsInRange.reduce((sum, slot) => sum + slot.volume, 0);
+            const percentage = totalVolume > 0 ? (volumeInRange / totalVolume) * 100 : 0;
+            return {
+              ...range,
+              percentage,
+              count: slotsInRange.length
+            };
+          });
+
           return (
             <div className="mb-3 px-4">
-              <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center justify-between mb-1">
                 <div className="text-xs font-semibold text-blue-400">
-                  📊 Volume Bar Analysis - 20 Price Zones
+                  📊 Volume Bar Legend - Volume Distribution by Intensity
                 </div>
                 <div className="text-xs text-gray-400">
                   Deeper blue = higher volume concentration
                 </div>
               </div>
-              <div className="flex items-center gap-4 text-[10px] text-gray-400">
-                <div className="flex items-center gap-1">
-                  <div className="w-4 h-3 bg-blue-500 rounded" style={{ opacity: 0.5 }}></div>
-                  <span>High Volume</span>
-                </div>
-                <div className="flex items-center gap-1">
-                  <div className="w-4 h-3 bg-blue-500 rounded" style={{ opacity: 0.1 }}></div>
-                  <span>Low Volume</span>
+              <div className="flex items-center gap-0.5 h-8 rounded-lg overflow-hidden border-2 border-blue-600/30 shadow-lg">
+                {rangeStats.map((range, idx) => (
+                  <div
+                    key={idx}
+                    className="flex-1 h-full flex flex-col items-center justify-center text-[7px] font-semibold leading-tight text-white"
+                    style={{ backgroundColor: '#3B82F6', opacity: range.opacity }}
+                    title={`${range.label} of max volume\n${range.percentage.toFixed(1)}% of total volume\n${range.count} price zones`}
+                  >
+                    <span className="text-[8px]">{range.label}</span>
+                    <span className="text-[7px] opacity-90">{range.percentage.toFixed(1)}%</span>
+                  </div>
+                ))}
+              </div>
+              <div className="flex items-center justify-between mt-2 text-[10px]">
+                <div className="text-gray-400">
+                  <span className="font-semibold">Price Zones:</span> 20 horizontal bands across ${volumeBarData.length > 0 ? volumeBarData[0].priceMin.toFixed(2) : '0'} - ${volumeBarData.length > 0 ? volumeBarData[volumeBarData.length - 1].priceMax.toFixed(2) : '0'}
                 </div>
                 {maxVolumeSlot.volume > 0 && (
                   <div className="text-gray-300 font-semibold">
@@ -1319,7 +1361,7 @@ export function PricePerformanceChart({
                 )}
               </div>
               <div className="text-[10px] text-gray-500 mt-1 text-center italic">
-                Price range divided into 20 horizontal zones. Volume aggregated for each zone across the entire period.
+                Each bar shows the percentage of total volume in zones with that intensity level
               </div>
             </div>
           );
