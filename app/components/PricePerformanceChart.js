@@ -442,6 +442,47 @@ export function PricePerformanceChart({
     });
   };
 
+  // Get color for volume bar based on intensity (0 to 1)
+  // Color gradient: light yellow → deep yellow → green → blue
+  const getVolumeBarColor = (intensity) => {
+    if (intensity < 0.2) {
+      // 0-20%: Light yellow to yellow (#FEFCE8 to #FEF08A)
+      const t = intensity / 0.2;
+      const r = 254;
+      const g = Math.floor(252 - t * 12);
+      const b = Math.floor(232 - t * 94);
+      return `rgba(${r}, ${g}, ${b}, 0.7)`;
+    } else if (intensity < 0.4) {
+      // 20-40%: Yellow to deep yellow (#FEF08A to #FBBF24)
+      const t = (intensity - 0.2) / 0.2;
+      const r = Math.floor(254 - t * 3);
+      const g = Math.floor(240 - t * 49);
+      const b = Math.floor(138 - t * 102);
+      return `rgba(${r}, ${g}, ${b}, 0.75)`;
+    } else if (intensity < 0.6) {
+      // 40-60%: Deep yellow to lime green (#FBBF24 to #84CC16)
+      const t = (intensity - 0.4) / 0.2;
+      const r = Math.floor(251 - t * 119);
+      const g = Math.floor(191 + t * 13);
+      const b = Math.floor(36 - t * 14);
+      return `rgba(${r}, ${g}, ${b}, 0.8)`;
+    } else if (intensity < 0.8) {
+      // 60-80%: Lime green to emerald (#84CC16 to #10B981)
+      const t = (intensity - 0.6) / 0.2;
+      const r = Math.floor(132 - t * 116);
+      const g = Math.floor(204 - t * 19);
+      const b = Math.floor(22 + t * 107);
+      return `rgba(${r}, ${g}, ${b}, 0.85)`;
+    } else {
+      // 80-100%: Emerald to deep blue (#10B981 to #1E40AF)
+      const t = (intensity - 0.8) / 0.2;
+      const r = Math.floor(16 + t * 14);
+      const g = Math.floor(185 - t * 121);
+      const b = Math.floor(129 + t * 46);
+      return `rgba(${r}, ${g}, ${b}, 0.9)`;
+    }
+  };
+
   // Calculate Volume Bar data for horizontal background zones
   const calculateVolumeBarData = (data) => {
     if (!data || data.length === 0) return [];
@@ -488,9 +529,11 @@ export function PricePerformanceChart({
     const maxVolume = Math.max(...slots.map(s => s.volume));
     if (maxVolume === 0) return slots;
 
-    // Calculate opacity for each slot (highest volume = 1.0, lowest = 0.1)
+    // Calculate intensity and color for each slot
     slots.forEach(slot => {
-      slot.opacity = 0.1 + (0.4 * (slot.volume / maxVolume));
+      const intensity = slot.volume / maxVolume; // 0 to 1
+      slot.intensity = intensity;
+      slot.color = getVolumeBarColor(intensity);
     });
 
     return slots;
@@ -1296,19 +1339,18 @@ export function PricePerformanceChart({
           // Calculate total volume and percentages
           const totalVolume = volumeBarData.reduce((sum, slot) => sum + slot.volume, 0);
 
-          // Define opacity ranges for the legend (matching the calculation in calculateVolumeBarData)
-          // opacity = 0.1 + (0.4 * (volume / maxVolume)), so range is 0.1 to 0.5
+          // Define intensity ranges for the legend with color gradient: yellow → green → blue
           const legendRanges = [
-            { label: '0-10%', min: 0, max: 0.1, opacity: 0.14 },
-            { label: '10-20%', min: 0.1, max: 0.2, opacity: 0.18 },
-            { label: '20-30%', min: 0.2, max: 0.3, opacity: 0.22 },
-            { label: '30-40%', min: 0.3, max: 0.4, opacity: 0.26 },
-            { label: '40-50%', min: 0.4, max: 0.5, opacity: 0.30 },
-            { label: '50-60%', min: 0.5, max: 0.6, opacity: 0.34 },
-            { label: '60-70%', min: 0.6, max: 0.7, opacity: 0.38 },
-            { label: '70-80%', min: 0.7, max: 0.8, opacity: 0.42 },
-            { label: '80-90%', min: 0.8, max: 0.9, opacity: 0.46 },
-            { label: '90-100%', min: 0.9, max: 1.0, opacity: 0.50 }
+            { label: '0-10%', min: 0, max: 0.1, intensity: 0.05, color: getVolumeBarColor(0.05) },
+            { label: '10-20%', min: 0.1, max: 0.2, intensity: 0.15, color: getVolumeBarColor(0.15) },
+            { label: '20-30%', min: 0.2, max: 0.3, intensity: 0.25, color: getVolumeBarColor(0.25) },
+            { label: '30-40%', min: 0.3, max: 0.4, intensity: 0.35, color: getVolumeBarColor(0.35) },
+            { label: '40-50%', min: 0.4, max: 0.5, intensity: 0.45, color: getVolumeBarColor(0.45) },
+            { label: '50-60%', min: 0.5, max: 0.6, intensity: 0.55, color: getVolumeBarColor(0.55) },
+            { label: '60-70%', min: 0.6, max: 0.7, intensity: 0.65, color: getVolumeBarColor(0.65) },
+            { label: '70-80%', min: 0.7, max: 0.8, intensity: 0.75, color: getVolumeBarColor(0.75) },
+            { label: '80-90%', min: 0.8, max: 0.9, intensity: 0.85, color: getVolumeBarColor(0.85) },
+            { label: '90-100%', min: 0.9, max: 1.0, intensity: 0.95, color: getVolumeBarColor(0.95) }
           ];
 
           // Calculate percentage of total volume in each range
@@ -1334,15 +1376,18 @@ export function PricePerformanceChart({
                   📊 Volume Bar Legend - Volume Distribution by Intensity
                 </div>
                 <div className="text-xs text-gray-400">
-                  Deeper blue = higher volume concentration
+                  🟡 Yellow (low) → 🟢 Green (medium) → 🔵 Blue (high)
                 </div>
               </div>
-              <div className="flex items-center gap-0.5 h-8 rounded-lg overflow-hidden border-2 border-blue-600/30 shadow-lg">
+              <div className="flex items-center gap-0.5 h-8 rounded-lg overflow-hidden border-2 border-yellow-600/30 shadow-lg">
                 {rangeStats.map((range, idx) => (
                   <div
                     key={idx}
-                    className="flex-1 h-full flex flex-col items-center justify-center text-[7px] font-semibold leading-tight text-white"
-                    style={{ backgroundColor: '#3B82F6', opacity: range.opacity }}
+                    className="flex-1 h-full flex flex-col items-center justify-center text-[7px] font-semibold leading-tight"
+                    style={{
+                      background: range.color,
+                      color: idx < 3 ? '#422006' : '#FFFFFF'
+                    }}
                     title={`${range.label} of max volume\n${range.percentage.toFixed(1)}% of total volume\n${range.count} price zones`}
                   >
                     <span className="text-[8px]">{range.label}</span>
@@ -1859,8 +1904,7 @@ export function PricePerformanceChart({
                       key={`volume-bar-${idx}`}
                       y1={slot.priceMin}
                       y2={slot.priceMax}
-                      fill="#3B82F6"
-                      fillOpacity={slot.opacity}
+                      fill={slot.color}
                       strokeOpacity={0}
                     />
                   ));
