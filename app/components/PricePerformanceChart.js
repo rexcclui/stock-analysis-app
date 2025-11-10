@@ -165,6 +165,7 @@ export function PricePerformanceChart({
   // Calculate VSPY (Relative Performance vs SPY on 3-day MA) for each data point
   const calculateVSPY = (data, period, spyHistoricalData) => {
     if (!data || data.length === 0 || !spyHistoricalData || spyHistoricalData.length === 0) {
+      console.log('VSPY: No data or SPY data', { dataLen: data?.length, spyLen: spyHistoricalData?.length });
       return data.map(point => ({ ...point, vspy: 1 }));
     }
 
@@ -181,7 +182,15 @@ export function PricePerformanceChart({
       spyMap.set(dateKey, point);
     });
 
-    return stockWithMA.map((point, idx) => {
+    console.log('VSPY: SPY map size:', spyMap.size, 'Stock data length:', stockWithMA.length, 'N:', N);
+    console.log('VSPY: Sample stock dates:', stockWithMA.slice(0, 3).map(p => p.date));
+    console.log('VSPY: Sample SPY dates:', Array.from(spyMap.keys()).slice(0, 3));
+
+    let matchedCount = 0;
+    let unmatchedCount = 0;
+    const vspyValues = [];
+
+    const result = stockWithMA.map((point, idx) => {
       // Need enough data for N-day performance calculation
       if (idx < N) {
         return { ...point, vspy: 1 }; // Default VSPY = 1
@@ -204,8 +213,11 @@ export function PricePerformanceChart({
       const nDaysAgoSpyPoint = spyMap.get(nDaysAgoDate);
 
       if (!currentSpyPoint || !nDaysAgoSpyPoint) {
+        unmatchedCount++;
         return { ...point, vspy: 1 }; // Default if SPY data not available
       }
+
+      matchedCount++;
 
       // Calculate N-day performance for SPY on 3-day MA
       const spyPerformance = nDaysAgoSpyPoint.ma3 > 0
@@ -230,8 +242,15 @@ export function PricePerformanceChart({
         vspy = 0.3;
       }
 
+      vspyValues.push(vspy);
       return { ...point, vspy };
     });
+
+    console.log('VSPY: Matched:', matchedCount, 'Unmatched:', unmatchedCount);
+    console.log('VSPY: Values range:', Math.min(...vspyValues), 'to', Math.max(...vspyValues));
+    console.log('VSPY: Sample values:', vspyValues.slice(0, 10));
+
+    return result;
   };
 
   // Helper to format date based on period
