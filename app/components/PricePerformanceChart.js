@@ -84,10 +84,10 @@ export function PricePerformanceChart({
     setDataOffset(0);
   }, [chartPeriod]);
 
-  // Reset max SMA gain when stock or period changes
+  // Reset max SMA gain when stock, period, or data range changes
   useEffect(() => {
     setMaxSmaGain({ gain: 0, period: 20, percentage: 0 });
-  }, [selectedStock?.code, chartPeriod]);
+  }, [selectedStock?.code, chartPeriod, dataOffset]);
 
   // Helper to get period size in days
   const getPeriodDays = (period) => {
