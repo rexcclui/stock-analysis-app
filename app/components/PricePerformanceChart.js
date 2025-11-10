@@ -783,7 +783,11 @@ export function PricePerformanceChart({
                   <div className={`text-xs font-semibold ${marketChange >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
                     Market Change: {marketChange >= 0 ? '+' : ''}{marketChange.toFixed(2)}% (${marketChangeAmount >= 0 ? '+' : ''}${marketChangeAmount.toFixed(2)})
                   </div>
-                  <div className="text-xs font-semibold text-yellow-400">
+                  <div
+                    className="text-xs font-semibold text-yellow-400 cursor-pointer hover:text-yellow-300 transition"
+                    onClick={() => setSmaPeriod(maxSmaGain.period)}
+                    title="Click to set SMA slider to this period"
+                  >
                     Max Gain: {maxSmaGain.percentage.toFixed(2)}% (${maxSmaGain.gain.toFixed(2)}) @ SMA {maxSmaGain.period}
                   </div>
                 </div>
