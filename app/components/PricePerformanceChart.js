@@ -817,11 +817,15 @@ export function PricePerformanceChart({
                   setColorMode('default');
                 }
               }}
-              className="px-3 py-2 rounded-lg text-xs font-medium transition"
               style={{
-                backgroundColor: colorMode === 'rvi' || colorMode === 'vspy' ? '#FBBF24' : '#374151',
-                color: colorMode === 'rvi' || colorMode === 'vspy' ? '#000000' : '#D1D5DB',
-                fontWeight: 'bold'
+                backgroundColor: (colorMode === 'rvi' || colorMode === 'vspy') ? '#FBBF24' : '#374151',
+                color: (colorMode === 'rvi' || colorMode === 'vspy') ? '#000000' : '#D1D5DB',
+                fontWeight: 'bold',
+                padding: '0.5rem 0.75rem',
+                borderRadius: '0.5rem',
+                fontSize: '0.75rem',
+                lineHeight: '1rem',
+                transition: 'all 0.15s ease'
               }}
               title={colorMode === 'rvi' ? 'Switch to VSPY coloring' : colorMode === 'vspy' ? 'Switch to Color OFF' : 'Enable RVI coloring'}
             >
