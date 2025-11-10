@@ -653,25 +653,34 @@ export function PricePerformanceChart({
     console.log('  Bottoms found:', bottoms.length);
     console.log('  Peaks found:', peaks.length);
 
-    // Identify Higher Lows (HL): each bottom higher than the previous
+    // Work backwards from most recent data to find recent uptrend
+    // Reverse arrays to start from most recent turning points
+    const recentBottoms = [...bottoms].reverse();
+    const recentPeaks = [...peaks].reverse();
+
+    // Identify Higher Lows (HL): working backwards, each bottom should be LOWER than the previous (more recent)
     const higherLows = [];
-    for (let i = 0; i < bottoms.length; i++) {
-      if (i === 0 || bottoms[i].price > bottoms[i - 1].price) {
-        higherLows.push(bottoms[i]);
+    for (let i = 0; i < recentBottoms.length; i++) {
+      if (i === 0 || recentBottoms[i].price < recentBottoms[i - 1].price) {
+        higherLows.push(recentBottoms[i]);
       } else {
         break; // Sequence broken
       }
     }
 
-    // Identify Higher Highs (HH): each peak higher than the previous
+    // Identify Higher Highs (HH): working backwards, each peak should be LOWER than the previous (more recent)
     const higherHighs = [];
-    for (let i = 0; i < peaks.length; i++) {
-      if (i === 0 || peaks[i].price > peaks[i - 1].price) {
-        higherHighs.push(peaks[i]);
+    for (let i = 0; i < recentPeaks.length; i++) {
+      if (i === 0 || recentPeaks[i].price < recentPeaks[i - 1].price) {
+        higherHighs.push(recentPeaks[i]);
       } else {
         break; // Sequence broken
       }
     }
+
+    // Reverse back to chronological order (oldest to newest)
+    higherLows.reverse();
+    higherHighs.reverse();
 
     console.log('  Higher Lows (HL):', higherLows.length, '-', higherLows.map(h => h.price.toFixed(2)).join(', '));
     console.log('  Higher Highs (HH):', higherHighs.length, '-', higherHighs.map(h => h.price.toFixed(2)).join(', '));
@@ -684,7 +693,7 @@ export function PricePerformanceChart({
 
     // Take more HLs to capture bigger trend (up to 5)
     const numHLToUse = Math.min(5, higherLows.length);
-    const trendBottoms = higherLows.slice(0, numHLToUse);
+    const trendBottoms = higherLows.slice(Math.max(0, higherLows.length - numHLToUse));
 
     // Lower trendline (PRIMARY): Connect the Higher Low points
     const firstHL = trendBottoms[0];
@@ -779,25 +788,34 @@ export function PricePerformanceChart({
     console.log('  Bottoms found:', bottoms.length);
     console.log('  Peaks found:', peaks.length);
 
-    // Identify Lower Highs (LH): each peak lower than the previous
+    // Work backwards from most recent data to find recent downtrend
+    // Reverse arrays to start from most recent turning points
+    const recentBottoms = [...bottoms].reverse();
+    const recentPeaks = [...peaks].reverse();
+
+    // Identify Lower Highs (LH): working backwards, each peak should be HIGHER than the previous (more recent)
     const lowerHighs = [];
-    for (let i = 0; i < peaks.length; i++) {
-      if (i === 0 || peaks[i].price < peaks[i - 1].price) {
-        lowerHighs.push(peaks[i]);
+    for (let i = 0; i < recentPeaks.length; i++) {
+      if (i === 0 || recentPeaks[i].price > recentPeaks[i - 1].price) {
+        lowerHighs.push(recentPeaks[i]);
       } else {
         break; // Sequence broken
       }
     }
 
-    // Identify Lower Lows (LL): each bottom lower than the previous
+    // Identify Lower Lows (LL): working backwards, each bottom should be HIGHER than the previous (more recent)
     const lowerLows = [];
-    for (let i = 0; i < bottoms.length; i++) {
-      if (i === 0 || bottoms[i].price < bottoms[i - 1].price) {
-        lowerLows.push(bottoms[i]);
+    for (let i = 0; i < recentBottoms.length; i++) {
+      if (i === 0 || recentBottoms[i].price > recentBottoms[i - 1].price) {
+        lowerLows.push(recentBottoms[i]);
       } else {
         break; // Sequence broken
       }
     }
+
+    // Reverse back to chronological order (oldest to newest)
+    lowerHighs.reverse();
+    lowerLows.reverse();
 
     console.log('  Lower Highs (LH):', lowerHighs.length, '-', lowerHighs.map(h => h.price.toFixed(2)).join(', '));
     console.log('  Lower Lows (LL):', lowerLows.length, '-', lowerLows.map(h => h.price.toFixed(2)).join(', '));
@@ -810,7 +828,7 @@ export function PricePerformanceChart({
 
     // Take more LHs to capture bigger trend (up to 5)
     const numLHToUse = Math.min(5, lowerHighs.length);
-    const trendPeaks = lowerHighs.slice(0, numLHToUse);
+    const trendPeaks = lowerHighs.slice(Math.max(0, lowerHighs.length - numLHToUse));
 
     // Upper trendline (PRIMARY): Connect the Lower High points
     const firstLH = trendPeaks[0];
