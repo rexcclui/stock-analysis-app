@@ -1906,95 +1906,68 @@ export function PricePerformanceChart({
         const volumeBarData = calculateVolumeBarData(currentData);
         const maxVolumeSlot = volumeBarData.reduce((max, slot) => slot.volume > max.volume ? slot : max, { volume: 0 });
 
-        // Calculate total volume and percentages
+        // Calculate total volume
         const totalVolume = volumeBarData.reduce((sum, slot) => sum + slot.volume, 0);
 
-        // Define intensity ranges for the legend with color gradient: yellow → green → blue
-        const legendRanges = [
-          { label: '0-10%', min: 0, max: 0.1, intensity: 0.05, color: getVolumeBarColor(0.05) },
-          { label: '10-20%', min: 0.1, max: 0.2, intensity: 0.15, color: getVolumeBarColor(0.15) },
-          { label: '20-30%', min: 0.2, max: 0.3, intensity: 0.25, color: getVolumeBarColor(0.25) },
-          { label: '30-40%', min: 0.3, max: 0.4, intensity: 0.35, color: getVolumeBarColor(0.35) },
-          { label: '40-50%', min: 0.4, max: 0.5, intensity: 0.45, color: getVolumeBarColor(0.45) },
-          { label: '50-60%', min: 0.5, max: 0.6, intensity: 0.55, color: getVolumeBarColor(0.55) },
-          { label: '60-70%', min: 0.6, max: 0.7, intensity: 0.65, color: getVolumeBarColor(0.65) },
-          { label: '70-80%', min: 0.7, max: 0.8, intensity: 0.75, color: getVolumeBarColor(0.75) },
-          { label: '80-90%', min: 0.8, max: 0.9, intensity: 0.85, color: getVolumeBarColor(0.85) },
-          { label: '90-100%', min: 0.9, max: 1.0, intensity: 0.95, color: getVolumeBarColor(0.95) }
-        ];
-
-        // Calculate percentage of total volume in each range and price ranges
-        const maxVolume = Math.max(...volumeBarData.map(s => s.volume));
-        const rangeStats = legendRanges.map(range => {
-          const slotsInRange = volumeBarData.filter(slot => {
-            const volumeRatio = slot.volume / maxVolume;
-            return volumeRatio >= range.min && volumeRatio < range.max;
-          });
-          const volumeInRange = slotsInRange.reduce((sum, slot) => sum + slot.volume, 0);
-          const percentage = totalVolume > 0 ? (volumeInRange / totalVolume) * 100 : 0;
-
-          // Calculate price range for this intensity range
-          let priceRangeLabel = '-';
-          if (slotsInRange.length > 0) {
-            const pricesInRange = slotsInRange.flatMap(slot => [slot.priceMin, slot.priceMax]);
-            const minPrice = Math.min(...pricesInRange);
-            const maxPrice = Math.max(...pricesInRange);
-            priceRangeLabel = `$${minPrice.toFixed(2)}-$${maxPrice.toFixed(2)}`;
-          }
+        // Create legend data directly from the 20 price slots (evenly distributed)
+        const legendData = volumeBarData.map(slot => {
+          const percentage = totalVolume > 0 ? (slot.volume / totalVolume) * 100 : 0;
+          const priceLabel = `$${slot.priceMin.toFixed(2)}-$${slot.priceMax.toFixed(2)}`;
 
           return {
-            ...range,
+            priceLabel,
+            priceMin: slot.priceMin,
+            priceMax: slot.priceMax,
             percentage,
-            count: slotsInRange.length,
-            priceRangeLabel
+            volume: slot.volume,
+            color: slot.color,
+            intensity: slot.intensity
           };
         });
-
-        // Filter out ranges with 0% to make legend cleaner
-        const activeRanges = rangeStats.filter(r => r.percentage > 0 || r.count > 0);
 
         return (
           <div className="mt-4 mb-3 px-4">
             <div className="bg-gray-800 rounded-xl shadow-xl border border-gray-700 p-4">
               <div className="flex items-center justify-between mb-2">
                 <div className="text-sm font-semibold text-yellow-400">
-                  📊 Volume Bar Legend - Volume Distribution by Price Range
+                  📊 Volume Bar Legend - 20 Price Zones (Evenly Distributed)
                 </div>
                 <div className="text-xs text-gray-400">
                   🟡 Yellow (low volume) → 🟢 Green (medium) → 🔵 Blue (high volume)
                 </div>
               </div>
               <div className="flex items-center gap-0.5 h-12 rounded-lg overflow-hidden border-2 border-yellow-600/30 shadow-lg">
-                {rangeStats.map((range, idx) => (
+                {legendData.map((slot, idx) => (
                   <div
                     key={idx}
-                    className="flex-1 h-full flex flex-col items-center justify-center text-[7px] font-semibold leading-tight px-1"
+                    className="flex-1 h-full flex flex-col items-center justify-center text-[7px] font-semibold leading-tight px-0.5"
                     style={{
-                      background: range.color,
-                      color: idx < 3 ? '#422006' : '#FFFFFF',
-                      opacity: range.percentage === 0 ? 0.4 : 1
+                      background: slot.color,
+                      color: slot.intensity < 0.3 ? '#422006' : '#FFFFFF',
+                      opacity: slot.percentage === 0 ? 0.3 : 1
                     }}
-                    title={`Price Range: ${range.priceRangeLabel}\nVolume Intensity: ${range.label} of max volume\nContains ${range.percentage.toFixed(1)}% of total trading volume\n${range.count} price zones in this range`}
+                    title={`Price: ${slot.priceLabel}\nVolume: ${slot.volume.toLocaleString()}\n${slot.percentage.toFixed(1)}% of total trading volume\nIntensity: ${(slot.intensity * 100).toFixed(0)}% of max volume`}
                   >
-                    <span className="text-[8px] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center">{range.priceRangeLabel}</span>
-                    <span className="text-[9px] font-bold">{range.percentage.toFixed(1)}%</span>
+                    <span className="text-[7px] whitespace-nowrap overflow-hidden text-ellipsis w-full text-center">{slot.priceLabel}</span>
+                    <span className="text-[8px] font-bold">{slot.percentage.toFixed(1)}%</span>
                   </div>
                 ))}
               </div>
               <div className="flex items-center justify-between mt-3 text-[11px]">
                 <div className="text-gray-300">
-                  <span className="font-semibold">Price Zones:</span> 20 horizontal bands from ${volumeBarData.length > 0 ? volumeBarData[0].priceMin.toFixed(2) : '0'} to ${volumeBarData.length > 0 ? volumeBarData[volumeBarData.length - 1].priceMax.toFixed(2) : '0'}
+                  <span className="font-semibold">Total Price Range:</span> ${volumeBarData.length > 0 ? volumeBarData[0].priceMin.toFixed(2) : '0'} to ${volumeBarData.length > 0 ? volumeBarData[volumeBarData.length - 1].priceMax.toFixed(2) : '0'}
                 </div>
                 {maxVolumeSlot.volume > 0 && (
                   <div className="text-emerald-300 font-semibold">
-                    🔥 Highest Volume: ${maxVolumeSlot.priceMin.toFixed(2)} - ${maxVolumeSlot.priceMax.toFixed(2)}
+                    🔥 Highest Volume: ${maxVolumeSlot.priceMin.toFixed(2)} - ${maxVolumeSlot.priceMax.toFixed(2)} ({((maxVolumeSlot.volume / totalVolume) * 100).toFixed(1)}%)
                   </div>
                 )}
               </div>
               <div className="text-[10px] text-gray-400 mt-2 text-center">
-                <span className="font-semibold">Legend:</span> Each bar's <span className="text-yellow-300">top label</span> shows the <span className="text-blue-300">price range</span> for that color intensity.
-                The <span className="text-emerald-300">bottom percentage</span> shows what portion of <span className="text-white font-semibold">total trading volume</span> occurred in that price range.
-                {activeRanges.length < rangeStats.length && <span className="text-gray-500 italic"> (Faded bars = no trading in that price range)</span>}
+                <span className="font-semibold">Legend:</span> Each bar represents one of the 20 equal price zones.
+                The <span className="text-yellow-300">top label</span> shows the <span className="text-blue-300">price range</span>, and the
+                <span className="text-emerald-300"> bottom percentage</span> shows what portion of <span className="text-white font-semibold">total trading volume</span> occurred in that zone.
+                <span className="text-gray-500 italic"> Color intensity reflects volume level (yellow=low, green=medium, blue=high).</span>
               </div>
             </div>
           </div>
