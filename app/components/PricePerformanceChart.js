@@ -821,16 +821,16 @@ export function PricePerformanceChart({
               }}
               className={`px-3 py-2 rounded-lg text-xs font-medium transition ${
                 colorMode === 'rvi'
-                  ? 'bg-purple-700 hover:bg-purple-600 text-white'
+                  ? 'bg-yellow-600 hover:bg-yellow-500 text-white'
                   : colorMode === 'vspy'
-                  ? 'bg-orange-700 hover:bg-orange-600 text-white'
+                  ? 'bg-yellow-600 hover:bg-yellow-500 text-white'
                   : colorMode === 'sma'
                   ? 'bg-emerald-700 hover:bg-emerald-600 text-white'
                   : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
               }`}
               title={colorMode === 'rvi' ? 'Switch to VSPY coloring' : colorMode === 'vspy' ? 'Switch to SMA Peak/Bottom mode' : colorMode === 'sma' ? 'Disable coloring' : 'Enable RVI coloring'}
             >
-              {colorMode === 'rvi' ? 'RVI: ON' : colorMode === 'vspy' ? 'VSPY: ON' : colorMode === 'sma' ? 'SMA P/B: ON' : 'Color: OFF'}
+              {colorMode === 'rvi' ? 'RVI' : colorMode === 'vspy' ? 'VSPY' : colorMode === 'sma' ? 'SMA P/B: ON' : 'Color: OFF'}
             </button>
           )}
 
