@@ -814,7 +814,7 @@ export function PricePerformanceChart({
                 } else if (colorMode === 'rvi') {
                   setColorMode('vspy');
                 } else if (colorMode === 'vspy') {
-                  setColorMode('sma');
+                  setColorMode('default');
                 } else {
                   setColorMode('default');
                 }
