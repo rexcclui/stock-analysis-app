@@ -819,16 +819,12 @@ export function PricePerformanceChart({
                   setColorMode('default');
                 }
               }}
-              className={`px-3 py-2 rounded-lg text-xs font-medium transition ${
-                colorMode === 'rvi'
-                  ? 'bg-yellow-500 hover:bg-yellow-400 text-gray-900'
-                  : colorMode === 'vspy'
-                  ? 'bg-yellow-500 hover:bg-yellow-400 text-gray-900'
-                  : colorMode === 'sma'
-                  ? 'bg-emerald-700 hover:bg-emerald-600 text-white'
-                  : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
-              }`}
-              title={colorMode === 'rvi' ? 'Switch to VSPY coloring' : colorMode === 'vspy' ? 'Switch to SMA Peak/Bottom mode' : colorMode === 'sma' ? 'Disable coloring' : 'Enable RVI coloring'}
+              className="px-3 py-2 rounded-lg text-xs font-medium transition"
+              style={{
+                backgroundColor: colorMode === 'rvi' || colorMode === 'vspy' ? '#EAB308' : colorMode === 'sma' ? '#047857' : '#374151',
+                color: colorMode === 'rvi' || colorMode === 'vspy' ? '#111827' : '#FFFFFF'
+              }}
+              title={colorMode === 'rvi' ? 'Switch to VSPY coloring' : colorMode === 'vspy' ? 'Switch to default' : colorMode === 'sma' ? 'Disable coloring' : 'Enable RVI coloring'}
             >
               {colorMode === 'rvi' ? 'RVI' : colorMode === 'vspy' ? 'VSPY' : colorMode === 'sma' ? 'SMA P/B: ON' : 'Color: OFF'}
             </button>
