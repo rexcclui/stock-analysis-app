@@ -757,7 +757,10 @@ export function PricePerformanceChart({
           const currentData = getCurrentDataSlice();
           const smaAnalysis = detectTurningPoints(currentData);
           const startPrice = currentData.length > 0 ? currentData[0].price : 1;
+          const endPrice = currentData.length > 0 ? currentData[currentData.length - 1].price : 1;
           const gainPercentage = startPrice > 0 ? (smaAnalysis.totalGain / startPrice) * 100 : 0;
+          const marketChange = startPrice > 0 ? ((endPrice - startPrice) / startPrice) * 100 : 0;
+          const marketChangeAmount = endPrice - startPrice;
 
           // Update max gain if current is higher
           if (gainPercentage > maxSmaGain.percentage) {
@@ -773,6 +776,9 @@ export function PricePerformanceChart({
                 <div className="flex flex-col items-end gap-1">
                   <div className="text-xs font-bold text-emerald-300">
                     Current Gain: {gainPercentage.toFixed(2)}% (${smaAnalysis.totalGain.toFixed(2)})
+                  </div>
+                  <div className={`text-xs font-semibold ${marketChange >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
+                    Market Change: {marketChange >= 0 ? '+' : ''}{marketChange.toFixed(2)}% (${marketChangeAmount >= 0 ? '+' : ''}${marketChangeAmount.toFixed(2)})
                   </div>
                   <div className="text-xs font-semibold text-yellow-400">
                     Max Gain: {maxSmaGain.percentage.toFixed(2)}% (${maxSmaGain.gain.toFixed(2)}) @ SMA {maxSmaGain.period}
