@@ -1326,7 +1326,7 @@ export function PricePerformanceChart({
                 multiData = smaSegments.data;
               }
 
-              console.log('Rendering chart with offset:', dataOffset, 'dataLength:', fullData.length, 'showing:', startIndex, 'to', endIndex, 'Color mode:', colorMode);
+              console.log('Rendering chart with offset:', dataOffset, 'dataLength:', fullData.length, 'showing:', startIndex, 'to', endIndex, 'Color mode:', colorMode, 'SMA mode:', colorMode === 'sma');
 
               // Debug cycle analysis state
               if (showCycleAnalysis) {
