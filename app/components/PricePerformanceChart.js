@@ -100,7 +100,7 @@ export function PricePerformanceChart({
     const fetchSpyData = async () => {
       if (colorMode === 'vspy' && spyData.length === 0) {
         try {
-          const response = await fetch('/api/stock/SPY');
+          const response = await fetch('/api/stock?symbol=SPY');
           if (response.ok) {
             const stockData = await response.json();
             const spyHistorical = stockData?.chartData?.fullHistorical || [];
