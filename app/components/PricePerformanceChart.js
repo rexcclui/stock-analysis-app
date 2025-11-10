@@ -55,8 +55,6 @@ export function PricePerformanceChart({
   const [channelSource, setChannelSource] = useState('close'); // Price source: 'close', 'hl2', 'ohlc4'
   const [channelVolumeBins, setChannelVolumeBins] = useState(70); // Volume profile bins
   const [channelProximityThreshold, setChannelProximityThreshold] = useState(0.02); // 2% proximity threshold
-  const [channelData, setChannelData] = useState(null); // Calculated channel data
-  const [volumeProfileData, setVolumeProfileData] = useState(null); // Calculated volume profile
 
   // AI Analysis using custom hook
   const {
@@ -969,9 +967,10 @@ export function PricePerformanceChart({
         ? analyzeChannelConfluence(dataWithChannel, volumeProfile, channelProximityThreshold)
         : dataWithChannel;
 
-      // Store channel data and volume profile for visualization
-      setChannelData(dataWithConfluence);
-      setVolumeProfileData(volumeProfile);
+      // Attach volume profile metadata to the data for use in rendering
+      if (dataWithConfluence.length > 0) {
+        dataWithConfluence._volumeProfile = volumeProfile;
+      }
 
       return dataWithConfluence;
     }
@@ -2201,9 +2200,10 @@ export function PricePerformanceChart({
                 })()}
 
                 {/* Standard Deviation Channel - Trend lines with volume profile validation */}
-                {colorMode === 'channel' && chartCompareStocks.length === 0 && channelData && multiData.length > 0 && (() => {
+                {colorMode === 'channel' && chartCompareStocks.length === 0 && multiData.length > 0 && (() => {
                   // Get the last data point to determine current bound states
-                  const lastPoint = channelData[channelData.length - 1];
+                  const lastPoint = multiData[multiData.length - 1];
+                  const volumeProfile = multiData._volumeProfile;
                   const upperState = lastPoint?.upperBoundState || 'neutral';
                   const lowerState = lastPoint?.lowerBoundState || 'neutral';
 
@@ -2278,15 +2278,15 @@ export function PricePerformanceChart({
                       )}
 
                       {/* Point of Control (POC) from Volume Profile */}
-                      {volumeProfileData && volumeProfileData.poc && (
+                      {volumeProfile && volumeProfile.poc && (
                         <ReferenceLine
-                          y={volumeProfileData.poc.priceLevel}
+                          y={volumeProfile.poc.priceLevel}
                           stroke="#fbbf24"
                           strokeWidth={2}
                           strokeDasharray="5 5"
                           strokeOpacity={0.9}
                           label={{
-                            value: `POC: $${volumeProfileData.poc.priceLevel.toFixed(2)}`,
+                            value: `POC: $${volumeProfile.poc.priceLevel.toFixed(2)}`,
                             position: 'left',
                             fill: '#fbbf24',
                             fontSize: 10,
@@ -2296,7 +2296,7 @@ export function PricePerformanceChart({
                       )}
 
                       {/* High Volume Nodes (HVNs) */}
-                      {volumeProfileData && volumeProfileData.hvns && volumeProfileData.hvns.slice(0, 5).map((hvn, idx) => (
+                      {volumeProfile && volumeProfile.hvns && volumeProfile.hvns.slice(0, 5).map((hvn, idx) => (
                         <ReferenceLine
                           key={`hvn-${idx}`}
                           y={hvn.priceLevel}
@@ -2457,38 +2457,44 @@ export function PricePerformanceChart({
       })()}
 
       {/* Standard Deviation Channel Legend */}
-      {colorMode === 'channel' && chartCompareStocks.length === 0 && selectedStock && channelData && volumeProfileData && (
-        <div className="mb-4 px-4">
-          <div className="bg-gradient-to-r from-gray-800 via-gray-750 to-gray-800 rounded-lg p-4 shadow-lg border-2 border-blue-600/30">
-            <div className="flex items-center justify-between mb-3">
-              <div className="text-sm font-semibold text-blue-400">
-                📈 Standard Deviation Channel with Volume Profile
-              </div>
-              <div className="text-xs text-gray-400">
-                Trend lines validated by volume density
-              </div>
-            </div>
+      {colorMode === 'channel' && chartCompareStocks.length === 0 && selectedStock && (() => {
+        const currentData = getCurrentDataSlice();
+        const volumeProfile = currentData._volumeProfile;
 
-            {/* Channel Parameters */}
-            <div className="grid grid-cols-2 gap-3 mb-3 text-xs">
-              <div className="bg-gray-900/50 rounded p-2">
-                <div className="text-gray-400 mb-1">Configuration</div>
-                <div className="text-white">
-                  <div>Lookback: <span className="text-blue-400 font-bold">{channelLookback}</span> periods</div>
-                  <div>Std Dev: <span className="text-red-400 font-bold">{channelStdDevMultiplier.toFixed(1)}σ</span></div>
-                  <div>Source: <span className="text-green-400 font-bold">{channelSource.toUpperCase()}</span></div>
+        if (!volumeProfile) return null;
+
+        return (
+          <div className="mb-4 px-4">
+            <div className="bg-gradient-to-r from-gray-800 via-gray-750 to-gray-800 rounded-lg p-4 shadow-lg border-2 border-blue-600/30">
+              <div className="flex items-center justify-between mb-3">
+                <div className="text-sm font-semibold text-blue-400">
+                  📈 Standard Deviation Channel with Volume Profile
+                </div>
+                <div className="text-xs text-gray-400">
+                  Trend lines validated by volume density
                 </div>
               </div>
 
-              <div className="bg-gray-900/50 rounded p-2">
-                <div className="text-gray-400 mb-1">Volume Profile</div>
-                <div className="text-white">
-                  <div>Bins: <span className="text-purple-400 font-bold">{channelVolumeBins}</span></div>
-                  <div>POC: <span className="text-yellow-400 font-bold">${volumeProfileData.poc.priceLevel.toFixed(2)}</span></div>
-                  <div>HVNs: <span className="text-purple-400 font-bold">{volumeProfileData.hvns.length}</span> zones</div>
+              {/* Channel Parameters */}
+              <div className="grid grid-cols-2 gap-3 mb-3 text-xs">
+                <div className="bg-gray-900/50 rounded p-2">
+                  <div className="text-gray-400 mb-1">Configuration</div>
+                  <div className="text-white">
+                    <div>Lookback: <span className="text-blue-400 font-bold">{channelLookback}</span> periods</div>
+                    <div>Std Dev: <span className="text-red-400 font-bold">{channelStdDevMultiplier.toFixed(1)}σ</span></div>
+                    <div>Source: <span className="text-green-400 font-bold">{channelSource.toUpperCase()}</span></div>
+                  </div>
+                </div>
+
+                <div className="bg-gray-900/50 rounded p-2">
+                  <div className="text-gray-400 mb-1">Volume Profile</div>
+                  <div className="text-white">
+                    <div>Bins: <span className="text-purple-400 font-bold">{channelVolumeBins}</span></div>
+                    <div>POC: <span className="text-yellow-400 font-bold">${volumeProfile.poc.priceLevel.toFixed(2)}</span></div>
+                    <div>HVNs: <span className="text-purple-400 font-bold">{volumeProfile.hvns.length}</span> zones</div>
+                  </div>
                 </div>
               </div>
-            </div>
 
             {/* Legend Explanation */}
             <div className="space-y-2 text-xs">
@@ -2538,12 +2544,13 @@ export function PricePerformanceChart({
               </div>
             </div>
 
-            <div className="text-[10px] text-gray-500 italic mt-3 text-center">
-              💡 Tip: Strong bounds indicate price levels with historical volume support. Weak bounds may be more easily broken through.
+              <div className="text-[10px] text-gray-500 italic mt-3 text-center">
+                💡 Tip: Strong bounds indicate price levels with historical volume support. Weak bounds may be more easily broken through.
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        );
+      })()}
 
       {/* AI Analysis Panel - Shows analysis summary and errors */}
       <AIPriceAnalysisPanel
