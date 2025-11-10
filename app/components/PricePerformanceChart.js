@@ -1169,16 +1169,29 @@ export function PricePerformanceChart({
                 {colorMode === 'sma' && chartCompareStocks.length === 0 && multiData.length > 0 && (() => {
                   const smaAnalysis = detectTurningPoints(multiData);
 
-                  // Custom arrow shapes - tip touches the line exactly
+                  // Custom arrow shapes - chevron style with stem
                   const UpArrow = (props) => {
                     const { cx, cy } = props;
                     return (
                       <g>
-                        <polygon
-                          points={`${cx},${cy} ${cx - 7},${cy + 12} ${cx + 7},${cy + 12}`}
-                          fill="#10b981"
-                          stroke="#ffffff"
-                          strokeWidth={2}
+                        {/* Stem line */}
+                        <line
+                          x1={cx}
+                          y1={cy}
+                          x2={cx}
+                          y2={cy + 10}
+                          stroke="#10b981"
+                          strokeWidth={2.5}
+                          strokeLinecap="round"
+                        />
+                        {/* Chevron head pointing up */}
+                        <polyline
+                          points={`${cx - 6},${cy + 5} ${cx},${cy} ${cx + 6},${cy + 5}`}
+                          fill="none"
+                          stroke="#10b981"
+                          strokeWidth={2.5}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
                         />
                       </g>
                     );
@@ -1188,11 +1201,24 @@ export function PricePerformanceChart({
                     const { cx, cy } = props;
                     return (
                       <g>
-                        <polygon
-                          points={`${cx},${cy} ${cx - 7},${cy - 12} ${cx + 7},${cy - 12}`}
-                          fill="#ef4444"
-                          stroke="#ffffff"
-                          strokeWidth={2}
+                        {/* Stem line */}
+                        <line
+                          x1={cx}
+                          y1={cy}
+                          x2={cx}
+                          y2={cy - 10}
+                          stroke="#ef4444"
+                          strokeWidth={2.5}
+                          strokeLinecap="round"
+                        />
+                        {/* Chevron head pointing down */}
+                        <polyline
+                          points={`${cx - 6},${cy - 5} ${cx},${cy} ${cx + 6},${cy - 5}`}
+                          fill="none"
+                          stroke="#ef4444"
+                          strokeWidth={2.5}
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
                         />
                       </g>
                     );
