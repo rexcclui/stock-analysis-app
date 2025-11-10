@@ -1169,13 +1169,13 @@ export function PricePerformanceChart({
                 {colorMode === 'sma' && chartCompareStocks.length === 0 && multiData.length > 0 && (() => {
                   const smaAnalysis = detectTurningPoints(multiData);
 
-                  // Custom arrow shapes
+                  // Custom arrow shapes - tip touches the line exactly
                   const UpArrow = (props) => {
                     const { cx, cy } = props;
                     return (
                       <g>
                         <polygon
-                          points={`${cx},${cy - 8} ${cx - 6},${cy + 4} ${cx + 6},${cy + 4}`}
+                          points={`${cx},${cy} ${cx - 7},${cy + 12} ${cx + 7},${cy + 12}`}
                           fill="#10b981"
                           stroke="#ffffff"
                           strokeWidth={2}
@@ -1189,7 +1189,7 @@ export function PricePerformanceChart({
                     return (
                       <g>
                         <polygon
-                          points={`${cx},${cy + 8} ${cx - 6},${cy - 4} ${cx + 6},${cy - 4}`}
+                          points={`${cx},${cy} ${cx - 7},${cy - 12} ${cx + 7},${cy - 12}`}
                           fill="#ef4444"
                           stroke="#ffffff"
                           strokeWidth={2}
@@ -1205,7 +1205,8 @@ export function PricePerformanceChart({
                           key={`sma-turning-${idx}`}
                           x={point.date}
                           y={point.price}
-                          r={8}
+                          r={1}
+                          fill="transparent"
                           shape={point.type === 'bottom' ? <UpArrow /> : <DownArrow />}
                           label={{
                             value: point.type === 'bottom'
@@ -1216,7 +1217,8 @@ export function PricePerformanceChart({
                             position: point.type === 'bottom' ? 'bottom' : 'top',
                             fill: point.type === 'bottom' ? '#10b981' : '#ef4444',
                             fontSize: 9,
-                            fontWeight: 'bold'
+                            fontWeight: 'bold',
+                            offset: point.type === 'bottom' ? 15 : 15
                           }}
                         />
                       ))}
