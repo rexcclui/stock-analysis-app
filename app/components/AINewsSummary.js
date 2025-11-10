@@ -163,7 +163,7 @@ export function AINewsSummary({ analysis, loading, error, onAnalyze, hasNews, sy
                           <li><strong>Wait 2-5 minutes</strong> - Billing updates can take time to propagate</li>
                           <li><strong>Check organization</strong> - Your API key might be from a different org than where you added credits</li>
                           <li><strong>Verify the API key</strong> - Go to <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener noreferrer" className="text-blue-400 hover:underline">API Keys</a> and check which organization owns your key</li>
-                          <li><strong>Check usage limits</strong> - You may have set a monthly budget limit that's been reached</li>
+                          <li><strong>Check usage limits</strong> - You may have set a monthly budget limit that&apos;s been reached</li>
                         </ul>
                       </div>
                     )}
