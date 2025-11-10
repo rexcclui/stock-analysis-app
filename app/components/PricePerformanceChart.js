@@ -821,9 +821,9 @@ export function PricePerformanceChart({
               }}
               className={`px-3 py-2 rounded-lg text-xs font-medium transition ${
                 colorMode === 'rvi'
-                  ? 'bg-yellow-600 hover:bg-yellow-500 text-white'
+                  ? 'bg-yellow-500 hover:bg-yellow-400 text-gray-900'
                   : colorMode === 'vspy'
-                  ? 'bg-yellow-600 hover:bg-yellow-500 text-white'
+                  ? 'bg-yellow-500 hover:bg-yellow-400 text-gray-900'
                   : colorMode === 'sma'
                   ? 'bg-emerald-700 hover:bg-emerald-600 text-white'
                   : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
