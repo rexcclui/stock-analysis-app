@@ -364,13 +364,26 @@ export function PricePerformanceChart({
         const spyTotalDays = spyData.length;
         const spyEndIndex = spyTotalDays - dataOffset;
         const spyStartIndex = Math.max(0, spyEndIndex - periodDays);
+        // Keep original date format for calculation
         const spySlicedData = spyData.slice(spyStartIndex, spyEndIndex).map(d => ({
-          date: formatChartDate(d.date, chartPeriod),
+          date: d.date, // Keep original YYYY-MM-DD format
           price: d.price,
           volume: d.volume || 0
         }));
 
-        return calculateVSPY(slicedData, chartPeriod, spySlicedData);
+        // Calculate VSPY with original dates, then format
+        const unformattedSlicedData = fullHistoricalData.slice(startIndex, endIndex).map(d => ({
+          date: d.date,
+          price: d.price,
+          volume: d.volume || 0
+        }));
+        const dataWithVSPY = calculateVSPY(unformattedSlicedData, chartPeriod, spySlicedData);
+
+        // Now format the dates
+        return dataWithVSPY.map(d => ({
+          ...d,
+          date: formatChartDate(d.date, chartPeriod)
+        }));
       }
     }
 
