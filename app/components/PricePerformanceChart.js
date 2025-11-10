@@ -41,7 +41,9 @@ export function PricePerformanceChart({
   const chartData = useMemo(() => selectedStock?.chartData?.[chartPeriod] || [], [selectedStock, chartPeriod]);
   const fullHistoricalData = useMemo(() => selectedStock?.chartData?.fullHistorical || [], [selectedStock]);
   const [dataOffset, setDataOffset] = useState(0); // Offset in days from most recent
-  const [colorMode, setColorMode] = useState('default'); // 'default', 'rvi', or 'sma'
+  const [colorMode, setColorMode] = useState('default'); // 'default', 'rvi', 'vspy', or 'sma'
+  const [spyData, setSpyData] = useState([]); // SPY historical data for VSPY calculation
+  const [spyLoading, setSpyLoading] = useState(false); // Loading state for SPY data
   const [smaPeriod, setSmaPeriod] = useState(20); // SMA period for peak/bottom mode
   const [maxSmaGain, setMaxSmaGain] = useState({ gain: 0, period: 20, percentage: 0 }); // Track maximum gain
 
@@ -101,6 +103,31 @@ export function PricePerformanceChart({
     return nMap[period] || 5;
   };
 
+  // Fetch SPY data when switching to VSPY mode
+  useEffect(() => {
+    const fetchSpyData = async () => {
+      if (colorMode === 'vspy' && spyData.length === 0) {
+        setSpyLoading(true);
+        try {
+          const response = await fetch('/api/stock?symbol=SPY');
+          if (response.ok) {
+            const stockData = await response.json();
+            const spyHistorical = stockData?.chartData?.fullHistorical || [];
+            setSpyData(spyHistorical);
+          } else {
+            console.error('Failed to fetch SPY data');
+          }
+        } catch (error) {
+          console.error('Error fetching SPY data:', error);
+        } finally {
+          setSpyLoading(false);
+        }
+      }
+    };
+
+    fetchSpyData();
+  }, [colorMode, spyData.length]);
+
   // Calculate RVI (Relative Volume Index) for each data point
   const calculateRVI = (data, period) => {
     if (!data || data.length === 0) return data;
@@ -127,6 +154,114 @@ export function PricePerformanceChart({
 
       return { ...point, rvi };
     });
+  };
+
+  // Calculate 3-day moving average
+  const calculate3DayMA = (data) => {
+    if (!data || data.length === 0) return [];
+
+    return data.map((point, idx) => {
+      if (idx < 2) {
+        // Not enough data for 3-day MA, use actual price
+        return { ...point, ma3: point.price };
+      }
+
+      const sum = data.slice(idx - 2, idx + 1).reduce((acc, d) => acc + (d.price || 0), 0);
+      const ma3 = sum / 3;
+
+      return { ...point, ma3 };
+    });
+  };
+
+  // Calculate VSPY (Relative Performance vs SPY on 3-day MA) for each data point
+  const calculateVSPY = (data, period, spyHistoricalData) => {
+    if (!data || data.length === 0 || !spyHistoricalData || spyHistoricalData.length === 0) {
+      console.log('VSPY: No data or SPY data', { dataLen: data?.length, spyLen: spyHistoricalData?.length });
+      return data.map(point => ({ ...point, vspy: 1 }));
+    }
+
+    const N = getRviN(period);
+
+    // Calculate 3-day MA for both current stock and SPY
+    const stockWithMA = calculate3DayMA(data);
+    const spyWithMA = calculate3DayMA(spyHistoricalData);
+
+    // Create a map of SPY data by date for quick lookup
+    const spyMap = new Map();
+    spyWithMA.forEach(point => {
+      const dateKey = new Date(point.date).toISOString().split('T')[0];
+      spyMap.set(dateKey, point);
+    });
+
+    console.log('VSPY: SPY map size:', spyMap.size, 'Stock data length:', stockWithMA.length, 'N:', N);
+    console.log('VSPY: Sample stock dates:', stockWithMA.slice(0, 3).map(p => p.date));
+    console.log('VSPY: Sample SPY dates:', Array.from(spyMap.keys()).slice(0, 3));
+
+    let matchedCount = 0;
+    let unmatchedCount = 0;
+    const vspyValues = [];
+
+    const result = stockWithMA.map((point, idx) => {
+      // Need enough data for N-day performance calculation
+      if (idx < N) {
+        return { ...point, vspy: 1 }; // Default VSPY = 1
+      }
+
+      const currentDate = new Date(point.date).toISOString().split('T')[0];
+      const nDaysAgoDate = new Date(data[idx - N].date).toISOString().split('T')[0];
+
+      // Get current and N-days-ago MA for the stock
+      const currentStockMA = point.ma3;
+      const nDaysAgoStockMA = stockWithMA[idx - N].ma3;
+
+      // Calculate N-day performance for stock on 3-day MA
+      const stockPerformance = nDaysAgoStockMA > 0
+        ? ((currentStockMA - nDaysAgoStockMA) / nDaysAgoStockMA)
+        : 0;
+
+      // Get corresponding SPY data
+      const currentSpyPoint = spyMap.get(currentDate);
+      const nDaysAgoSpyPoint = spyMap.get(nDaysAgoDate);
+
+      if (!currentSpyPoint || !nDaysAgoSpyPoint) {
+        unmatchedCount++;
+        return { ...point, vspy: 1 }; // Default if SPY data not available
+      }
+
+      matchedCount++;
+
+      // Calculate N-day performance for SPY on 3-day MA
+      const spyPerformance = nDaysAgoSpyPoint.ma3 > 0
+        ? ((currentSpyPoint.ma3 - nDaysAgoSpyPoint.ma3) / nDaysAgoSpyPoint.ma3)
+        : 0;
+
+      // VSPY = stock performance / SPY performance
+      // Handle edge cases where SPY performance is 0 or very small
+      let vspy = 1;
+      if (Math.abs(spyPerformance) > 0.0001) {
+        vspy = stockPerformance / spyPerformance;
+        // Normalize VSPY to be around 1.0, similar to RVI
+        // If both are positive, vspy > 1 means stock outperforming
+        // If both are negative, vspy > 1 means stock declining less
+        // Keep vspy in reasonable range
+        vspy = Math.max(-5, Math.min(10, vspy));
+      } else if (stockPerformance > 0.01) {
+        // SPY flat but stock up significantly
+        vspy = 3;
+      } else if (stockPerformance < -0.01) {
+        // SPY flat but stock down significantly
+        vspy = 0.3;
+      }
+
+      vspyValues.push(vspy);
+      return { ...point, vspy };
+    });
+
+    console.log('VSPY: Matched:', matchedCount, 'Unmatched:', unmatchedCount);
+    console.log('VSPY: Values range:', Math.min(...vspyValues), 'to', Math.max(...vspyValues));
+    console.log('VSPY: Sample values:', vspyValues.slice(0, 10));
+
+    return result;
   };
 
   // Helper to format date based on period
@@ -172,18 +307,81 @@ export function PricePerformanceChart({
     }
   };
 
-  // Add RVI-based dataKeys to chart data for colored segments
-  const addRviDataKeys = (data) => {
+  // Map VSPY value to color with 21 levels for more granular visualization
+  const getVspyColor = (vspy) => {
+    // VSPY < 1 = underperforming SPY (reds/yellows - bad)
+    // VSPY = 1 = matching SPY (light/standard blue - neutral)
+    // VSPY > 1 = outperforming SPY (deep blues/purples/greens - good)
+    if (vspy < 0.3) {
+      return '#DC2626'; // Dark red (severe underperformance)
+    } else if (vspy < 0.4) {
+      return '#EF4444'; // Red (strong underperformance)
+    } else if (vspy < 0.5) {
+      return '#F87171'; // Light red (underperformance)
+    } else if (vspy < 0.6) {
+      return '#FB923C'; // Orange (moderate underperformance)
+    } else if (vspy < 0.7) {
+      return '#FBBF24'; // Amber (slight underperformance)
+    } else if (vspy < 0.8) {
+      return '#FCD34D'; // Yellow (approaching neutral)
+    } else if (vspy < 0.85) {
+      return '#DBEAFE'; // Very light blue
+    } else if (vspy < 0.9) {
+      return '#BFDBFE'; // Extra light blue
+    } else if (vspy < 0.95) {
+      return '#93C5FD'; // Light blue
+    } else if (vspy < 1.0) {
+      return '#60A5FA'; // Medium-light blue
+    } else if (vspy < 1.05) {
+      return '#3B82F6'; // Standard blue (matching SPY)
+    } else if (vspy < 1.1) {
+      return '#2563EB'; // Medium blue
+    } else if (vspy < 1.2) {
+      return '#1D4ED8'; // Medium-deep blue
+    } else if (vspy < 1.3) {
+      return '#1E40AF'; // Deep blue
+    } else if (vspy < 1.5) {
+      return '#1E3A8A'; // Very deep blue
+    } else if (vspy < 1.8) {
+      return '#312E81'; // Blue-purple transition
+    } else if (vspy < 2.0) {
+      return '#4C1D95'; // Purple (strong outperformance)
+    } else if (vspy < 2.5) {
+      return '#7C3AED'; // Bright purple
+    } else if (vspy < 3.0) {
+      return '#A855F7'; // Magenta-purple
+    } else if (vspy < 4.0) {
+      return '#C026D3'; // Bright magenta (very strong outperformance)
+    } else {
+      return '#10B981'; // Bright green (extreme outperformance)
+    }
+  };
+
+  // Get the color index value based on the current color mode
+  const getColorIndexValue = (point, mode) => {
+    if (mode === 'rvi') {
+      return point.rvi || 1;
+    } else if (mode === 'vspy') {
+      return point.vspy || 1;
+    }
+    return 1;
+  };
+
+  // Add RVI/VSPY-based dataKeys to chart data for colored segments
+  const addRviDataKeys = (data, mode = 'rvi') => {
     if (!data || data.length === 0) return data;
+
+    // Use appropriate color function based on mode
+    const getColor = mode === 'vspy' ? getVspyColor : getRviColor;
 
     // Identify color changes and assign segment IDs
     let segmentId = 0;
-    let currentColor = getRviColor(data[0].rvi || 1);
+    let currentColor = getColor(getColorIndexValue(data[0], mode));
     const colorMap = {}; // Maps segment ID to color
     colorMap[0] = currentColor;
 
     const dataWithSegments = data.map((point, idx) => {
-      const pointColor = getRviColor(point.rvi || 1);
+      const pointColor = getColor(getColorIndexValue(point, mode));
       const newPoint = { ...point };
 
       if (pointColor !== currentColor && idx > 0) {
@@ -363,6 +561,36 @@ export function PricePerformanceChart({
     // Apply RVI calculation if in RVI color mode
     if (colorMode === 'rvi') {
       return calculateRVI(slicedData, chartPeriod);
+    }
+
+    // Apply VSPY calculation if in VSPY color mode
+    if (colorMode === 'vspy') {
+      // Get the corresponding SPY data slice
+      if (spyData.length > 0) {
+        const spyTotalDays = spyData.length;
+        const spyEndIndex = spyTotalDays - dataOffset;
+        const spyStartIndex = Math.max(0, spyEndIndex - periodDays);
+        // Keep original date format for calculation
+        const spySlicedData = spyData.slice(spyStartIndex, spyEndIndex).map(d => ({
+          date: d.date, // Keep original YYYY-MM-DD format
+          price: d.price,
+          volume: d.volume || 0
+        }));
+
+        // Calculate VSPY with original dates, then format
+        const unformattedSlicedData = fullHistoricalData.slice(startIndex, endIndex).map(d => ({
+          date: d.date,
+          price: d.price,
+          volume: d.volume || 0
+        }));
+        const dataWithVSPY = calculateVSPY(unformattedSlicedData, chartPeriod, spySlicedData);
+
+        // Now format the dates
+        return dataWithVSPY.map(d => ({
+          ...d,
+          date: formatChartDate(d.date, chartPeriod)
+        }));
+      }
     }
 
     // Apply SMA calculation if in SMA mode
@@ -580,15 +808,29 @@ export function PricePerformanceChart({
           {/* Color Mode Toggle */}
           {chartCompareStocks.length === 0 && selectedStock && (
             <button
-              onClick={() => setColorMode(colorMode === 'default' ? 'rvi' : 'default')}
+              onClick={() => {
+                if (colorMode === 'default') {
+                  setColorMode('rvi');
+                } else if (colorMode === 'rvi') {
+                  setColorMode('vspy');
+                } else if (colorMode === 'vspy') {
+                  setColorMode('sma');
+                } else {
+                  setColorMode('default');
+                }
+              }}
               className={`px-3 py-2 rounded-lg text-xs font-medium transition ${
                 colorMode === 'rvi'
                   ? 'bg-purple-700 hover:bg-purple-600 text-white'
+                  : colorMode === 'vspy'
+                  ? 'bg-orange-700 hover:bg-orange-600 text-white'
+                  : colorMode === 'sma'
+                  ? 'bg-emerald-700 hover:bg-emerald-600 text-white'
                   : 'bg-gray-700 hover:bg-gray-600 text-gray-300'
               }`}
-              title={colorMode === 'rvi' ? 'Disable RVI coloring' : 'Enable RVI coloring'}
+              title={colorMode === 'rvi' ? 'Switch to VSPY coloring' : colorMode === 'vspy' ? 'Switch to SMA Peak/Bottom mode' : colorMode === 'sma' ? 'Disable coloring' : 'Enable RVI coloring'}
             >
-              {colorMode === 'rvi' ? 'RVI: ON' : 'RVI: OFF'}
+              {colorMode === 'rvi' ? 'RVI: ON' : colorMode === 'vspy' ? 'VSPY: ON' : colorMode === 'sma' ? 'SMA P/B: ON' : 'Color: OFF'}
             </button>
           )}
 
@@ -605,6 +847,22 @@ export function PricePerformanceChart({
             >
               {colorMode === 'sma' ? 'SMA P/B: ON' : 'SMA P/B: OFF'}
             </button>
+          )}
+
+          {/* SMA Period Slider */}
+          {colorMode === 'sma' && chartCompareStocks.length === 0 && selectedStock && (
+            <div className="flex items-center gap-2">
+              <label className="text-xs text-gray-300 font-medium">SMA: {smaPeriod}</label>
+              <input
+                type="range"
+                min="5"
+                max="100"
+                value={smaPeriod}
+                onChange={(e) => setSmaPeriod(parseInt(e.target.value))}
+                className="w-24 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                title={`SMA Period: ${smaPeriod} days`}
+              />
+            </div>
           )}
 
           {/* SMA Period Slider */}
@@ -809,6 +1067,145 @@ export function PricePerformanceChart({
           );
         })()}
 
+        {/* VSPY Color Legend */}
+        {colorMode === 'vspy' && chartCompareStocks.length === 0 && selectedStock && (
+          <div className="mb-3 px-4">
+            <div className="flex items-center justify-between mb-1">
+              <div className="text-xs font-semibold text-orange-400">
+                📊 VSPY Color Legend (Relative Performance vs SPY) - 21 Levels
+              </div>
+              <div className="text-xs text-gray-400">
+                🔴 Red (underperform) → 🟡 Yellow → 🔵 Blue (match) → 🟣 Purple → 🟢 Green (outperform)
+              </div>
+            </div>
+            <div className="flex items-center gap-0.5 h-8 rounded-lg overflow-hidden border-2 border-orange-600/30 shadow-lg">
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#DC2626', color: '#FFFFFF' }} title="Severe underperformance">
+                &lt;0.3
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#EF4444', color: '#FFFFFF' }} title="Strong underperformance">
+                0.3
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#F87171', color: '#FFFFFF' }} title="Underperformance">
+                0.4
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#FB923C', color: '#FFFFFF' }} title="Moderate underperformance">
+                0.5
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#FBBF24', color: '#78350F' }} title="Slight underperformance">
+                0.6
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#FCD34D', color: '#78350F' }} title="Approaching neutral">
+                0.7
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#DBEAFE', color: '#1E3A8A' }}>
+                0.8
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#BFDBFE', color: '#1E3A8A' }}>
+                0.85
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#93C5FD', color: '#1E3A8A' }}>
+                0.9
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#60A5FA', color: '#1E3A8A' }}>
+                0.95
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#3B82F6', color: '#FFFFFF' }} title="Matching SPY">
+                1.0
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#2563EB', color: '#FFFFFF' }}>
+                1.05
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#1D4ED8', color: '#FFFFFF' }}>
+                1.1
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#1E40AF', color: '#FFFFFF' }}>
+                1.2
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#1E3A8A', color: '#FFFFFF' }}>
+                1.3
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#312E81', color: '#FFFFFF' }}>
+                1.5
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#4C1D95', color: '#FFFFFF' }} title="Strong outperformance">
+                1.8
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#7C3AED', color: '#FFFFFF' }}>
+                2.0
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#A855F7', color: '#FFFFFF' }}>
+                2.5
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#C026D3', color: '#FFFFFF' }} title="Very strong outperformance">
+                3.0
+              </div>
+              <div className="flex-1 h-full flex items-center justify-center text-[7px] font-semibold leading-tight" style={{ backgroundColor: '#10B981', color: '#FFFFFF' }} title="Extreme outperformance">
+                &gt;4.0
+              </div>
+            </div>
+            <div className="text-[10px] text-gray-500 mt-1 text-center italic">
+              VSPY = {getRviN(chartPeriod)}-day performance on 3-day MA (Stock) / {getRviN(chartPeriod)}-day performance on 3-day MA (SPY)
+            </div>
+          </div>
+        )}
+
+        {/* SMA Peak/Bottom Info Display */}
+        {colorMode === 'sma' && chartCompareStocks.length === 0 && selectedStock && (() => {
+          const currentData = getCurrentDataSlice();
+          const smaAnalysis = detectTurningPoints(currentData);
+          const startPrice = currentData.length > 0 ? currentData[0].price : 1;
+          const endPrice = currentData.length > 0 ? currentData[currentData.length - 1].price : 1;
+          const gainPercentage = startPrice > 0 ? (smaAnalysis.totalGain / startPrice) * 100 : 0;
+          const marketChange = startPrice > 0 ? ((endPrice - startPrice) / startPrice) * 100 : 0;
+          const marketChangeAmount = endPrice - startPrice;
+
+          // Update max gain if current is higher
+          if (gainPercentage > maxSmaGain.percentage) {
+            setMaxSmaGain({ gain: smaAnalysis.totalGain, period: smaPeriod, percentage: gainPercentage });
+          }
+
+          return (
+            <div className="mb-3 px-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-xs font-semibold text-emerald-400">
+                  📈 SMA Peak/Bottom Analysis (SMA Period: {smaPeriod})
+                </div>
+                <div className="flex flex-col items-end gap-1">
+                  <div
+                    className="text-xs font-bold"
+                    style={{ color: gainPercentage > marketChange ? '#22c55e' : '#ef4444' }}
+                  >
+                    Current Gain: {gainPercentage.toFixed(2)}% (${smaAnalysis.totalGain.toFixed(2)})
+                  </div>
+                  <div className={`text-xs font-semibold ${marketChange >= 0 ? 'text-blue-400' : 'text-red-400'}`}>
+                    Market Change: {marketChange >= 0 ? '+' : ''}{marketChange.toFixed(2)}% (${marketChangeAmount >= 0 ? '+' : ''}${marketChangeAmount.toFixed(2)})
+                  </div>
+                  <div
+                    className="text-xs font-semibold text-yellow-400 cursor-pointer hover:text-yellow-300 transition"
+                    onClick={() => setSmaPeriod(maxSmaGain.period)}
+                    title="Click to set SMA slider to this period"
+                  >
+                    Max Gain: {maxSmaGain.percentage.toFixed(2)}% (${maxSmaGain.gain.toFixed(2)}) @ SMA {maxSmaGain.period}
+                  </div>
+                </div>
+              </div>
+              <div className="flex items-center gap-4 text-[10px] text-gray-400">
+                <div className="flex items-center gap-1">
+                  <div className="w-4 h-2 bg-blue-400 rounded"></div>
+                  <span>Uptrend (Bottom to Peak)</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-4 h-2 bg-gray-400 rounded"></div>
+                  <span>Downtrend (Peak to Bottom)</span>
+                </div>
+                <div className="text-gray-500 italic">
+                  {smaAnalysis.turningPoints.length} turning points detected
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
         {/* Cycle Timeline Visualization */}
         {showCycleAnalysis && cycleAnalysis && cycleAnalysis.cycles && (() => {
           // Get current visible data slice
@@ -885,10 +1282,51 @@ export function PricePerformanceChart({
             userSelect: 'none',
             WebkitUserSelect: 'none',
             MozUserSelect: 'none',
-            msUserSelect: 'none'
+            msUserSelect: 'none',
+            position: 'relative'
           }}
           onMouseLeave={handleMouseUp}
         >
+          {/* SPY Data Loading Overlay */}
+          {colorMode === 'vspy' && (spyLoading || spyData.length === 0) && (
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(17, 24, 39, 0.9)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10,
+              borderRadius: '0.5rem'
+            }}>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  border: '4px solid #FB923C',
+                  borderTopColor: 'transparent',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }}></div>
+                <div style={{ color: '#FB923C', fontSize: '14px', fontWeight: 500 }}>
+                  Loading SPY data for VSPY calculation...
+                </div>
+              </div>
+              <style>{`
+                @keyframes spin {
+                  to { transform: rotate(360deg); }
+                }
+              `}</style>
+            </div>
+          )}
           <ResponsiveContainer width="100%" height={400} style={{ margin: 0, padding: 0 }}>
             {(() => {
               // Get current data slice based on offset
@@ -946,10 +1384,10 @@ export function PricePerformanceChart({
               const endIndex = Math.ceil((zoomDomain.end / 100) * fullData.length);
               let multiData = fullData.slice(startIndex, endIndex);
 
-              // For RVI mode, add segment dataKeys
+              // For RVI or VSPY mode, add segment dataKeys
               let rviSegments = null;
-              if (colorMode === 'rvi' && chartCompareStocks.length === 0) {
-                rviSegments = addRviDataKeys(multiData);
+              if ((colorMode === 'rvi' || colorMode === 'vspy') && chartCompareStocks.length === 0) {
+                rviSegments = addRviDataKeys(multiData, colorMode);
                 multiData = rviSegments.data;
               }
 
@@ -961,7 +1399,7 @@ export function PricePerformanceChart({
                 multiData = smaSegments.data;
               }
 
-              console.log('Rendering chart with offset:', dataOffset, 'dataLength:', fullData.length, 'showing:', startIndex, 'to', endIndex, 'RVI mode:', colorMode === 'rvi', 'SMA mode:', colorMode === 'sma');
+              console.log('Rendering chart with offset:', dataOffset, 'dataLength:', fullData.length, 'showing:', startIndex, 'to', endIndex, 'Color mode:', colorMode);
 
               // Debug cycle analysis state
               if (showCycleAnalysis) {
@@ -1252,14 +1690,14 @@ export function PricePerformanceChart({
                 )}
 
                 {chartCompareStocks.length === 0 ? (
-                  colorMode === 'rvi' && rviSegments ? (
-                    // RVI Mode: Render colored segments that form a single continuous line
+                  (colorMode === 'rvi' || colorMode === 'vspy') && rviSegments ? (
+                    // RVI/VSPY Mode: Render colored segments that form a single continuous line
                     (() => {
                       const lines = [];
                       for (let i = 0; i <= rviSegments.maxSegmentId; i++) {
                         lines.push(
                           <Line
-                            key={`rvi-seg-${i}`}
+                            key={`${colorMode}-seg-${i}`}
                             type="monotone"
                             dataKey={`price_seg_${i}`}
                             stroke={rviSegments.colorMap[i]}
