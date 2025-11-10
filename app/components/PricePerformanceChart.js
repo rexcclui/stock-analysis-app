@@ -1834,7 +1834,7 @@ export function PricePerformanceChart({
                             label={showLabel ? {
                               value: `${percentage.toFixed(1)}%`,
                               position: 'center',
-                              fill: slot.intensity < 0.3 ? '#78350F' : '#FFFFFF',
+                              fill: slot.intensity < 0.3 ? '#78350F' : '#D1D5DB',
                               fontSize: 11,
                               fontWeight: 'bold'
                             } : null}
