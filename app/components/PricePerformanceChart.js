@@ -787,12 +787,12 @@ export function PricePerformanceChart({
               </div>
               <div className="flex items-center gap-4 text-[10px] text-gray-400">
                 <div className="flex items-center gap-1">
-                  <span className="text-green-500 font-bold text-base">▲</span>
-                  <span>Bottom (Uptrend Start)</span>
+                  <div className="w-4 h-2 bg-blue-400 rounded"></div>
+                  <span>Uptrend (Bottom to Peak)</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <span className="text-red-500 font-bold text-base">▼</span>
-                  <span>Peak (Downtrend Start)</span>
+                  <div className="w-4 h-2 bg-gray-400 rounded"></div>
+                  <span>Downtrend (Peak to Bottom)</span>
                 </div>
                 <div className="text-gray-500 italic">
                   {smaAnalysis.turningPoints.length} turning points detected
@@ -1243,81 +1243,6 @@ export function PricePerformanceChart({
                     })}
                   </>
                 )}
-
-                {/* SMA Peak/Bottom Markers */}
-                {colorMode === 'sma' && chartCompareStocks.length === 0 && multiData.length > 0 && (() => {
-                  const smaAnalysis = detectTurningPoints(multiData);
-
-                  // Custom arrow shapes - chevron style with stem
-                  const UpArrow = (props) => {
-                    const { cx, cy } = props;
-                    return (
-                      <g>
-                        {/* Stem line */}
-                        <line
-                          x1={cx}
-                          y1={cy}
-                          x2={cx}
-                          y2={cy + 10}
-                          stroke="#10b981"
-                          strokeWidth={2.5}
-                          strokeLinecap="round"
-                        />
-                        {/* Chevron head pointing up */}
-                        <polyline
-                          points={`${cx - 6},${cy + 5} ${cx},${cy} ${cx + 6},${cy + 5}`}
-                          fill="none"
-                          stroke="#10b981"
-                          strokeWidth={2.5}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </g>
-                    );
-                  };
-
-                  const DownArrow = (props) => {
-                    const { cx, cy } = props;
-                    return (
-                      <g>
-                        {/* Stem line */}
-                        <line
-                          x1={cx}
-                          y1={cy}
-                          x2={cx}
-                          y2={cy - 10}
-                          stroke="#ef4444"
-                          strokeWidth={2.5}
-                          strokeLinecap="round"
-                        />
-                        {/* Chevron head pointing down */}
-                        <polyline
-                          points={`${cx - 6},${cy - 5} ${cx},${cy} ${cx + 6},${cy - 5}`}
-                          fill="none"
-                          stroke="#ef4444"
-                          strokeWidth={2.5}
-                          strokeLinecap="round"
-                          strokeLinejoin="round"
-                        />
-                      </g>
-                    );
-                  };
-
-                  return (
-                    <>
-                      {smaAnalysis.turningPoints.map((point, idx) => (
-                        <ReferenceDot
-                          key={`sma-turning-${idx}`}
-                          x={point.date}
-                          y={point.price}
-                          r={1}
-                          fill="transparent"
-                          shape={point.type === 'bottom' ? <UpArrow /> : <DownArrow />}
-                        />
-                      ))}
-                    </>
-                  );
-                })()}
 
                 {chartCompareStocks.length === 0 ? (
                   colorMode === 'rvi' && rviSegments ? (
