@@ -41,13 +41,22 @@ export function PricePerformanceChart({
   const chartData = useMemo(() => selectedStock?.chartData?.[chartPeriod] || [], [selectedStock, chartPeriod]);
   const fullHistoricalData = useMemo(() => selectedStock?.chartData?.fullHistorical || [], [selectedStock]);
   const [dataOffset, setDataOffset] = useState(0); // Offset in days from most recent
-  const [colorMode, setColorMode] = useState('default'); // 'default', 'rvi', 'vspy', 'sma', or 'volumeBar'
+  const [colorMode, setColorMode] = useState('default'); // 'default', 'rvi', 'vspy', 'sma', 'volumeBar', or 'channel'
   const [spyData, setSpyData] = useState([]); // SPY historical data for VSPY calculation
   const [spyLoading, setSpyLoading] = useState(false); // Loading state for SPY data
   const [smaPeriod, setSmaPeriod] = useState(20); // SMA period for peak/bottom mode
   const [maxSmaGain, setMaxSmaGain] = useState({ gain: 0, period: 20, percentage: 0 }); // Track maximum gain
   const [isSimulating, setIsSimulating] = useState(false); // Simulation running state
   const [simulationResults, setSimulationResults] = useState([]); // Track all simulation results
+
+  // Standard Deviation Channel configuration
+  const [channelLookback, setChannelLookback] = useState(100); // Lookback period for channel
+  const [channelStdDevMultiplier, setChannelStdDevMultiplier] = useState(2.0); // Std dev multiplier
+  const [channelSource, setChannelSource] = useState('close'); // Price source: 'close', 'hl2', 'ohlc4'
+  const [channelVolumeBins, setChannelVolumeBins] = useState(70); // Volume profile bins
+  const [channelProximityThreshold, setChannelProximityThreshold] = useState(0.02); // 2% proximity threshold
+  const [channelData, setChannelData] = useState(null); // Calculated channel data
+  const [volumeProfileData, setVolumeProfileData] = useState(null); // Calculated volume profile
 
   // AI Analysis using custom hook
   const {
@@ -442,6 +451,252 @@ export function PricePerformanceChart({
     });
   };
 
+  // Calculate Linear Regression for trend line (centerline)
+  const calculateLinearRegression = (data, period, priceSource = 'close') => {
+    if (!data || data.length < period) return null;
+
+    const lookbackData = data.slice(-period);
+    const n = lookbackData.length;
+
+    // Get price values based on source
+    const getPriceValue = (point) => {
+      switch (priceSource) {
+        case 'close':
+          return point.price || 0;
+        case 'hl2':
+          return ((point.high || point.price) + (point.low || point.price)) / 2;
+        case 'ohlc4':
+          return ((point.open || point.price) + (point.high || point.price) +
+                  (point.low || point.price) + (point.price || 0)) / 4;
+        default:
+          return point.price || 0;
+      }
+    };
+
+    // Calculate linear regression: y = mx + b
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+
+    lookbackData.forEach((point, idx) => {
+      const x = idx;
+      const y = getPriceValue(point);
+      sumX += x;
+      sumY += y;
+      sumXY += x * y;
+      sumX2 += x * x;
+    });
+
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+
+    return { slope, intercept, n };
+  };
+
+  // Calculate Standard Deviation Channel
+  const calculateStdDevChannel = (data, period, stdDevMultiplier, priceSource = 'close') => {
+    if (!data || data.length < period) return data;
+
+    return data.map((point, idx) => {
+      if (idx < period - 1) {
+        return {
+          ...point,
+          centerLine: null,
+          upperBound: null,
+          lowerBound: null,
+          stdDev: null
+        };
+      }
+
+      // Get lookback window
+      const windowData = data.slice(idx - period + 1, idx + 1);
+
+      // Calculate linear regression for centerline
+      const regression = calculateLinearRegression(windowData, period, priceSource);
+      if (!regression) {
+        return {
+          ...point,
+          centerLine: null,
+          upperBound: null,
+          lowerBound: null,
+          stdDev: null
+        };
+      }
+
+      // The centerline value at the current point (last point of window)
+      const centerLine = regression.slope * (period - 1) + regression.intercept;
+
+      // Calculate standard deviation of price deviations from centerline
+      let sumSquaredDiff = 0;
+      windowData.forEach((p, i) => {
+        const regressionValue = regression.slope * i + regression.intercept;
+        const price = p.price || 0;
+        const diff = price - regressionValue;
+        sumSquaredDiff += diff * diff;
+      });
+
+      const stdDev = Math.sqrt(sumSquaredDiff / period);
+
+      // Calculate upper and lower bounds
+      const upperBound = centerLine + (stdDev * stdDevMultiplier);
+      const lowerBound = centerLine - (stdDev * stdDevMultiplier);
+
+      return {
+        ...point,
+        centerLine,
+        upperBound,
+        lowerBound,
+        stdDev
+      };
+    });
+  };
+
+  // Calculate Volume Profile (Volume at Price)
+  const calculateVolumeProfile = (data, numBins = 70) => {
+    if (!data || data.length === 0) return null;
+
+    // Find price range
+    const prices = data.map(d => d.price || 0);
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    const priceRange = maxPrice - minPrice;
+
+    if (priceRange === 0) return null;
+
+    const binSize = priceRange / numBins;
+
+    // Initialize bins
+    const bins = Array(numBins).fill(0).map((_, i) => ({
+      priceLevel: minPrice + (i + 0.5) * binSize,
+      priceMin: minPrice + i * binSize,
+      priceMax: minPrice + (i + 1) * binSize,
+      volume: 0
+    }));
+
+    // Aggregate volume into bins
+    data.forEach(point => {
+      const price = point.price || 0;
+      const volume = point.volume || 0;
+
+      // Find which bin this price falls into
+      const binIndex = Math.min(
+        Math.floor((price - minPrice) / binSize),
+        numBins - 1
+      );
+
+      if (binIndex >= 0 && binIndex < numBins) {
+        bins[binIndex].volume += volume;
+      }
+    });
+
+    // Calculate statistics
+    const volumes = bins.map(b => b.volume);
+    const totalVolume = volumes.reduce((sum, v) => sum + v, 0);
+    const avgVolume = totalVolume / numBins;
+    const stdDevVolume = Math.sqrt(
+      volumes.reduce((sum, v) => sum + Math.pow(v - avgVolume, 2), 0) / numBins
+    );
+
+    // Identify POC (Point of Control) - highest volume
+    const pocBin = bins.reduce((max, bin) =>
+      bin.volume > max.volume ? bin : max, bins[0]
+    );
+
+    // Identify HVN (High Volume Nodes) - volume > avg + 1 std dev
+    const hvnThreshold = avgVolume + stdDevVolume;
+    const hvns = bins.filter(bin => bin.volume > hvnThreshold);
+
+    // Identify LVN (Low Volume Nodes) - volume < avg - 1 std dev
+    const lvnThreshold = avgVolume - stdDevVolume;
+    const lvns = bins.filter(bin => bin.volume < lvnThreshold && bin.volume > 0);
+
+    return {
+      bins,
+      poc: pocBin,
+      hvns,
+      lvns,
+      avgVolume,
+      stdDevVolume,
+      minPrice,
+      maxPrice
+    };
+  };
+
+  // Analyze confluence between channel bounds and volume profile
+  const analyzeChannelConfluence = (channelData, volumeProfile, proximityThreshold = 0.02) => {
+    if (!channelData || !volumeProfile) return channelData;
+
+    return channelData.map(point => {
+      if (!point.upperBound || !point.lowerBound) {
+        return {
+          ...point,
+          upperBoundState: 'neutral',
+          lowerBoundState: 'neutral'
+        };
+      }
+
+      // Check confluence for upper bound
+      let upperBoundState = 'neutral';
+      const upperPrice = point.upperBound;
+      const upperThreshold = upperPrice * proximityThreshold;
+
+      // Check if upper bound is near POC
+      if (Math.abs(upperPrice - volumeProfile.poc.priceLevel) < upperThreshold) {
+        upperBoundState = 'strong';
+      } else {
+        // Check if near any HVN
+        for (const hvn of volumeProfile.hvns) {
+          if (Math.abs(upperPrice - hvn.priceLevel) < upperThreshold) {
+            upperBoundState = 'strong';
+            break;
+          }
+        }
+
+        // Check if near any LVN
+        if (upperBoundState === 'neutral') {
+          for (const lvn of volumeProfile.lvns) {
+            if (Math.abs(upperPrice - lvn.priceLevel) < upperThreshold) {
+              upperBoundState = 'weak';
+              break;
+            }
+          }
+        }
+      }
+
+      // Check confluence for lower bound
+      let lowerBoundState = 'neutral';
+      const lowerPrice = point.lowerBound;
+      const lowerThreshold = lowerPrice * proximityThreshold;
+
+      // Check if lower bound is near POC
+      if (Math.abs(lowerPrice - volumeProfile.poc.priceLevel) < lowerThreshold) {
+        lowerBoundState = 'strong';
+      } else {
+        // Check if near any HVN
+        for (const hvn of volumeProfile.hvns) {
+          if (Math.abs(lowerPrice - hvn.priceLevel) < lowerThreshold) {
+            lowerBoundState = 'strong';
+            break;
+          }
+        }
+
+        // Check if near any LVN
+        if (lowerBoundState === 'neutral') {
+          for (const lvn of volumeProfile.lvns) {
+            if (Math.abs(lowerPrice - lvn.priceLevel) < lowerThreshold) {
+              lowerBoundState = 'weak';
+              break;
+            }
+          }
+        }
+      }
+
+      return {
+        ...point,
+        upperBoundState,
+        lowerBoundState
+      };
+    });
+  };
+
   // Get color for volume bar based on intensity (0 to 1)
   // Color gradient: light yellow → deep yellow → green → blue
   const getVolumeBarColor = (intensity) => {
@@ -695,6 +950,30 @@ export function PricePerformanceChart({
     // Apply SMA calculation if in SMA mode
     if (colorMode === 'sma') {
       return calculateSMA(slicedData, smaPeriod);
+    }
+
+    // Apply Standard Deviation Channel calculation if in channel mode
+    if (colorMode === 'channel') {
+      const dataWithChannel = calculateStdDevChannel(
+        slicedData,
+        channelLookback,
+        channelStdDevMultiplier,
+        channelSource
+      );
+
+      // Calculate volume profile
+      const volumeProfile = calculateVolumeProfile(slicedData, channelVolumeBins);
+
+      // Apply confluence analysis
+      const dataWithConfluence = volumeProfile
+        ? analyzeChannelConfluence(dataWithChannel, volumeProfile, channelProximityThreshold)
+        : dataWithChannel;
+
+      // Store channel data and volume profile for visualization
+      setChannelData(dataWithConfluence);
+      setVolumeProfileData(volumeProfile);
+
+      return dataWithConfluence;
     }
 
     return slicedData;
@@ -1020,6 +1299,22 @@ export function PricePerformanceChart({
             </button>
           )}
 
+          {/* Standard Deviation Channel Mode Toggle */}
+          {chartCompareStocks.length === 0 && selectedStock && (
+            <button
+              onClick={() => setColorMode(colorMode === 'channel' ? 'default' : 'channel')}
+              className="px-3 py-2 rounded-lg text-xs font-medium transition"
+              style={{
+                backgroundColor: colorMode === 'channel' ? '#FBBF24' : '#374151',
+                color: colorMode === 'channel' ? '#000000' : '#D1D5DB',
+                fontWeight: 'bold'
+              }}
+              title={colorMode === 'channel' ? 'Disable Trend Channel mode' : 'Enable Trend Channel mode'}
+            >
+              Trend Line
+            </button>
+          )}
+
           {/* SMA Period Slider */}
           {colorMode === 'sma' && chartCompareStocks.length === 0 && selectedStock && (
             <div className="flex items-center gap-2">
@@ -1059,6 +1354,66 @@ export function PricePerformanceChart({
               >
                 {isSimulating ? 'Simulating...' : 'Simulate'}
               </button>
+            </div>
+          )}
+
+          {/* Standard Deviation Channel Parameters */}
+          {colorMode === 'channel' && chartCompareStocks.length === 0 && selectedStock && (
+            <div className="flex items-center gap-3">
+              {/* Lookback Period */}
+              <div className="flex items-center gap-1">
+                <label className="text-xs text-gray-300 font-medium">Period: {channelLookback}</label>
+                <input
+                  type="range"
+                  min="20"
+                  max="200"
+                  value={channelLookback}
+                  onChange={(e) => setChannelLookback(parseInt(e.target.value))}
+                  className="w-20 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-600"
+                  title={`Lookback Period: ${channelLookback} days`}
+                />
+              </div>
+
+              {/* Std Dev Multiplier */}
+              <div className="flex items-center gap-1">
+                <label className="text-xs text-gray-300 font-medium">StdDev: {channelStdDevMultiplier.toFixed(1)}</label>
+                <input
+                  type="range"
+                  min="1"
+                  max="3"
+                  step="0.1"
+                  value={channelStdDevMultiplier}
+                  onChange={(e) => setChannelStdDevMultiplier(parseFloat(e.target.value))}
+                  className="w-20 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-red-600"
+                  title={`Standard Deviation Multiplier: ${channelStdDevMultiplier.toFixed(1)}`}
+                />
+              </div>
+
+              {/* Volume Bins */}
+              <div className="flex items-center gap-1">
+                <label className="text-xs text-gray-300 font-medium">Bins: {channelVolumeBins}</label>
+                <input
+                  type="range"
+                  min="20"
+                  max="100"
+                  value={channelVolumeBins}
+                  onChange={(e) => setChannelVolumeBins(parseInt(e.target.value))}
+                  className="w-20 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-purple-600"
+                  title={`Volume Profile Bins: ${channelVolumeBins}`}
+                />
+              </div>
+
+              {/* Price Source Selector */}
+              <select
+                value={channelSource}
+                onChange={(e) => setChannelSource(e.target.value)}
+                className="px-2 py-1 bg-gray-700 border border-gray-600 rounded text-xs text-white"
+                title="Price source for centerline calculation"
+              >
+                <option value="close">Close</option>
+                <option value="hl2">HL/2</option>
+                <option value="ohlc4">OHLC/4</option>
+              </select>
             </div>
           )}
 
@@ -1845,6 +2200,116 @@ export function PricePerformanceChart({
                   );
                 })()}
 
+                {/* Standard Deviation Channel - Trend lines with volume profile validation */}
+                {colorMode === 'channel' && chartCompareStocks.length === 0 && channelData && multiData.length > 0 && (() => {
+                  // Get the last data point to determine current bound states
+                  const lastPoint = channelData[channelData.length - 1];
+                  const upperState = lastPoint?.upperBoundState || 'neutral';
+                  const lowerState = lastPoint?.lowerBoundState || 'neutral';
+
+                  // Style functions based on strength
+                  const getBoundStyle = (state) => {
+                    switch (state) {
+                      case 'strong':
+                        return { strokeWidth: 3, strokeDasharray: undefined, opacity: 1 };
+                      case 'weak':
+                        return { strokeWidth: 1.5, strokeDasharray: '3 3', opacity: 0.6 };
+                      case 'neutral':
+                      default:
+                        return { strokeWidth: 2, strokeDasharray: undefined, opacity: 0.8 };
+                    }
+                  };
+
+                  const upperStyle = getBoundStyle(upperState);
+                  const lowerStyle = getBoundStyle(lowerState);
+
+                  return (
+                    <>
+                      {/* Upper Bound */}
+                      {lastPoint?.upperBound && (
+                        <ReferenceLine
+                          y={lastPoint.upperBound}
+                          stroke="#ef4444"
+                          strokeWidth={upperStyle.strokeWidth}
+                          strokeDasharray={upperStyle.strokeDasharray}
+                          strokeOpacity={upperStyle.opacity}
+                          label={{
+                            value: `Upper (${upperState}): $${lastPoint.upperBound.toFixed(2)}`,
+                            position: 'right',
+                            fill: '#ef4444',
+                            fontSize: 10,
+                            fontWeight: upperState === 'strong' ? 'bold' : 'normal'
+                          }}
+                        />
+                      )}
+
+                      {/* Center Line */}
+                      {lastPoint?.centerLine && (
+                        <ReferenceLine
+                          y={lastPoint.centerLine}
+                          stroke="#3b82f6"
+                          strokeWidth={2}
+                          strokeOpacity={0.7}
+                          label={{
+                            value: `Center: $${lastPoint.centerLine.toFixed(2)}`,
+                            position: 'right',
+                            fill: '#3b82f6',
+                            fontSize: 10
+                          }}
+                        />
+                      )}
+
+                      {/* Lower Bound */}
+                      {lastPoint?.lowerBound && (
+                        <ReferenceLine
+                          y={lastPoint.lowerBound}
+                          stroke="#10b981"
+                          strokeWidth={lowerStyle.strokeWidth}
+                          strokeDasharray={lowerStyle.strokeDasharray}
+                          strokeOpacity={lowerStyle.opacity}
+                          label={{
+                            value: `Lower (${lowerState}): $${lastPoint.lowerBound.toFixed(2)}`,
+                            position: 'right',
+                            fill: '#10b981',
+                            fontSize: 10,
+                            fontWeight: lowerState === 'strong' ? 'bold' : 'normal'
+                          }}
+                        />
+                      )}
+
+                      {/* Point of Control (POC) from Volume Profile */}
+                      {volumeProfileData && volumeProfileData.poc && (
+                        <ReferenceLine
+                          y={volumeProfileData.poc.priceLevel}
+                          stroke="#fbbf24"
+                          strokeWidth={2}
+                          strokeDasharray="5 5"
+                          strokeOpacity={0.9}
+                          label={{
+                            value: `POC: $${volumeProfileData.poc.priceLevel.toFixed(2)}`,
+                            position: 'left',
+                            fill: '#fbbf24',
+                            fontSize: 10,
+                            fontWeight: 'bold'
+                          }}
+                        />
+                      )}
+
+                      {/* High Volume Nodes (HVNs) */}
+                      {volumeProfileData && volumeProfileData.hvns && volumeProfileData.hvns.slice(0, 5).map((hvn, idx) => (
+                        <ReferenceLine
+                          key={`hvn-${idx}`}
+                          y={hvn.priceLevel}
+                          stroke="#a855f7"
+                          strokeWidth={1}
+                          strokeDasharray="2 2"
+                          strokeOpacity={0.5}
+                        />
+                      ))}
+                    </>
+                  );
+                })()}
+
                 {chartCompareStocks.length === 0 ? (
                   (colorMode === 'rvi' || colorMode === 'vspy') && rviSegments ? (
                     // RVI/VSPY Mode: Render colored segments that form a single continuous line
@@ -1990,6 +2455,95 @@ export function PricePerformanceChart({
           </div>
         );
       })()}
+
+      {/* Standard Deviation Channel Legend */}
+      {colorMode === 'channel' && chartCompareStocks.length === 0 && selectedStock && channelData && volumeProfileData && (
+        <div className="mb-4 px-4">
+          <div className="bg-gradient-to-r from-gray-800 via-gray-750 to-gray-800 rounded-lg p-4 shadow-lg border-2 border-blue-600/30">
+            <div className="flex items-center justify-between mb-3">
+              <div className="text-sm font-semibold text-blue-400">
+                📈 Standard Deviation Channel with Volume Profile
+              </div>
+              <div className="text-xs text-gray-400">
+                Trend lines validated by volume density
+              </div>
+            </div>
+
+            {/* Channel Parameters */}
+            <div className="grid grid-cols-2 gap-3 mb-3 text-xs">
+              <div className="bg-gray-900/50 rounded p-2">
+                <div className="text-gray-400 mb-1">Configuration</div>
+                <div className="text-white">
+                  <div>Lookback: <span className="text-blue-400 font-bold">{channelLookback}</span> periods</div>
+                  <div>Std Dev: <span className="text-red-400 font-bold">{channelStdDevMultiplier.toFixed(1)}σ</span></div>
+                  <div>Source: <span className="text-green-400 font-bold">{channelSource.toUpperCase()}</span></div>
+                </div>
+              </div>
+
+              <div className="bg-gray-900/50 rounded p-2">
+                <div className="text-gray-400 mb-1">Volume Profile</div>
+                <div className="text-white">
+                  <div>Bins: <span className="text-purple-400 font-bold">{channelVolumeBins}</span></div>
+                  <div>POC: <span className="text-yellow-400 font-bold">${volumeProfileData.poc.priceLevel.toFixed(2)}</span></div>
+                  <div>HVNs: <span className="text-purple-400 font-bold">{volumeProfileData.hvns.length}</span> zones</div>
+                </div>
+              </div>
+            </div>
+
+            {/* Legend Explanation */}
+            <div className="space-y-2 text-xs">
+              <div className="flex items-center gap-2">
+                <div className="w-16 h-0.5 bg-red-500" style={{opacity: 1}}></div>
+                <div className="text-red-400 font-bold">Upper Bound</div>
+                <div className="text-gray-400 text-[10px]">(Resistance - Price + {channelStdDevMultiplier.toFixed(1)}σ)</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-16 h-0.5 bg-blue-500"></div>
+                <div className="text-blue-400 font-bold">Center Line</div>
+                <div className="text-gray-400 text-[10px]">(Linear Regression Trend)</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-16 h-0.5 bg-green-500" style={{opacity: 1}}></div>
+                <div className="text-green-400 font-bold">Lower Bound</div>
+                <div className="text-gray-400 text-[10px]">(Support - Price - {channelStdDevMultiplier.toFixed(1)}σ)</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-16 h-0.5 bg-yellow-500" style={{borderTop: '2px dashed #FBBF24'}}></div>
+                <div className="text-yellow-400 font-bold">POC</div>
+                <div className="text-gray-400 text-[10px]">(Point of Control - Highest Volume Zone)</div>
+              </div>
+              <div className="flex items-center gap-2">
+                <div className="w-16 h-0.5 bg-purple-500" style={{borderTop: '2px dashed #A855F7', opacity: 0.5}}></div>
+                <div className="text-purple-400 font-bold">HVN</div>
+                <div className="text-gray-400 text-[10px]">(High Volume Node - Strong Price Level)</div>
+              </div>
+            </div>
+
+            {/* Bound Strength Explanation */}
+            <div className="mt-3 pt-3 border-t border-gray-700">
+              <div className="text-xs font-semibold text-cyan-400 mb-2">Bound Validation States:</div>
+              <div className="grid grid-cols-3 gap-2 text-[10px]">
+                <div className="bg-green-900/20 border border-green-600/30 rounded p-2">
+                  <div className="text-green-400 font-bold mb-1">✓ STRONG</div>
+                  <div className="text-gray-400">Bound overlaps POC or HVN. High validation from volume.</div>
+                </div>
+                <div className="bg-gray-900/20 border border-gray-600/30 rounded p-2">
+                  <div className="text-gray-400 font-bold mb-1">○ NEUTRAL</div>
+                  <div className="text-gray-400">No significant volume confluence. Normal bound.</div>
+                </div>
+                <div className="bg-red-900/20 border border-red-600/30 rounded p-2">
+                  <div className="text-red-400 font-bold mb-1">✗ WEAK</div>
+                  <div className="text-gray-400">Bound overlaps LVN. Low validation, possible breakout zone.</div>
+                </div>
+              </div>
+            </div>
+
+            <div className="text-[10px] text-gray-500 italic mt-3 text-center">
+              💡 Tip: Strong bounds indicate price levels with historical volume support. Weak bounds may be more easily broken through.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* AI Analysis Panel - Shows analysis summary and errors */}
       <AIPriceAnalysisPanel
