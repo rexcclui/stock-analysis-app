@@ -286,6 +286,54 @@ export function PricePerformanceChart({
     return { data, turningPoints, totalGain };
   };
 
+  // Add SMA-based colored segments (uptrends in light blue, downtrends in gray)
+  const addSmaDataKeys = (data, turningPoints) => {
+    if (!data || data.length === 0) return data;
+
+    // Identify segments between turning points
+    let segmentId = 0;
+    const colorMap = {}; // Maps segment ID to color
+    let currentType = 'neutral'; // Start as neutral until first turning point
+    colorMap[0] = '#9CA3AF'; // Gray for initial neutral/downtrend
+
+    const dataWithSegments = data.map((point, idx) => {
+      const newPoint = { ...point };
+
+      // Check if this point is a turning point
+      const turningPoint = turningPoints.find(tp => tp.date === point.date);
+
+      if (turningPoint) {
+        // End current segment
+        newPoint[`price_seg_${segmentId}`] = point.price;
+
+        // Start new segment
+        segmentId++;
+        currentType = turningPoint.type === 'bottom' ? 'uptrend' : 'downtrend';
+        colorMap[segmentId] = currentType === 'uptrend' ? '#60A5FA' : '#9CA3AF'; // Light blue for uptrend, gray for downtrend
+        newPoint[`price_seg_${segmentId}`] = point.price;
+      } else {
+        // Normal point within segment
+        newPoint[`price_seg_${segmentId}`] = point.price;
+      }
+
+      return newPoint;
+    });
+
+    // Add null values for all other segments
+    const maxSegmentId = segmentId;
+    const enhancedData = dataWithSegments.map(point => {
+      const newPoint = { ...point };
+      for (let i = 0; i <= maxSegmentId; i++) {
+        if (newPoint[`price_seg_${i}`] === undefined) {
+          newPoint[`price_seg_${i}`] = null;
+        }
+      }
+      return newPoint;
+    });
+
+    return { data: enhancedData, colorMap, maxSegmentId };
+  };
+
   // Get current data slice based on offset and period
   const getCurrentDataSlice = () => {
     if (fullHistoricalData.length === 0) {
@@ -875,7 +923,15 @@ export function PricePerformanceChart({
                 multiData = rviSegments.data;
               }
 
-              console.log('Rendering chart with offset:', dataOffset, 'dataLength:', fullData.length, 'showing:', startIndex, 'to', endIndex, 'RVI mode:', colorMode === 'rvi');
+              // For SMA mode, add segment dataKeys based on turning points
+              let smaSegments = null;
+              if (colorMode === 'sma' && chartCompareStocks.length === 0) {
+                const smaAnalysis = detectTurningPoints(multiData);
+                smaSegments = addSmaDataKeys(multiData, smaAnalysis.turningPoints);
+                multiData = smaSegments.data;
+              }
+
+              console.log('Rendering chart with offset:', dataOffset, 'dataLength:', fullData.length, 'showing:', startIndex, 'to', endIndex, 'RVI mode:', colorMode === 'rvi', 'SMA mode:', colorMode === 'sma');
 
               // Debug cycle analysis state
               if (showCycleAnalysis) {
@@ -1264,6 +1320,28 @@ export function PricePerformanceChart({
                             type="monotone"
                             dataKey={`price_seg_${i}`}
                             stroke={rviSegments.colorMap[i]}
+                            strokeWidth={2}
+                            dot={false}
+                            connectNulls={false}
+                            isAnimationActive={false}
+                            name={i === 0 ? `${selectedStock?.code || ''} Price` : undefined}
+                            legendType={i === 0 ? 'line' : 'none'}
+                          />
+                        );
+                      }
+                      return lines;
+                    })()
+                  ) : colorMode === 'sma' && smaSegments ? (
+                    // SMA Mode: Render colored segments (light blue for uptrends, gray for downtrends)
+                    (() => {
+                      const lines = [];
+                      for (let i = 0; i <= smaSegments.maxSegmentId; i++) {
+                        lines.push(
+                          <Line
+                            key={`sma-seg-${i}`}
+                            type="monotone"
+                            dataKey={`price_seg_${i}`}
+                            stroke={smaSegments.colorMap[i]}
                             strokeWidth={2}
                             dot={false}
                             connectNulls={false}
