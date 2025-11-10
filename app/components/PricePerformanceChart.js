@@ -1816,16 +1816,33 @@ export function PricePerformanceChart({
                 {/* Volume Bar Mode - Horizontal background zones */}
                 {colorMode === 'volumeBar' && chartCompareStocks.length === 0 && multiData.length > 0 && (() => {
                   const volumeBarData = calculateVolumeBarData(multiData);
+                  const totalVolume = volumeBarData.reduce((sum, slot) => sum + slot.volume, 0);
 
-                  return volumeBarData.map((slot, idx) => (
-                    <ReferenceArea
-                      key={`volume-bar-${idx}`}
-                      y1={slot.priceMin}
-                      y2={slot.priceMax}
-                      fill={slot.color}
-                      strokeOpacity={0}
-                    />
-                  ));
+                  return (
+                    <>
+                      {volumeBarData.map((slot, idx) => {
+                        const percentage = totalVolume > 0 ? (slot.volume / totalVolume) * 100 : 0;
+                        const showLabel = percentage >= 2.0; // Only show label if >= 2% to avoid clutter
+
+                        return (
+                          <ReferenceArea
+                            key={`volume-bar-${idx}`}
+                            y1={slot.priceMin}
+                            y2={slot.priceMax}
+                            fill={slot.color}
+                            strokeOpacity={0}
+                            label={showLabel ? {
+                              value: `${percentage.toFixed(1)}%`,
+                              position: 'center',
+                              fill: slot.intensity < 0.3 ? '#78350F' : '#FFFFFF',
+                              fontSize: 11,
+                              fontWeight: 'bold'
+                            } : null}
+                          />
+                        );
+                      })}
+                    </>
+                  );
                 })()}
 
                 {chartCompareStocks.length === 0 ? (
