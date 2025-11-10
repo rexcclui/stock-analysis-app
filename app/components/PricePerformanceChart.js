@@ -849,6 +849,13 @@ export function PricePerformanceChart({
           {colorMode === 'sma' && chartCompareStocks.length === 0 && selectedStock && (
             <div className="flex items-center gap-2">
               <label className="text-xs text-gray-300 font-medium">SMA: {smaPeriod}</label>
+              <button
+                onClick={() => setSmaPeriod(Math.max(5, smaPeriod - 1))}
+                className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                title="Decrement SMA period"
+              >
+                -
+              </button>
               <input
                 type="range"
                 min="5"
@@ -858,6 +865,13 @@ export function PricePerformanceChart({
                 className="w-24 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-emerald-600"
                 title={`SMA Period: ${smaPeriod} days`}
               />
+              <button
+                onClick={() => setSmaPeriod(Math.min(100, smaPeriod + 1))}
+                className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                title="Increment SMA period"
+              >
+                +
+              </button>
             </div>
           )}
 
