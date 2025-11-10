@@ -1307,18 +1307,6 @@ export function PricePerformanceChart({
                           r={1}
                           fill="transparent"
                           shape={point.type === 'bottom' ? <UpArrow /> : <DownArrow />}
-                          label={{
-                            value: point.type === 'bottom'
-                              ? `▲ $${point.price.toFixed(2)}`
-                              : point.gain
-                                ? `▼ $${point.price.toFixed(2)} (+$${point.gain.toFixed(2)})`
-                                : `▼ $${point.price.toFixed(2)}`,
-                            position: point.type === 'bottom' ? 'bottom' : 'top',
-                            fill: point.type === 'bottom' ? '#10b981' : '#ef4444',
-                            fontSize: 9,
-                            fontWeight: 'bold',
-                            offset: point.type === 'bottom' ? 15 : 15
-                          }}
                         />
                       ))}
                     </>
