@@ -679,15 +679,18 @@ export function PricePerformanceChart({
     const volumeRatio = avgDownVolume > 0 ? avgUpVolume / avgDownVolume : 1;
 
     console.log('📊 Uptrend Volume Analysis:', {
+      upDays,
+      downDays,
       avgUpVolume: avgUpVolume.toFixed(0),
       avgDownVolume: avgDownVolume.toFixed(0),
       volumeRatio: volumeRatio.toFixed(2),
-      confirmed: volumeRatio > 0.8
+      threshold: 0.5,
+      confirmed: volumeRatio > 0.5
     });
 
-    // Only show uptrend if volume supports it (not requiring strict > 1, allowing 0.8+ for flexibility)
-    if (volumeRatio < 0.8) {
-      console.log('❌ Uptrend rejected: volume too low on up days');
+    // RELAXED: Allow uptrend with volume ratio >= 0.5 (was 0.8)
+    if (volumeRatio < 0.5) {
+      console.log('❌ Uptrend rejected: volume too low on up days (ratio:', volumeRatio.toFixed(2), '< 0.5)');
       return null;
     }
 
@@ -777,16 +780,31 @@ export function PricePerformanceChart({
 
   // Calculate parallel channel for last downtrend
   const calculateDowntrendChannel = (data, turningPoints) => {
-    if (!data || data.length === 0 || !turningPoints || turningPoints.length === 0) return null;
+    console.log('🔍 DOWNTREND DETECTION START');
+    console.log('  Data points:', data?.length);
+    console.log('  Turning points:', turningPoints?.length);
+
+    if (!data || data.length === 0 || !turningPoints || turningPoints.length === 0) {
+      console.log('❌ No data or turning points');
+      return null;
+    }
 
     const bottoms = turningPoints.filter(tp => tp.type === 'bottom');
     const peaks = turningPoints.filter(tp => tp.type === 'peak');
 
-    if (peaks.length < 2) return null;
+    console.log('  Bottoms found:', bottoms.length);
+    console.log('  Peaks found:', peaks.length);
+    console.log('  Peak prices:', peaks.map(p => p.price.toFixed(2)).join(', '));
+
+    if (peaks.length < 2) {
+      console.log('❌ Not enough peaks (need 2, have ' + peaks.length + ')');
+      return null;
+    }
 
     // Take more peaks to capture bigger trend (up to 5 most recent peaks)
     const numPeaksToUse = Math.min(5, peaks.length);
     const trendPeaks = peaks.slice(-numPeaksToUse);
+    console.log('  Using last', numPeaksToUse, 'peaks for downtrend analysis');
 
     // Get the trend period for volume analysis
     const firstPeakIndex = trendPeaks[0].index;
@@ -815,15 +833,18 @@ export function PricePerformanceChart({
     const volumeRatio = avgUpVolume > 0 ? avgDownVolume / avgUpVolume : 1;
 
     console.log('📊 Downtrend Volume Analysis:', {
+      upDays,
+      downDays,
       avgUpVolume: avgUpVolume.toFixed(0),
       avgDownVolume: avgDownVolume.toFixed(0),
       volumeRatio: volumeRatio.toFixed(2),
-      confirmed: volumeRatio > 0.8
+      threshold: 0.5,
+      confirmed: volumeRatio > 0.5
     });
 
-    // Only show downtrend if volume supports it (not requiring strict > 1, allowing 0.8+ for flexibility)
-    if (volumeRatio < 0.8) {
-      console.log('❌ Downtrend rejected: volume too low on down days');
+    // RELAXED: Allow downtrend with volume ratio >= 0.5 (was 0.8)
+    if (volumeRatio < 0.5) {
+      console.log('❌ Downtrend rejected: volume too low on down days (ratio:', volumeRatio.toFixed(2), '< 0.5)');
       return null;
     }
 
@@ -847,9 +868,14 @@ export function PricePerformanceChart({
     const slope = (sumW * sumXY - sumX * sumY) / (sumW * sumX2 - sumX * sumX);
     const intercept = (sumY - slope * sumX) / sumW;
 
+    console.log('  Linear regression slope:', slope.toFixed(6));
+    console.log('  First peak price:', trendPeaks[0].price.toFixed(2));
+    console.log('  Last peak price:', trendPeaks[trendPeaks.length - 1].price.toFixed(2));
+    console.log('  Price change:', (trendPeaks[trendPeaks.length - 1].price - trendPeaks[0].price).toFixed(2));
+
     // Only proceed if slope is negative (downtrend)
     if (slope >= 0) {
-      console.log('❌ Downtrend rejected: positive slope');
+      console.log('❌ Downtrend rejected: positive slope (', slope.toFixed(6), ') - prices rising not falling');
       return null;
     }
 
