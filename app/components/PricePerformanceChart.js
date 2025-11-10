@@ -41,7 +41,7 @@ export function PricePerformanceChart({
   const chartData = useMemo(() => selectedStock?.chartData?.[chartPeriod] || [], [selectedStock, chartPeriod]);
   const fullHistoricalData = useMemo(() => selectedStock?.chartData?.fullHistorical || [], [selectedStock]);
   const [dataOffset, setDataOffset] = useState(0); // Offset in days from most recent
-  const [colorMode, setColorMode] = useState('default'); // 'default', 'rvi', 'vspy', or 'sma'
+  const [colorMode, setColorMode] = useState('default'); // 'default', 'rvi', 'vspy', 'sma', or 'volumeBar'
   const [spyData, setSpyData] = useState([]); // SPY historical data for VSPY calculation
   const [spyLoading, setSpyLoading] = useState(false); // Loading state for SPY data
   const [smaPeriod, setSmaPeriod] = useState(20); // SMA period for peak/bottom mode
@@ -440,6 +440,60 @@ export function PricePerformanceChart({
 
       return { ...point, sma, smaSlope };
     });
+  };
+
+  // Calculate Volume Bar data for horizontal background zones
+  const calculateVolumeBarData = (data) => {
+    if (!data || data.length === 0) return [];
+
+    // Find min and max price across all data
+    const prices = data.map(d => d.price).filter(p => p != null);
+    if (prices.length === 0) return [];
+
+    const minPrice = Math.min(...prices);
+    const maxPrice = Math.max(...prices);
+    const priceRange = maxPrice - minPrice;
+
+    // Avoid division by zero
+    if (priceRange === 0) return [];
+
+    // Create 20 slots
+    const numSlots = 20;
+    const slotSize = priceRange / numSlots;
+
+    // Initialize slots
+    const slots = Array.from({ length: numSlots }, (_, i) => ({
+      slotIndex: i,
+      priceMin: minPrice + (i * slotSize),
+      priceMax: minPrice + ((i + 1) * slotSize),
+      volume: 0
+    }));
+
+    // Aggregate volume for each slot
+    data.forEach(point => {
+      if (point.price == null || point.volume == null) return;
+
+      // Find which slot this price belongs to
+      const slotIndex = Math.min(
+        Math.floor((point.price - minPrice) / slotSize),
+        numSlots - 1
+      );
+
+      if (slotIndex >= 0 && slotIndex < numSlots) {
+        slots[slotIndex].volume += point.volume;
+      }
+    });
+
+    // Find max volume for normalization
+    const maxVolume = Math.max(...slots.map(s => s.volume));
+    if (maxVolume === 0) return slots;
+
+    // Calculate opacity for each slot (highest volume = 1.0, lowest = 0.1)
+    slots.forEach(slot => {
+      slot.opacity = 0.1 + (0.4 * (slot.volume / maxVolume));
+    });
+
+    return slots;
   };
 
   // Detect turning points (peaks and bottoms) in SMA and calculate price differences
@@ -907,6 +961,22 @@ export function PricePerformanceChart({
             </button>
           )}
 
+          {/* Volume Bar Mode Toggle */}
+          {chartCompareStocks.length === 0 && selectedStock && (
+            <button
+              onClick={() => setColorMode(colorMode === 'volumeBar' ? 'default' : 'volumeBar')}
+              className="px-3 py-2 rounded-lg text-xs font-medium transition"
+              style={{
+                backgroundColor: colorMode === 'volumeBar' ? '#FBBF24' : '#374151',
+                color: colorMode === 'volumeBar' ? '#000000' : '#D1D5DB',
+                fontWeight: 'bold'
+              }}
+              title={colorMode === 'volumeBar' ? 'Disable Volume Bar mode' : 'Enable Volume Bar mode'}
+            >
+              {colorMode === 'volumeBar' ? 'Vol Bar' : 'Vol Bar: OFF'}
+            </button>
+          )}
+
           {/* SMA Period Slider */}
           {colorMode === 'sma' && chartCompareStocks.length === 0 && selectedStock && (
             <div className="flex items-center gap-2">
@@ -1216,6 +1286,44 @@ export function PricePerformanceChart({
             </div>
           </div>
         )}
+
+        {/* Volume Bar Info Display */}
+        {colorMode === 'volumeBar' && chartCompareStocks.length === 0 && selectedStock && (() => {
+          const currentData = getCurrentDataSlice();
+          const volumeBarData = calculateVolumeBarData(currentData);
+          const maxVolumeSlot = volumeBarData.reduce((max, slot) => slot.volume > max.volume ? slot : max, { volume: 0 });
+
+          return (
+            <div className="mb-3 px-4">
+              <div className="flex items-center justify-between mb-2">
+                <div className="text-xs font-semibold text-blue-400">
+                  📊 Volume Bar Analysis - 20 Price Zones
+                </div>
+                <div className="text-xs text-gray-400">
+                  Deeper blue = higher volume concentration
+                </div>
+              </div>
+              <div className="flex items-center gap-4 text-[10px] text-gray-400">
+                <div className="flex items-center gap-1">
+                  <div className="w-4 h-3 bg-blue-500 rounded" style={{ opacity: 0.5 }}></div>
+                  <span>High Volume</span>
+                </div>
+                <div className="flex items-center gap-1">
+                  <div className="w-4 h-3 bg-blue-500 rounded" style={{ opacity: 0.1 }}></div>
+                  <span>Low Volume</span>
+                </div>
+                {maxVolumeSlot.volume > 0 && (
+                  <div className="text-gray-300 font-semibold">
+                    Max Volume Zone: ${maxVolumeSlot.priceMin.toFixed(2)} - ${maxVolumeSlot.priceMax.toFixed(2)}
+                  </div>
+                )}
+              </div>
+              <div className="text-[10px] text-gray-500 mt-1 text-center italic">
+                Price range divided into 20 horizontal zones. Volume aggregated for each zone across the entire period.
+              </div>
+            </div>
+          );
+        })()}
 
         {/* Cycle Timeline Visualization */}
         {showCycleAnalysis && cycleAnalysis && cycleAnalysis.cycles && (() => {
@@ -1699,6 +1807,22 @@ export function PricePerformanceChart({
                     })}
                   </>
                 )}
+
+                {/* Volume Bar Mode - Horizontal background zones */}
+                {colorMode === 'volumeBar' && chartCompareStocks.length === 0 && multiData.length > 0 && (() => {
+                  const volumeBarData = calculateVolumeBarData(multiData);
+
+                  return volumeBarData.map((slot, idx) => (
+                    <ReferenceArea
+                      key={`volume-bar-${idx}`}
+                      y1={slot.priceMin}
+                      y2={slot.priceMax}
+                      fill="#3B82F6"
+                      fillOpacity={slot.opacity}
+                      strokeOpacity={0}
+                    />
+                  ));
+                })()}
 
                 {chartCompareStocks.length === 0 ? (
                   (colorMode === 'rvi' || colorMode === 'vspy') && rviSegments ? (
