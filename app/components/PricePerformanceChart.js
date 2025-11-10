@@ -702,6 +702,8 @@ export function PricePerformanceChart({
         {colorMode === 'sma' && chartCompareStocks.length === 0 && selectedStock && (() => {
           const currentData = getCurrentDataSlice();
           const smaAnalysis = detectTurningPoints(currentData);
+          const startPrice = currentData.length > 0 ? currentData[0].price : 1;
+          const gainPercentage = startPrice > 0 ? (smaAnalysis.totalGain / startPrice) * 100 : 0;
           return (
             <div className="mb-3 px-4">
               <div className="flex items-center justify-between mb-2">
@@ -709,16 +711,16 @@ export function PricePerformanceChart({
                   📈 SMA Peak/Bottom Analysis (SMA Period: {smaPeriod})
                 </div>
                 <div className="text-xs font-bold text-emerald-300">
-                  Total Bottom-to-Peak Gain: ${smaAnalysis.totalGain.toFixed(2)}
+                  Total Bottom-to-Peak Gain: {gainPercentage.toFixed(2)}% (${smaAnalysis.totalGain.toFixed(2)})
                 </div>
               </div>
               <div className="flex items-center gap-4 text-[10px] text-gray-400">
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-green-500"></div>
+                  <span className="text-green-500 font-bold text-base">▲</span>
                   <span>Bottom (Uptrend Start)</span>
                 </div>
                 <div className="flex items-center gap-1">
-                  <div className="w-3 h-3 rounded-full bg-red-500"></div>
+                  <span className="text-red-500 font-bold text-base">▼</span>
                   <span>Peak (Downtrend Start)</span>
                 </div>
                 <div className="text-gray-500 italic">
@@ -1166,6 +1168,36 @@ export function PricePerformanceChart({
                 {/* SMA Peak/Bottom Markers */}
                 {colorMode === 'sma' && chartCompareStocks.length === 0 && multiData.length > 0 && (() => {
                   const smaAnalysis = detectTurningPoints(multiData);
+
+                  // Custom arrow shapes
+                  const UpArrow = (props) => {
+                    const { cx, cy } = props;
+                    return (
+                      <g>
+                        <polygon
+                          points={`${cx},${cy - 8} ${cx - 6},${cy + 4} ${cx + 6},${cy + 4}`}
+                          fill="#10b981"
+                          stroke="#ffffff"
+                          strokeWidth={2}
+                        />
+                      </g>
+                    );
+                  };
+
+                  const DownArrow = (props) => {
+                    const { cx, cy } = props;
+                    return (
+                      <g>
+                        <polygon
+                          points={`${cx},${cy + 8} ${cx - 6},${cy - 4} ${cx + 6},${cy - 4}`}
+                          fill="#ef4444"
+                          stroke="#ffffff"
+                          strokeWidth={2}
+                        />
+                      </g>
+                    );
+                  };
+
                   return (
                     <>
                       {smaAnalysis.turningPoints.map((point, idx) => (
@@ -1173,16 +1205,14 @@ export function PricePerformanceChart({
                           key={`sma-turning-${idx}`}
                           x={point.date}
                           y={point.price}
-                          r={7}
-                          fill={point.type === 'bottom' ? '#10b981' : '#ef4444'}
-                          stroke="#ffffff"
-                          strokeWidth={2}
+                          r={8}
+                          shape={point.type === 'bottom' ? <UpArrow /> : <DownArrow />}
                           label={{
                             value: point.type === 'bottom'
-                              ? `B $${point.price.toFixed(2)}`
+                              ? `▲ $${point.price.toFixed(2)}`
                               : point.gain
-                                ? `P $${point.price.toFixed(2)} (+$${point.gain.toFixed(2)})`
-                                : `P $${point.price.toFixed(2)}`,
+                                ? `▼ $${point.price.toFixed(2)} (+$${point.gain.toFixed(2)})`
+                                : `▼ $${point.price.toFixed(2)}`,
                             position: point.type === 'bottom' ? 'bottom' : 'top',
                             fill: point.type === 'bottom' ? '#10b981' : '#ef4444',
                             fontSize: 9,
