@@ -988,7 +988,7 @@ export function PricePerformanceChart({
           onMouseLeave={handleMouseUp}
         >
           {/* SPY Data Loading Overlay */}
-          {colorMode === 'vspy' && spyLoading && (
+          {colorMode === 'vspy' && (spyLoading || spyData.length === 0) && (
             <div style={{
               position: 'absolute',
               top: 0,
