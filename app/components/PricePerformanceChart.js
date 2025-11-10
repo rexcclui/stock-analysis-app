@@ -43,6 +43,7 @@ export function PricePerformanceChart({
   const [dataOffset, setDataOffset] = useState(0); // Offset in days from most recent
   const [colorMode, setColorMode] = useState('default'); // 'default', 'rvi', or 'vspy'
   const [spyData, setSpyData] = useState([]); // SPY historical data for VSPY calculation
+  const [spyLoading, setSpyLoading] = useState(false); // Loading state for SPY data
 
   // AI Analysis using custom hook
   const {
@@ -99,6 +100,7 @@ export function PricePerformanceChart({
   useEffect(() => {
     const fetchSpyData = async () => {
       if (colorMode === 'vspy' && spyData.length === 0) {
+        setSpyLoading(true);
         try {
           const response = await fetch('/api/stock?symbol=SPY');
           if (response.ok) {
@@ -110,6 +112,8 @@ export function PricePerformanceChart({
           }
         } catch (error) {
           console.error('Error fetching SPY data:', error);
+        } finally {
+          setSpyLoading(false);
         }
       }
     };
@@ -978,10 +982,51 @@ export function PricePerformanceChart({
             userSelect: 'none',
             WebkitUserSelect: 'none',
             MozUserSelect: 'none',
-            msUserSelect: 'none'
+            msUserSelect: 'none',
+            position: 'relative'
           }}
           onMouseLeave={handleMouseUp}
         >
+          {/* SPY Data Loading Overlay */}
+          {colorMode === 'vspy' && spyLoading && (
+            <div style={{
+              position: 'absolute',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              backgroundColor: 'rgba(17, 24, 39, 0.9)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              zIndex: 10,
+              borderRadius: '0.5rem'
+            }}>
+              <div style={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                gap: '12px'
+              }}>
+                <div style={{
+                  width: '40px',
+                  height: '40px',
+                  border: '4px solid #FB923C',
+                  borderTopColor: 'transparent',
+                  borderRadius: '50%',
+                  animation: 'spin 1s linear infinite'
+                }}></div>
+                <div style={{ color: '#FB923C', fontSize: '14px', fontWeight: 500 }}>
+                  Loading SPY data for VSPY calculation...
+                </div>
+              </div>
+              <style>{`
+                @keyframes spin {
+                  to { transform: rotate(360deg); }
+                }
+              `}</style>
+            </div>
+          )}
           <ResponsiveContainer width="100%" height={400} style={{ margin: 0, padding: 0 }}>
             {(() => {
               // Get current data slice based on offset
