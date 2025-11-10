@@ -639,117 +639,95 @@ export function PricePerformanceChart({
     return { data: enhancedData, colorMap, maxSegmentId };
   };
 
-  // Calculate parallel channel for last uptrend
+  // Calculate parallel channel for last uptrend (Higher Lows + Higher Highs)
   const calculateUptrendChannel = (data, turningPoints) => {
-    if (!data || data.length === 0 || !turningPoints || turningPoints.length === 0) return null;
+    console.log('🔍 UPTREND DETECTION START');
+    if (!data || data.length === 0 || !turningPoints || turningPoints.length === 0) {
+      console.log('❌ No data or turning points');
+      return null;
+    }
 
     const bottoms = turningPoints.filter(tp => tp.type === 'bottom');
     const peaks = turningPoints.filter(tp => tp.type === 'peak');
 
-    if (bottoms.length < 2) return null;
+    console.log('  Bottoms found:', bottoms.length);
+    console.log('  Peaks found:', peaks.length);
 
-    // Take more bottoms to capture bigger trend (up to 5 most recent bottoms)
-    const numBottomsToUse = Math.min(5, bottoms.length);
-    const trendBottoms = bottoms.slice(-numBottomsToUse);
-
-    // Get the trend period for volume analysis
-    const firstBottomIndex = trendBottoms[0].index;
-    const lastBottomIndex = trendBottoms[trendBottoms.length - 1].index;
-    const trendPeriodData = data.slice(firstBottomIndex, Math.min(data.length, lastBottomIndex + 50));
-
-    // Analyze volume patterns: uptrend should have higher volume on up days
-    let upDayVolume = 0, downDayVolume = 0, upDays = 0, downDays = 0;
-    for (let i = 1; i < trendPeriodData.length; i++) {
-      const curr = trendPeriodData[i];
-      const prev = trendPeriodData[i - 1];
-      const volume = curr.volume || 0;
-
-      if (curr.price > prev.price) {
-        upDayVolume += volume;
-        upDays++;
-      } else if (curr.price < prev.price) {
-        downDayVolume += volume;
-        downDays++;
+    // Identify Higher Lows (HL): each bottom higher than the previous
+    const higherLows = [];
+    for (let i = 0; i < bottoms.length; i++) {
+      if (i === 0 || bottoms[i].price > bottoms[i - 1].price) {
+        higherLows.push(bottoms[i]);
+      } else {
+        break; // Sequence broken
       }
     }
 
-    // Calculate volume ratio - higher on up days confirms uptrend
-    const avgUpVolume = upDays > 0 ? upDayVolume / upDays : 0;
-    const avgDownVolume = downDays > 0 ? downDayVolume / downDays : 0;
-    const volumeRatio = avgDownVolume > 0 ? avgUpVolume / avgDownVolume : 1;
+    // Identify Higher Highs (HH): each peak higher than the previous
+    const higherHighs = [];
+    for (let i = 0; i < peaks.length; i++) {
+      if (i === 0 || peaks[i].price > peaks[i - 1].price) {
+        higherHighs.push(peaks[i]);
+      } else {
+        break; // Sequence broken
+      }
+    }
 
-    console.log('📊 Uptrend Volume Analysis:', {
-      upDays,
-      downDays,
-      avgUpVolume: avgUpVolume.toFixed(0),
-      avgDownVolume: avgDownVolume.toFixed(0),
-      volumeRatio: volumeRatio.toFixed(2),
-      threshold: 0.5,
-      confirmed: volumeRatio > 0.5
-    });
+    console.log('  Higher Lows (HL):', higherLows.length, '-', higherLows.map(h => h.price.toFixed(2)).join(', '));
+    console.log('  Higher Highs (HH):', higherHighs.length, '-', higherHighs.map(h => h.price.toFixed(2)).join(', '));
 
-    // RELAXED: Allow uptrend with volume ratio >= 0.5 (was 0.8)
-    if (volumeRatio < 0.5) {
-      console.log('❌ Uptrend rejected: volume too low on up days (ratio:', volumeRatio.toFixed(2), '< 0.5)');
+    // Requirement: Minimum 2 HL + 1 HH
+    if (higherLows.length < 2 || higherHighs.length < 1) {
+      console.log('❌ Uptrend rejected: need minimum 2 HL + 1 HH (have', higherLows.length, 'HL,', higherHighs.length, 'HH)');
       return null;
     }
 
-    // Use volume-weighted linear regression for better trend detection
-    const n = trendBottoms.length;
-    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumW = 0;
+    // Take more HLs to capture bigger trend (up to 5)
+    const numHLToUse = Math.min(5, higherLows.length);
+    const trendBottoms = higherLows.slice(0, numHLToUse);
 
-    trendBottoms.forEach(bottom => {
-      // Find the volume at this bottom point
-      const bottomData = data[bottom.index];
-      const weight = Math.sqrt(bottomData?.volume || 1); // Square root to moderate extreme values
+    // Lower trendline (PRIMARY): Connect the Higher Low points
+    const firstHL = trendBottoms[0];
+    const lastHL = trendBottoms[trendBottoms.length - 1];
 
-      sumX += bottom.index * weight;
-      sumY += bottom.price * weight;
-      sumXY += bottom.index * bottom.price * weight;
-      sumX2 += bottom.index * bottom.index * weight;
-      sumW += weight;
-    });
+    // Calculate slope from connecting HL points
+    const lowerSlope = (lastHL.price - firstHL.price) / (lastHL.index - firstHL.index);
+    const lowerIntercept = firstHL.price - lowerSlope * firstHL.index;
 
-    // Calculate slope and intercept of volume-weighted best-fit line
-    const slope = (sumW * sumXY - sumX * sumY) / (sumW * sumX2 - sumX * sumX);
-    const intercept = (sumY - slope * sumX) / sumW;
+    console.log('  Lower support line slope:', lowerSlope.toFixed(6));
+    console.log('  Connecting HL from', firstHL.price.toFixed(2), 'to', lastHL.price.toFixed(2));
 
-    // Only proceed if slope is positive (uptrend)
-    if (slope <= 0) {
-      console.log('❌ Uptrend rejected: negative slope');
-      return null;
-    }
-
-    // Extend the trendline to current if price is above the line
-    let endIndex = lastBottomIndex;
+    // Extend to current price if trend continues
+    let endIndex = lastHL.index;
     const lastDataPoint = data[data.length - 1];
-    const currentExpectedPrice = slope * (data.length - 1) + intercept;
+    const currentExpectedPrice = lowerSlope * (data.length - 1) + lowerIntercept;
 
-    if (lastDataPoint && data.length - 1 > lastBottomIndex && lastDataPoint.price > currentExpectedPrice * 0.95) {
+    if (lastDataPoint && data.length - 1 > lastHL.index && lastDataPoint.price > currentExpectedPrice * 0.9) {
       endIndex = data.length - 1;
+      console.log('  Extended to current price:', lastDataPoint.price.toFixed(2));
     }
 
-    // Calculate support line (lower bound)
+    // Lower support line (primary anchor line)
     const lowerStart = {
-      date: trendBottoms[0].date,
-      price: slope * firstBottomIndex + intercept,
-      index: firstBottomIndex
+      date: firstHL.date,
+      price: lowerSlope * firstHL.index + lowerIntercept,
+      index: firstHL.index
     };
     const lowerEnd = {
-      date: endIndex === data.length - 1 ? lastDataPoint.date : trendBottoms[trendBottoms.length - 1].date,
-      price: slope * endIndex + intercept,
+      date: endIndex === data.length - 1 ? lastDataPoint.date : lastHL.date,
+      price: lowerSlope * endIndex + lowerIntercept,
       index: endIndex
     };
 
-    // Find maximum distance above the support line (for resistance line)
+    // Upper parallel trendline: Same slope, shifted UP to touch nearest major HH
     let maxDistanceAbove = 0;
-    const extendedEndIndex = Math.min(data.length - 1, endIndex + 50);
-    const trendData = data.slice(firstBottomIndex, extendedEndIndex + 1);
 
-    for (let i = 0; i < trendData.length; i++) {
-      const point = trendData[i];
-      const actualIndex = firstBottomIndex + i;
-      const expectedPrice = slope * actualIndex + intercept;
+    // Check all HH points and data points in range
+    const rangeData = data.slice(firstHL.index, Math.min(data.length, endIndex + 20));
+    for (let i = 0; i < rangeData.length; i++) {
+      const point = rangeData[i];
+      const actualIndex = firstHL.index + i;
+      const expectedPrice = lowerSlope * actualIndex + lowerIntercept;
       const distance = point.price - expectedPrice;
 
       if (distance > maxDistanceAbove) {
@@ -757,9 +735,14 @@ export function PricePerformanceChart({
       }
     }
 
-    if (maxDistanceAbove === 0) return null;
+    console.log('  Nearest HH distance above support:', maxDistanceAbove.toFixed(2));
 
-    // Upper resistance line: parallel to support
+    if (maxDistanceAbove === 0) {
+      console.log('❌ No resistance level found above support');
+      return null;
+    }
+
+    // Upper resistance line: Parallel to lower line, shifted up
     const upperStart = {
       date: lowerStart.date,
       price: lowerStart.price + maxDistanceAbove,
@@ -772,18 +755,19 @@ export function PricePerformanceChart({
     };
 
     console.log('✅ Uptrend channel confirmed');
+    console.log('  Channel width:', maxDistanceAbove.toFixed(2));
+    console.log('  Support:', lowerStart.price.toFixed(2), '→', lowerEnd.price.toFixed(2));
+    console.log('  Resistance:', upperStart.price.toFixed(2), '→', upperEnd.price.toFixed(2));
+
     return {
-      mainLine: { start: lowerStart, end: lowerEnd },      // Lower support line
-      parallelLine: { start: upperStart, end: upperEnd }   // Upper resistance line
+      mainLine: { start: lowerStart, end: lowerEnd },      // Lower support (primary)
+      parallelLine: { start: upperStart, end: upperEnd }   // Upper resistance (parallel)
     };
   };
 
-  // Calculate parallel channel for last downtrend
+  // Calculate parallel channel for last downtrend (Lower Highs + Lower Lows)
   const calculateDowntrendChannel = (data, turningPoints) => {
     console.log('🔍 DOWNTREND DETECTION START');
-    console.log('  Data points:', data?.length);
-    console.log('  Turning points:', turningPoints?.length);
-
     if (!data || data.length === 0 || !turningPoints || turningPoints.length === 0) {
       console.log('❌ No data or turning points');
       return null;
@@ -794,121 +778,82 @@ export function PricePerformanceChart({
 
     console.log('  Bottoms found:', bottoms.length);
     console.log('  Peaks found:', peaks.length);
-    console.log('  Peak prices:', peaks.map(p => p.price.toFixed(2)).join(', '));
 
-    if (peaks.length < 2) {
-      console.log('❌ Not enough peaks (need 2, have ' + peaks.length + ')');
-      return null;
-    }
-
-    // Take more peaks to capture bigger trend (up to 5 most recent peaks)
-    const numPeaksToUse = Math.min(5, peaks.length);
-    const trendPeaks = peaks.slice(-numPeaksToUse);
-    console.log('  Using last', numPeaksToUse, 'peaks for downtrend analysis');
-
-    // Get the trend period for volume analysis
-    const firstPeakIndex = trendPeaks[0].index;
-    const lastPeakIndex = trendPeaks[trendPeaks.length - 1].index;
-    const trendPeriodData = data.slice(firstPeakIndex, Math.min(data.length, lastPeakIndex + 50));
-
-    // Analyze volume patterns: downtrend should have higher volume on down days
-    let upDayVolume = 0, downDayVolume = 0, upDays = 0, downDays = 0;
-    for (let i = 1; i < trendPeriodData.length; i++) {
-      const curr = trendPeriodData[i];
-      const prev = trendPeriodData[i - 1];
-      const volume = curr.volume || 0;
-
-      if (curr.price > prev.price) {
-        upDayVolume += volume;
-        upDays++;
-      } else if (curr.price < prev.price) {
-        downDayVolume += volume;
-        downDays++;
+    // Identify Lower Highs (LH): each peak lower than the previous
+    const lowerHighs = [];
+    for (let i = 0; i < peaks.length; i++) {
+      if (i === 0 || peaks[i].price < peaks[i - 1].price) {
+        lowerHighs.push(peaks[i]);
+      } else {
+        break; // Sequence broken
       }
     }
 
-    // Calculate volume ratio - higher on down days confirms downtrend
-    const avgUpVolume = upDays > 0 ? upDayVolume / upDays : 0;
-    const avgDownVolume = downDays > 0 ? downDayVolume / downDays : 0;
-    const volumeRatio = avgUpVolume > 0 ? avgDownVolume / avgUpVolume : 1;
+    // Identify Lower Lows (LL): each bottom lower than the previous
+    const lowerLows = [];
+    for (let i = 0; i < bottoms.length; i++) {
+      if (i === 0 || bottoms[i].price < bottoms[i - 1].price) {
+        lowerLows.push(bottoms[i]);
+      } else {
+        break; // Sequence broken
+      }
+    }
 
-    console.log('📊 Downtrend Volume Analysis:', {
-      upDays,
-      downDays,
-      avgUpVolume: avgUpVolume.toFixed(0),
-      avgDownVolume: avgDownVolume.toFixed(0),
-      volumeRatio: volumeRatio.toFixed(2),
-      threshold: 0.5,
-      confirmed: volumeRatio > 0.5
-    });
+    console.log('  Lower Highs (LH):', lowerHighs.length, '-', lowerHighs.map(h => h.price.toFixed(2)).join(', '));
+    console.log('  Lower Lows (LL):', lowerLows.length, '-', lowerLows.map(h => h.price.toFixed(2)).join(', '));
 
-    // RELAXED: Allow downtrend with volume ratio >= 0.5 (was 0.8)
-    if (volumeRatio < 0.5) {
-      console.log('❌ Downtrend rejected: volume too low on down days (ratio:', volumeRatio.toFixed(2), '< 0.5)');
+    // Requirement: Minimum 2 LH + 1 LL
+    if (lowerHighs.length < 2 || lowerLows.length < 1) {
+      console.log('❌ Downtrend rejected: need minimum 2 LH + 1 LL (have', lowerHighs.length, 'LH,', lowerLows.length, 'LL)');
       return null;
     }
 
-    // Use volume-weighted linear regression for better trend detection
-    const n = trendPeaks.length;
-    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0, sumW = 0;
+    // Take more LHs to capture bigger trend (up to 5)
+    const numLHToUse = Math.min(5, lowerHighs.length);
+    const trendPeaks = lowerHighs.slice(0, numLHToUse);
 
-    trendPeaks.forEach(peak => {
-      // Find the volume at this peak point
-      const peakData = data[peak.index];
-      const weight = Math.sqrt(peakData?.volume || 1); // Square root to moderate extreme values
+    // Upper trendline (PRIMARY): Connect the Lower High points
+    const firstLH = trendPeaks[0];
+    const lastLH = trendPeaks[trendPeaks.length - 1];
 
-      sumX += peak.index * weight;
-      sumY += peak.price * weight;
-      sumXY += peak.index * peak.price * weight;
-      sumX2 += peak.index * peak.index * weight;
-      sumW += weight;
-    });
+    // Calculate slope from connecting LH points
+    const upperSlope = (lastLH.price - firstLH.price) / (lastLH.index - firstLH.index);
+    const upperIntercept = firstLH.price - upperSlope * firstLH.index;
 
-    // Calculate slope and intercept of volume-weighted best-fit line
-    const slope = (sumW * sumXY - sumX * sumY) / (sumW * sumX2 - sumX * sumX);
-    const intercept = (sumY - slope * sumX) / sumW;
+    console.log('  Upper resistance line slope:', upperSlope.toFixed(6));
+    console.log('  Connecting LH from', firstLH.price.toFixed(2), 'to', lastLH.price.toFixed(2));
 
-    console.log('  Linear regression slope:', slope.toFixed(6));
-    console.log('  First peak price:', trendPeaks[0].price.toFixed(2));
-    console.log('  Last peak price:', trendPeaks[trendPeaks.length - 1].price.toFixed(2));
-    console.log('  Price change:', (trendPeaks[trendPeaks.length - 1].price - trendPeaks[0].price).toFixed(2));
-
-    // Only proceed if slope is negative (downtrend)
-    if (slope >= 0) {
-      console.log('❌ Downtrend rejected: positive slope (', slope.toFixed(6), ') - prices rising not falling');
-      return null;
-    }
-
-    // Extend the trendline to current if price is below the line
-    let endIndex = lastPeakIndex;
+    // Extend to current price if trend continues
+    let endIndex = lastLH.index;
     const lastDataPoint = data[data.length - 1];
-    const currentExpectedPrice = slope * (data.length - 1) + intercept;
+    const currentExpectedPrice = upperSlope * (data.length - 1) + upperIntercept;
 
-    if (lastDataPoint && data.length - 1 > lastPeakIndex && lastDataPoint.price < currentExpectedPrice * 1.05) {
+    if (lastDataPoint && data.length - 1 > lastLH.index && lastDataPoint.price < currentExpectedPrice * 1.1) {
       endIndex = data.length - 1;
+      console.log('  Extended to current price:', lastDataPoint.price.toFixed(2));
     }
 
-    // Calculate resistance line (upper bound)
+    // Upper resistance line (primary anchor line)
     const upperStart = {
-      date: trendPeaks[0].date,
-      price: slope * firstPeakIndex + intercept,
-      index: firstPeakIndex
+      date: firstLH.date,
+      price: upperSlope * firstLH.index + upperIntercept,
+      index: firstLH.index
     };
     const upperEnd = {
-      date: endIndex === data.length - 1 ? lastDataPoint.date : trendPeaks[trendPeaks.length - 1].date,
-      price: slope * endIndex + intercept,
+      date: endIndex === data.length - 1 ? lastDataPoint.date : lastLH.date,
+      price: upperSlope * endIndex + upperIntercept,
       index: endIndex
     };
 
-    // Find maximum distance below the resistance line (for support line)
+    // Lower parallel trendline: Same slope, shifted DOWN to touch nearest major LL
     let maxDistanceBelow = 0;
-    const extendedEndIndex = Math.min(data.length - 1, endIndex + 50);
-    const trendData = data.slice(firstPeakIndex, extendedEndIndex + 1);
 
-    for (let i = 0; i < trendData.length; i++) {
-      const point = trendData[i];
-      const actualIndex = firstPeakIndex + i;
-      const expectedPrice = slope * actualIndex + intercept;
+    // Check all LL points and data points in range
+    const rangeData = data.slice(firstLH.index, Math.min(data.length, endIndex + 20));
+    for (let i = 0; i < rangeData.length; i++) {
+      const point = rangeData[i];
+      const actualIndex = firstLH.index + i;
+      const expectedPrice = upperSlope * actualIndex + upperIntercept;
       const distance = expectedPrice - point.price;
 
       if (distance > maxDistanceBelow) {
@@ -916,9 +861,14 @@ export function PricePerformanceChart({
       }
     }
 
-    if (maxDistanceBelow === 0) return null;
+    console.log('  Nearest LL distance below resistance:', maxDistanceBelow.toFixed(2));
 
-    // Lower support line: parallel to resistance
+    if (maxDistanceBelow === 0) {
+      console.log('❌ No support level found below resistance');
+      return null;
+    }
+
+    // Lower support line: Parallel to upper line, shifted down
     const lowerStart = {
       date: upperStart.date,
       price: upperStart.price - maxDistanceBelow,
@@ -931,9 +881,13 @@ export function PricePerformanceChart({
     };
 
     console.log('✅ Downtrend channel confirmed');
+    console.log('  Channel width:', maxDistanceBelow.toFixed(2));
+    console.log('  Resistance:', upperStart.price.toFixed(2), '→', upperEnd.price.toFixed(2));
+    console.log('  Support:', lowerStart.price.toFixed(2), '→', lowerEnd.price.toFixed(2));
+
     return {
-      mainLine: { start: upperStart, end: upperEnd },      // Upper resistance line
-      parallelLine: { start: lowerStart, end: lowerEnd }   // Lower support line
+      mainLine: { start: upperStart, end: upperEnd },      // Upper resistance (primary)
+      parallelLine: { start: lowerStart, end: lowerEnd }   // Lower support (parallel)
     };
   };
 
