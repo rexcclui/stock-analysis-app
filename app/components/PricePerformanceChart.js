@@ -2461,36 +2461,22 @@ export function PricePerformanceChart({
                   ) : colorMode === 'channel' ? (
                     // Channel Mode: Render price line + channel lines with gradient zones
                     <>
-                      {/* Stacked gradient fill zones */}
-                      {/* Layer 1 (bottom): Base to lowerBound - green tint */}
+                      {/* TEST: Bright solid colors to debug visibility */}
                       <Area
                         type="monotone"
-                        dataKey="zoneLower"
-                        stackId="1"
+                        dataKey="upperBound"
                         stroke="none"
-                        fill="transparent"
-                        fillOpacity={1}
+                        fill="rgba(255, 0, 0, 0.2)"
                         isAnimationActive={false}
+                        connectNulls={false}
                       />
-                      {/* Layer 2 (middle): lowerBound to centerLine - lower gradient */}
                       <Area
                         type="monotone"
-                        dataKey="zoneMid"
-                        stackId="1"
+                        dataKey="lowerBound"
                         stroke="none"
-                        fill="url(#lowerChannelGradient)"
-                        fillOpacity={1}
+                        fill="rgba(0, 255, 0, 0.2)"
                         isAnimationActive={false}
-                      />
-                      {/* Layer 3 (top): centerLine to upperBound - upper gradient */}
-                      <Area
-                        type="monotone"
-                        dataKey="zoneUpper"
-                        stackId="1"
-                        stroke="none"
-                        fill="url(#upperChannelGradient)"
-                        fillOpacity={1}
-                        isAnimationActive={false}
+                        connectNulls={false}
                       />
                       <Line
                         type="monotone"
