@@ -1645,7 +1645,7 @@ export function PricePerformanceChart({
               {channelSimulationResult && (
                 <div className="flex flex-col gap-1">
                   <div
-                    className="text-xs text-green-400 font-medium cursor-pointer hover:text-green-300 transition"
+                    className="text-[10px] text-green-400 font-medium cursor-pointer hover:text-green-300 transition"
                     onClick={() => {
                       setTrendChannelLookback(channelSimulationResult.optimalLookback);
                       setTrendChannelStdMultiplier(channelSimulationResult.optimalDelta);
@@ -1657,7 +1657,7 @@ export function PricePerformanceChart({
                   </div>
                   {channelSimulationResult.recent && (
                     <div
-                      className="text-xs text-emerald-300 font-medium cursor-pointer hover:text-emerald-200 transition"
+                      className="text-[10px] text-emerald-300 font-medium cursor-pointer hover:text-emerald-200 transition"
                       onClick={() => {
                         setTrendChannelLookback(channelSimulationResult.recent.optimalLookback);
                         setTrendChannelStdMultiplier(channelSimulationResult.recent.optimalDelta);
