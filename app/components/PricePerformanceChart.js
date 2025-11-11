@@ -67,6 +67,7 @@ export function PricePerformanceChart({
   // Channel (trend mode) configuration - user configurable lookback & std dev (delta)
   const [trendChannelLookback, setTrendChannelLookback] = useState(120); // default lookback for whole-range regression
   const [trendChannelStdMultiplier, setTrendChannelStdMultiplier] = useState(2); // sigma multiplier
+  const [trendChannelInterceptShift, setTrendChannelInterceptShift] = useState(0); // vertical adjustment for optimal touch alignment
 
   // AI Analysis using custom hook
   const {
@@ -510,11 +511,12 @@ export function PricePerformanceChart({
   };
 
   // Build configurable Trend Channel (regression over last lookback points only when in 'trend')
-  const buildConfigurableTrendChannel = (data, lookback, stdMult) => {
+  const buildConfigurableTrendChannel = (data, lookback, stdMult, options = {}) => {
     if (!data || data.length < 2) return data;
     const slice = lookback && lookback < data.length ? data.slice(-lookback) : data;
     const n = slice.length;
     if (n < 2) return data;
+    const { interceptShift = 0 } = options;
     let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
     slice.forEach((pt, i) => {
       const x = i;
@@ -524,7 +526,8 @@ export function PricePerformanceChart({
     const denom = (n * sumX2 - sumX * sumX);
     if (denom === 0) return data;
     const slope = (n * sumXY - sumX * sumY) / denom;
-    const intercept = (sumY - slope * sumX) / n;
+    const baseIntercept = (sumY - slope * sumX) / n;
+    const intercept = baseIntercept + interceptShift;
     let resSum = 0;
     slice.forEach((pt, i) => {
       const model = slope * i + intercept;
@@ -558,6 +561,81 @@ export function PricePerformanceChart({
         })()
       };
     });
+  };
+
+  // Compute intercept shift and delta ensuring both channel bounds touch price extremes
+  const computeTrendChannelTouchAlignment = (data, lookback) => {
+    if (!data || data.length < 2) return null;
+    const slice = lookback && lookback < data.length ? data.slice(-lookback) : data;
+    const n = slice.length;
+    if (n < 2) return null;
+
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+    slice.forEach((pt, i) => {
+      const x = i;
+      const y = pt.price || 0;
+      sumX += x;
+      sumY += y;
+      sumXY += x * y;
+      sumX2 += x * x;
+    });
+
+    const denom = (n * sumX2 - sumX * sumX);
+    if (denom === 0) return null;
+
+    const slope = (n * sumXY - sumX * sumY) / denom;
+    const baseIntercept = (sumY - slope * sumX) / n;
+
+    const residuals = slice.map((pt, i) => {
+      const model = slope * i + baseIntercept;
+      return (pt.price || 0) - model;
+    });
+
+    const maxResidual = Math.max(...residuals);
+    const minResidual = Math.min(...residuals);
+    if (!Number.isFinite(maxResidual) || !Number.isFinite(minResidual)) return null;
+
+    const interceptShift = (maxResidual + minResidual) / 2;
+    const adjustedResiduals = residuals.map(diff => diff - interceptShift);
+
+    const resSum = adjustedResiduals.reduce((sum, diff) => sum + diff * diff, 0);
+    const stdDev = Math.sqrt(resSum / Math.max(1, n - 1));
+    const extremeMagnitude = adjustedResiduals.reduce((acc, diff) => Math.max(acc, Math.abs(diff)), 0);
+
+    let optimalDelta = stdDev > 0 ? extremeMagnitude / stdDev : 0;
+    if (!Number.isFinite(optimalDelta)) {
+      optimalDelta = 0;
+    }
+
+    const tolerance = stdDev > 0 ? stdDev * 1e-6 : 1e-6;
+    const touchesUpper = extremeMagnitude === 0
+      ? true
+      : adjustedResiduals.some(diff => Math.abs(diff - extremeMagnitude) <= tolerance);
+    const touchesLower = extremeMagnitude === 0
+      ? true
+      : adjustedResiduals.some(diff => Math.abs(diff + extremeMagnitude) <= tolerance);
+
+    const interceptWithShift = baseIntercept + interceptShift;
+    const coverageCount = slice.reduce((count, pt, idx) => {
+      const center = slope * idx + interceptWithShift;
+      const upper = center + optimalDelta * stdDev;
+      const lower = center - optimalDelta * stdDev;
+      const price = pt.price || 0;
+      return (price <= upper + tolerance && price >= lower - tolerance) ? count + 1 : count;
+    }, 0);
+
+    return {
+      interceptShift,
+      optimalDelta,
+      touchesUpper,
+      touchesLower,
+      coverageCount,
+      totalPoints: slice.length,
+      stdDev,
+      slope,
+      baseIntercept,
+      extremeMagnitude
+    };
   };
 
   // Calculate Standard Deviation Channel
@@ -692,79 +770,29 @@ export function PricePerformanceChart({
     // Find the std dev multiplier (delta) that keeps the most points inside the channel
     // while ensuring both the upper and lower bounds are touched at least once when possible.
     const runDeltaSimulation = async (data, lookback) => {
-      const minDelta = 0.5;
-      const maxDelta = 4.0;
-      const deltaStep = 0.5;
-
-      let bestWithTouches = null;
-      let bestOverall = null;
-      const deltaResults = [];
-
-      for (let delta = minDelta; delta <= maxDelta; delta += deltaStep) {
-        const dataWithChannel = buildConfigurableTrendChannel(
-          data,
-          lookback,
-          delta
-        );
-
-        let coverageCount = 0;
-        let upperTouched = false;
-        let lowerTouched = false;
-        const boundTolerance = 0.01;
-
-        dataWithChannel.forEach(point => {
-          if (point.trendUpper !== null && point.trendLower !== null && typeof point.price === 'number') {
-            const price = point.price;
-            const upperBound = point.trendUpper;
-            const lowerBound = point.trendLower;
-
-            if (price >= lowerBound && price <= upperBound) {
-              coverageCount++;
-            }
-
-            if (!upperTouched) {
-              const upperDiff = Math.abs(price - upperBound);
-              const upperPercent = upperDiff / upperBound;
-              if (upperPercent <= boundTolerance) {
-                upperTouched = true;
-              }
-            }
-
-            if (!lowerTouched) {
-              const lowerDiff = Math.abs(price - lowerBound);
-              const lowerPercent = lowerDiff / lowerBound;
-              if (lowerPercent <= boundTolerance) {
-                lowerTouched = true;
-              }
-            }
-          }
-        });
-
-        const touchesBothBounds = upperTouched && lowerTouched;
-
-        const resultEntry = { delta, coverageCount, touchesBothBounds };
-        deltaResults.push(resultEntry);
-
-        if (!bestOverall || coverageCount > bestOverall.coverageCount) {
-          bestOverall = resultEntry;
-        }
-
-        if (touchesBothBounds) {
-          if (!bestWithTouches || coverageCount > bestWithTouches.coverageCount) {
-            bestWithTouches = resultEntry;
-          }
-        }
-
-        await new Promise(resolve => setTimeout(resolve, 0));
+      const alignment = computeTrendChannelTouchAlignment(data, lookback);
+      if (!alignment) {
+        return {
+          optimalDelta: 0,
+          maxCoverageCount: 0,
+          touchesBothBounds: false,
+          interceptShift: 0,
+          touchesUpper: false,
+          touchesLower: false,
+          totalPoints: data.length,
+          deltaResults: []
+        };
       }
 
-      const chosen = bestWithTouches || bestOverall || { delta: minDelta, coverageCount: 0, touchesBothBounds: false };
-
       return {
-        optimalDelta: chosen.delta,
-        maxCoverageCount: chosen.coverageCount,
-        touchesBothBounds: chosen.touchesBothBounds,
-        deltaResults
+        optimalDelta: alignment.optimalDelta,
+        maxCoverageCount: alignment.coverageCount,
+        touchesBothBounds: alignment.touchesUpper && alignment.touchesLower,
+        interceptShift: alignment.interceptShift,
+        touchesUpper: alignment.touchesUpper,
+        touchesLower: alignment.touchesLower,
+        totalPoints: alignment.totalPoints,
+        deltaResults: []
       };
     };
 
@@ -783,28 +811,35 @@ export function PricePerformanceChart({
       maxCrosses: fullLookbackResult.maxCrosses,
       maxCoverageCount: fullDeltaResult.maxCoverageCount,
       touchesBothBounds: fullDeltaResult.touchesBothBounds,
+      touchesUpper: fullDeltaResult.touchesUpper,
+      touchesLower: fullDeltaResult.touchesLower,
       totalPoints: currentData.length,
       crossPercentage: ((fullLookbackResult.maxCrosses / currentData.length) * 100).toFixed(2),
       coveragePercentage: ((fullDeltaResult.maxCoverageCount / currentData.length) * 100).toFixed(2),
       lookbackResults: fullLookbackResult.lookbackResults,
       deltaResults: fullDeltaResult.deltaResults,
+      optimalInterceptShift: fullDeltaResult.interceptShift,
       recent: {
         optimalLookback: recentLookbackResult.optimalLookback,
         optimalDelta: recentDeltaResult.optimalDelta,
         maxCrosses: recentLookbackResult.maxCrosses,
         maxCoverageCount: recentDeltaResult.maxCoverageCount,
         touchesBothBounds: recentDeltaResult.touchesBothBounds,
+        touchesUpper: recentDeltaResult.touchesUpper,
+        touchesLower: recentDeltaResult.touchesLower,
         totalPoints: recentData.length,
         crossPercentage: ((recentLookbackResult.maxCrosses / recentData.length) * 100).toFixed(2),
         coveragePercentage: ((recentDeltaResult.maxCoverageCount / recentData.length) * 100).toFixed(2),
         lookbackResults: recentLookbackResult.lookbackResults,
-        deltaResults: recentDeltaResult.deltaResults
+        deltaResults: recentDeltaResult.deltaResults,
+        optimalInterceptShift: recentDeltaResult.interceptShift
       }
     });
 
     // Apply optimal lookback and delta (full data set)
     setTrendChannelLookback(fullLookbackResult.optimalLookback);
     setTrendChannelStdMultiplier(fullDeltaResult.optimalDelta);
+    setTrendChannelInterceptShift(fullDeltaResult.interceptShift || 0);
     setIsChannelSimulating(false);
   };
 
@@ -1640,6 +1675,7 @@ export function PricePerformanceChart({
                   onChange={(e)=> {
                     const v = parseInt(e.target.value);
                     setTrendChannelLookback(v);
+                    setTrendChannelInterceptShift(0);
                   }}
                   className="w-32 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-yellow-500"
                 />
@@ -1655,7 +1691,10 @@ export function PricePerformanceChart({
                   max="4"
                   step="0.5"
                   value={trendChannelStdMultiplier}
-                  onChange={(e)=> setTrendChannelStdMultiplier(parseFloat(e.target.value))}
+                  onChange={(e)=> {
+                    setTrendChannelStdMultiplier(parseFloat(e.target.value));
+                    setTrendChannelInterceptShift(0);
+                  }}
                   className="w-24 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-amber-500"
                 />
               </div>
@@ -1684,6 +1723,7 @@ export function PricePerformanceChart({
                     onClick={() => {
                       setTrendChannelLookback(channelSimulationResult.optimalLookback);
                       setTrendChannelStdMultiplier(channelSimulationResult.optimalDelta);
+                      setTrendChannelInterceptShift(channelSimulationResult.optimalInterceptShift || 0);
                     }}
                     title="Click to restore optimal settings (full range)"
                   >
@@ -1695,6 +1735,7 @@ export function PricePerformanceChart({
                       onClick={() => {
                         setTrendChannelLookback(channelSimulationResult.recent.optimalLookback);
                         setTrendChannelStdMultiplier(channelSimulationResult.recent.optimalDelta);
+                        setTrendChannelInterceptShift(channelSimulationResult.recent.optimalInterceptShift || 0);
                       }}
                       title="Click to apply recent optimal settings"
                     >
@@ -2267,7 +2308,12 @@ export function PricePerformanceChart({
               let smaSegments = null;
               // Apply configurable trend channel (overwrites default trend calc) when in trend mode
               if (colorMode === 'trend') {
-                multiData = buildConfigurableTrendChannel(multiData, trendChannelLookback, trendChannelStdMultiplier);
+                multiData = buildConfigurableTrendChannel(
+                  multiData,
+                  trendChannelLookback,
+                  trendChannelStdMultiplier,
+                  { interceptShift: trendChannelInterceptShift }
+                );
               }
               if (colorMode === 'sma' && chartCompareStocks.length === 0) {
                 const smaAnalysis = detectTurningPoints(multiData);
