@@ -608,7 +608,7 @@ export function PricePerformanceChart({
     }
 
     const tolerance = stdDev > 0 ? stdDev * 1e-6 : 1e-6;
-    const boundaryWindow = Math.max(1, Math.floor(n * 0.05));
+    const boundaryWindow = Math.max(1, Math.floor(n * 0.15));
 
     let touchesUpper = false;
     let touchesLower = false;
