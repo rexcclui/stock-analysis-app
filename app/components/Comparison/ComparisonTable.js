@@ -783,7 +783,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                       fontWeight: 'bold',
                       marginBottom: '0.25rem'
                     }}>
-                      {basePerf > 0 ? '+' : ''}{basePerf.toFixed(1)}%
+                      {basePerf > 0 ? '+' : ''}{Math.abs(basePerf) > 30 ? basePerf.toFixed(0) : basePerf.toFixed(1)}%
                     </div>
                   </td>
                 );
@@ -820,7 +820,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                         fontWeight: 'bold',
                         marginBottom: '0.25rem'
                       }}>
-                        {value > 0 ? '+' : ''}{value.toFixed(1)}%
+                        {value > 0 ? '+' : ''}{Math.abs(value) > 30 ? value.toFixed(0) : value.toFixed(1)}%
                       </div>
                     </td>
                   );
@@ -945,7 +945,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                         fontWeight: 'bold',
                         marginBottom: '0.25rem'
                       }}>
-                        {value > 0 ? '+' : ''}{value.toFixed(1)}%
+                        {value > 0 ? '+' : ''}{Math.abs(value) > 30 ? value.toFixed(0) : value.toFixed(1)}%
                       </div>
                     </td>
                   );
@@ -985,7 +985,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                           fontWeight: 'bold',
                           marginBottom: '0.25rem'
                         }}>
-                          {value > 0 ? '+' : ''}{value.toFixed(1)}%
+                          {value > 0 ? '+' : ''}{Math.abs(value) > 30 ? value.toFixed(0) : value.toFixed(1)}%
                         </div>
                       </td>
                     );
