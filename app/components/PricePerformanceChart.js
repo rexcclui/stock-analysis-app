@@ -59,6 +59,8 @@ export function PricePerformanceChart({
   // Channel simulation state
   const [isChannelSimulating, setIsChannelSimulating] = useState(false);
   const [channelSimulationResult, setChannelSimulationResult] = useState(null);
+  // Partition band count for channel/trend visual segmentation
+  const CHANNEL_BANDS = 6; // creates 6 colored zones between lower and upper (adjustable)
 
   // Trend Channel (Linear Regression) configuration
   const [trendLookback, setTrendLookback] = useState(100); // Lookback period for trend calculation
@@ -543,7 +545,17 @@ export function PricePerformanceChart({
         ...pt,
         trendLine: center,
         trendUpper: center + stdMult * stdDev,
-        trendLower: center - stdMult * stdDev
+        trendLower: center - stdMult * stdDev,
+        ...(() => { // Add partition band levels for trend channel
+          const extras = {};
+          const upper = center + stdMult * stdDev;
+          const lower = center - stdMult * stdDev;
+          for (let b = 1; b < CHANNEL_BANDS; b++) {
+            const frac = b / CHANNEL_BANDS;
+            extras[`trendBand_${b}`] = lower + (upper - lower) * frac;
+          }
+          return extras;
+        })()
       };
     });
   };
@@ -601,7 +613,15 @@ export function PricePerformanceChart({
         centerLine,
         upperBound,
         lowerBound,
-        stdDev
+        stdDev,
+        ...(() => { // Add partition band levels for std dev channel
+          const extras = {};
+          for (let b = 1; b < CHANNEL_BANDS; b++) {
+            const frac = b / CHANNEL_BANDS;
+            extras[`channelBand_${b}`] = lowerBound + (upperBound - lowerBound) * frac;
+          }
+          return extras;
+        })()
       };
     });
   };
@@ -928,6 +948,35 @@ export function PricePerformanceChart({
       const b = Math.floor(129 + t * 46);
       return `rgba(${r}, ${g}, ${b}, 0.9)`;
     }
+  };
+
+  // Color ramp helper for channel & trend partition bands.
+  // ratio: 0 (bottom/support) → 1 (top/resistance)
+  // Gradient path: emerald (#10B981) → teal (#14B8A6) → blue (#3B82F6) → purple (#8B5CF6) → pink (#EC4899) → red (#EF4444)
+  // We interpolate across 5 segments between 6 anchor colors.
+  const getChannelBandColor = (ratio) => {
+    if (isNaN(ratio)) return 'rgba(255,255,255,0.05)';
+    const r = Math.max(0, Math.min(1, ratio));
+    const anchors = [
+      { r: 16,  g:185, b:129 }, // emerald
+      { r: 20,  g:184, b:166 }, // teal
+      { r: 59,  g:130, b:246 }, // blue
+      { r:139,  g:92,  b:246 }, // purple
+      { r:236,  g:72,  b:153 }, // pink
+      { r:239,  g:68,  b:68  }  // red
+    ];
+    const segCount = anchors.length - 1; // 5
+    const scaled = r * segCount;
+    const i = Math.min(segCount - 1, Math.floor(scaled));
+    const t = scaled - i;
+    const a = anchors[i];
+    const b = anchors[i + 1];
+    const rr = Math.round(a.r + (b.r - a.r) * t);
+    const gg = Math.round(a.g + (b.g - a.g) * t);
+    const bb = Math.round(a.b + (b.b - a.b) * t);
+    // Slight transparency so overlapping areas blend smoothly
+    const alpha = 0.18 + 0.05 * r; // a bit more opaque toward resistance
+    return `rgba(${rr}, ${gg}, ${bb}, ${alpha.toFixed(3)})`;
   };
 
   // Calculate Volume Bar data for horizontal background zones
@@ -2435,6 +2484,39 @@ export function PricePerformanceChart({
                   ) : colorMode === 'channel' ? (
                     // Channel Mode: Render price line + channel lines
                     <>
+                      {/* Channel Partition Bands */}
+                      {multiData.length > 1 && multiData.map((pt, i) => {
+                        const next = multiData[i + 1];
+                        if (!next) return null;
+                        if (pt.lowerBound == null || pt.upperBound == null || next.lowerBound == null || next.upperBound == null) return null;
+                        // Render each band zone between consecutive band boundaries
+                        const zones = [];
+                        for (let b = 0; b < CHANNEL_BANDS; b++) {
+                          const lowerKey = b === 0 ? 'lowerBound' : `channelBand_${b}`;
+                          const upperKey = b === CHANNEL_BANDS - 1 ? 'upperBound' : `channelBand_${b + 1}`;
+                          const ptLower = pt[lowerKey];
+                          const ptUpper = pt[upperKey];
+                          const nextLower = next[lowerKey];
+                          const nextUpper = next[upperKey];
+                          if (ptLower == null || ptUpper == null || nextLower == null || nextUpper == null) continue;
+                          const zoneLower = Math.min(ptLower, nextLower);
+                          const zoneUpper = Math.max(ptUpper, nextUpper);
+                          const ratioMid = (b + 0.5) / CHANNEL_BANDS; // mid-point for color
+                          zones.push(
+                            <ReferenceArea
+                              key={`channel-band-${i}-${b}`}
+                              x1={pt.date}
+                              x2={next.date}
+                              y1={zoneLower}
+                              y2={zoneUpper}
+                              fill={getChannelBandColor(ratioMid)}
+                              strokeOpacity={0}
+                              ifOverflow="discard"
+                            />
+                          );
+                        }
+                        return zones;
+                      })}
                       <Line
                         type="monotone"
                         dataKey="price"
@@ -2481,6 +2563,38 @@ export function PricePerformanceChart({
                   ) : colorMode === 'trend' ? (
                     // Trend Mode: Render price line + linear regression trend channel
                     <>
+                      {/* Trend Channel Partition Bands */}
+                      {multiData.length > 1 && multiData.map((pt, i) => {
+                        const next = multiData[i + 1];
+                        if (!next) return null;
+                        if (pt.trendLower == null || pt.trendUpper == null || next.trendLower == null || next.trendUpper == null) return null;
+                        const zones = [];
+                        for (let b = 0; b < CHANNEL_BANDS; b++) {
+                          const lowerKey = b === 0 ? 'trendLower' : `trendBand_${b}`;
+                          const upperKey = b === CHANNEL_BANDS - 1 ? 'trendUpper' : `trendBand_${b + 1}`;
+                          const ptLower = pt[lowerKey];
+                          const ptUpper = pt[upperKey];
+                          const nextLower = next[lowerKey];
+                          const nextUpper = next[upperKey];
+                          if (ptLower == null || ptUpper == null || nextLower == null || nextUpper == null) continue;
+                          const zoneLower = Math.min(ptLower, nextLower);
+                          const zoneUpper = Math.max(ptUpper, nextUpper);
+                          const ratioMid = (b + 0.5) / CHANNEL_BANDS;
+                          zones.push(
+                            <ReferenceArea
+                              key={`trend-band-${i}-${b}`}
+                              x1={pt.date}
+                              x2={next.date}
+                              y1={zoneLower}
+                              y2={zoneUpper}
+                              fill={getChannelBandColor(ratioMid)}
+                              strokeOpacity={0}
+                              ifOverflow="discard"
+                            />
+                          );
+                        }
+                        return zones;
+                      })}
                       <Line
                         type="monotone"
                         dataKey="price"
@@ -2700,7 +2814,7 @@ export function PricePerformanceChart({
                 <div>• <span className="text-purple-400 font-semibold">Center Line:</span> Shows the dominant price trend direction based on linear regression</div>
                 <div>• <span className="text-red-400 font-semibold">Upper/Lower Bounds:</span> Statistical boundaries ({channelStdDevMultiplier.toFixed(1)} standard deviations) where price is likely to stay within</div>
                 <div>• <span className="text-yellow-400 font-semibold">POC & HVNs:</span> Price levels with high trading volume indicate strong support/resistance zones</div>
-                <div>• <span className="text-green-400 font-semibold">Trading Signal:</span> When price touches a bound near POC/HVN, it's a stronger support/resistance level</div>
+                <div>• <span className="text-green-400 font-semibold">Trading Signal:</span> When price touches a bound near POC/HVN, it&apos;s a stronger support/resistance level</div>
                 <div>• <span className="text-orange-400 font-semibold">Breakout Signal:</span> Price breaking through a bound suggests potential trend change</div>
               </div>
             </div>
