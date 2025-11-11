@@ -1653,7 +1653,6 @@ export function PricePerformanceChart({
                     title="Click to restore optimal settings (full range)"
                   >
                     Optimal (Full): {channelSimulationResult.optimalLookback} / Δ{channelSimulationResult.optimalDelta}
-                    ({channelSimulationResult.maxBoundCrosses} bound crosses, {channelSimulationResult.boundCrossPercentage}%)
                   </div>
                   {channelSimulationResult.recent && (
                     <div
@@ -1665,7 +1664,6 @@ export function PricePerformanceChart({
                       title="Click to apply recent optimal settings"
                     >
                       Optimal (Recent 25%): {channelSimulationResult.recent.optimalLookback} / Δ{channelSimulationResult.recent.optimalDelta}
-                      ({channelSimulationResult.recent.maxBoundCrosses} bound crosses, {channelSimulationResult.recent.boundCrossPercentage}%)
                     </div>
                   )}
                 </div>
