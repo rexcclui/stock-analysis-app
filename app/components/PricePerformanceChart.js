@@ -623,7 +623,7 @@ export function PricePerformanceChart({
 
     const fixedStdMult = 0.5; // Fixed delta value
     const minLookback = 20;
-    const maxLookback = Math.min(200, currentData.length);
+    const maxLookback = currentData.length; // Test from lowest to highest available
 
     let optimalLookback = minLookback;
     let maxCrosses = 0;
