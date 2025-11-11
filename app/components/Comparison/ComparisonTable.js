@@ -354,11 +354,11 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
   const calculateNDayPeriods = (stock, n) => {
     const historical = stock?.chartData?.fullHistorical;
     if (!historical || !Array.isArray(historical) || historical.length === 0) {
-      return Array(8).fill(0);
+      return Array(11).fill(0);
     }
 
     const periods = [];
-    for (let i = 0; i < 8; i++) {
+    for (let i = 0; i < 11; i++) {
       const startIdx = i * n;
       const endIdx = (i + 1) * n;
 
@@ -579,7 +579,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
               <>
                 <th
                   className="px-1 py-1 text-left cursor-pointer hover:bg-gray-800 transition text-sm"
-                  style={{ borderRight: '2px solid transparent', width: '180px', minWidth: '180px' }}
+                  style={{ borderRight: '2px solid transparent', width: '240px', minWidth: '240px' }}
                   onClick={() => handleSort('name')}
                 >
                   Name <SortIcon active={isActive('name')} direction={sortDirection} />
@@ -593,35 +593,35 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
               <>
                 <th
                   className="px-1 py-1 text-right cursor-pointer hover:bg-gray-800 transition"
-                  style={{ borderRight: '2px solid transparent' }}
+                  style={{ borderRight: '2px solid transparent', width: '90px', minWidth: '90px' }}
                   onClick={() => handleSort('marketCap')}
                 >
                   Market Cap <SortIcon active={isActive('marketCap')} direction={sortDirection} />
                 </th>
                 <th
                   className="px-1 py-1 text-right cursor-pointer hover:bg-gray-800 transition"
-                  style={{ borderRight: '2px solid transparent' }}
+                  style={{ borderRight: '2px solid transparent', width: '63px', minWidth: '63px' }}
                   onClick={() => handleSort('beta')}
                 >
                   Beta <SortIcon active={isActive('beta')} direction={sortDirection} />
                 </th>
                 <th
                   className="px-1 py-1 text-right cursor-pointer hover:bg-gray-800 transition"
-                  style={{ borderRight: '2px solid transparent' }}
+                  style={{ borderRight: '2px solid transparent', width: '72px', minWidth: '72px' }}
                   onClick={() => handleSort('pe')}
                 >
                   P/E <SortIcon active={isActive('pe')} direction={sortDirection} />
                 </th>
                 <th
                   className="px-1 py-1 text-right cursor-pointer hover:bg-gray-800 transition"
-                  style={{ borderRight: '2px solid transparent' }}
+                  style={{ borderRight: '2px solid transparent', width: '72px', minWidth: '72px' }}
                   onClick={() => handleSort('dividendYield')}
                 >
                   Dividend <SortIcon active={isActive('dividendYield')} direction={sortDirection} />
                 </th>
                 <th
                   className="px-1 py-1 text-center cursor-pointer hover:bg-gray-800 transition"
-                  style={{ borderRight: '2px solid transparent' }}
+                  style={{ borderRight: '2px solid transparent', width: '90px', minWidth: '90px' }}
                   onClick={() => handleSort('rating')}
                 >
                   Rating <SortIcon active={isActive('rating')} direction={sortDirection} />
@@ -648,7 +648,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                 </th>
               ))
             ) : (
-              Array.from({ length: 8 }, (_, i) => {
+              Array.from({ length: 11 }, (_, i) => {
                 const end = (i + 1) * nDays;
                 const label = `-${end}D`;
                 return (
@@ -694,9 +694,9 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
             </td>
             {showNameColumn && (
               <>
-                <td className="px-1 py-1 font-medium text-white text-sm" style={{ borderRight: '2px solid transparent', width: '180px', minWidth: '180px' }}>
+                <td className="px-1 py-1 font-medium text-white text-sm" style={{ borderRight: '2px solid transparent', width: '240px', minWidth: '240px' }}>
                   {selectedStock.website ? (
-                    <a href={selectedStock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate" style={{ color: '#FBBF24' }} title={selectedStock.name}>
+                    <a href={selectedStock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block" style={{ color: '#FBBF24' }} title={selectedStock.name}>
                       {selectedStock.name}
                     </a>
                   ) : (
@@ -704,7 +704,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                       onClick={() => onStockCodeClick && onStockCodeClick(selectedStock.code)}
                       role="link"
                       tabIndex={0}
-                      className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate"
+                      className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block"
                       title={selectedStock.name}
                     >{selectedStock.name}</span>
                   )}
@@ -714,27 +714,27 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
             )}
             {showMarketDetail && (
               <>
-                <td className="px-1 py-1" style={{ borderRight: '2px solid transparent' }}>
+                <td className="px-1 py-1" style={{ borderRight: '2px solid transparent', width: '90px', minWidth: '90px' }}>
                   <div style={getMarketCapCellStyle(selectedStock.marketCap)}>
                     ${selectedStock.marketCap}
                   </div>
                 </td>
-                <td className="px-1 py-1 text-right" style={{ borderRight: '2px solid transparent' }}>
+                <td className="px-1 py-1 text-right" style={{ borderRight: '2px solid transparent', width: '63px', minWidth: '63px' }}>
                   <div style={getBetaCellStyle(selectedStock.beta)}>
                     {selectedStock.beta || 'N/A'}
                   </div>
                 </td>
-                <td className="px-1 py-1" style={{ borderRight: '2px solid transparent' }}>
+                <td className="px-1 py-1" style={{ borderRight: '2px solid transparent', width: '72px', minWidth: '72px' }}>
                   <div style={getPeCellStyle(selectedStock.pe)}>
                     {selectedStock.pe === '—' ? '—' : selectedStock.pe}
                   </div>
                 </td>
-                <td className="px-1 py-1 text-right" style={{ borderRight: '2px solid transparent' }}>
+                <td className="px-1 py-1 text-right" style={{ borderRight: '2px solid transparent', width: '72px', minWidth: '72px' }}>
                   <div style={getDividendCellStyle(selectedStock.dividendYield)}>
                     {selectedStock.dividendYield}
                   </div>
                 </td>
-                <td className="px-1 py-1 text-center" style={{ borderRight: '2px solid transparent' }}>
+                <td className="px-1 py-1 text-center" style={{ borderRight: '2px solid transparent', width: '90px', minWidth: '90px' }}>
                   <span style={getRatingStyle(selectedStock.analystRating)}>
                     {selectedStock.analystRating}
                   </span>
@@ -857,9 +857,9 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
               </td>
               {showNameColumn && (
                 <>
-                  <td className="px-1 py-3 text-gray-200" style={{width: '160px', maxWidth: '160px'}}>
+                  <td className="px-1 py-3 text-gray-200" style={{width: '240px', maxWidth: '240px'}}>
                     {stock.website ? (
-                      <a href={stock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate" style={{ color: '#FBBF24' }} title={stock.name}>
+                      <a href={stock.website} target="_blank" rel="noopener noreferrer" className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block" style={{ color: '#FBBF24' }} title={stock.name}>
                         {stock.name}
                       </a>
                     ) : (
@@ -867,7 +867,7 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
                         onClick={() => onStockCodeClick && onStockCodeClick(stock.code)}
                         role="link"
                         tabIndex={0}
-                        className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block truncate"
+                        className="text-yellow-400 hover:text-yellow-600 underline decoration-dotted cursor-pointer focus:outline-none focus:ring-2 focus:ring-yellow-500 rounded block"
                         title={stock.name}
                       >{stock.name}</span>
                     )}
@@ -879,27 +879,27 @@ function TableView({ selectedStock, comparisonStocks, periods, onRemoveCompariso
               )}
               {showMarketDetail && (
                 <>
-                  <td className="px-1 py-3">
+                  <td className="px-1 py-3" style={{ width: '90px', minWidth: '90px' }}>
                     <div style={getMarketCapCellStyle(stock.marketCap)}>
                       ${stock.marketCap}
                     </div>
                   </td>
-                  <td className="px-1 py-3 text-right">
+                  <td className="px-1 py-3 text-right" style={{ width: '63px', minWidth: '63px' }}>
                     <div style={getBetaCellStyle(stock.beta)}>
                       {stock.beta || 'N/A'}
                     </div>
                   </td>
-                  <td className="px-1 py-3">
+                  <td className="px-1 py-3" style={{ width: '72px', minWidth: '72px' }}>
                     <div style={getPeCellStyle(stock.pe)}>
                       {stock.pe === '—' ? '—' : stock.pe}
                     </div>
                   </td>
-                  <td className="px-1 py-3 text-right">
+                  <td className="px-1 py-3 text-right" style={{ width: '72px', minWidth: '72px' }}>
                     <div style={getDividendCellStyle(stock.dividendYield)}>
                       {stock.dividendYield}
                     </div>
                   </td>
-                  <td className="px-1 py-3 text-center">
+                  <td className="px-1 py-3 text-center" style={{ width: '90px', minWidth: '90px' }}>
                     <span style={getRatingStyle(stock.analystRating)}>
                       {stock.analystRating}
                     </span>
