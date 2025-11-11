@@ -621,13 +621,14 @@ export function PricePerformanceChart({
       return;
     }
 
-    const fixedStdMult = 0.5; // Fixed delta value
+    // === PHASE 1: Find optimal lookback with fixed delta ===
+    const fixedStdMult = 0.5; // Fixed delta value for lookback simulation
     const minLookback = 20;
     const maxLookback = currentData.length; // Test from lowest to highest available
 
     let optimalLookback = minLookback;
     let maxCrosses = 0;
-    const results = [];
+    const lookbackResults = [];
 
     // Allow UI to update
     await new Promise(resolve => setTimeout(resolve, 50));
@@ -657,7 +658,7 @@ export function PricePerformanceChart({
         }
       });
 
-      results.push({ lookback, crossCount });
+      lookbackResults.push({ lookback, crossCount });
 
       // Update optimal if this lookback has more crosses
       if (crossCount > maxCrosses) {
@@ -671,16 +672,72 @@ export function PricePerformanceChart({
       }
     }
 
+    // === PHASE 2: Find optimal delta using optimal lookback ===
+    const minDelta = 0.5;
+    const maxDelta = 4.0;
+    const deltaStep = 0.5;
+
+    let optimalDelta = minDelta;
+    let maxBoundCrosses = 0;
+    const deltaResults = [];
+
+    // Iterate through delta values
+    for (let delta = minDelta; delta <= maxDelta; delta += deltaStep) {
+      // Calculate trend channel with optimal lookback and current delta
+      const dataWithChannel = buildConfigurableTrendChannel(
+        currentData,
+        optimalLookback,
+        delta
+      );
+
+      // Count how many times price crosses upper or lower bounds
+      let boundCrossCount = 0;
+      const boundTolerance = 0.01; // 1% tolerance for bound crossing
+
+      dataWithChannel.forEach(point => {
+        if (point.trendUpper !== null && point.trendLower !== null && point.price) {
+          // Check if price is near upper bound
+          const upperDiff = Math.abs(point.price - point.trendUpper);
+          const upperPercent = upperDiff / point.trendUpper;
+
+          // Check if price is near lower bound
+          const lowerDiff = Math.abs(point.price - point.trendLower);
+          const lowerPercent = lowerDiff / point.trendLower;
+
+          // Count if price crosses either bound
+          if (upperPercent <= boundTolerance || lowerPercent <= boundTolerance) {
+            boundCrossCount++;
+          }
+        }
+      });
+
+      deltaResults.push({ delta, boundCrossCount });
+
+      // Update optimal if this delta has more bound crosses
+      if (boundCrossCount > maxBoundCrosses) {
+        maxBoundCrosses = boundCrossCount;
+        optimalDelta = delta;
+      }
+
+      // Yield to UI
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+
     setChannelSimulationResult({
       optimalLookback,
+      optimalDelta,
       maxCrosses,
+      maxBoundCrosses,
       totalPoints: currentData.length,
       crossPercentage: ((maxCrosses / currentData.length) * 100).toFixed(2),
-      allResults: results
+      boundCrossPercentage: ((maxBoundCrosses / currentData.length) * 100).toFixed(2),
+      lookbackResults,
+      deltaResults
     });
 
-    // Apply optimal lookback
+    // Apply optimal lookback and delta
     setTrendChannelLookback(optimalLookback);
+    setTrendChannelStdMultiplier(optimalDelta);
     setIsChannelSimulating(false);
   };
 
@@ -1527,11 +1584,14 @@ export function PricePerformanceChart({
               {channelSimulationResult && (
                 <div
                   className="text-xs text-green-400 font-medium cursor-pointer hover:text-green-300 transition"
-                  onClick={() => setTrendChannelLookback(channelSimulationResult.optimalLookback)}
+                  onClick={() => {
+                    setTrendChannelLookback(channelSimulationResult.optimalLookback);
+                    setTrendChannelStdMultiplier(channelSimulationResult.optimalDelta);
+                  }}
                   title="Click to restore optimal settings"
                 >
-                  Optimal: {channelSimulationResult.optimalLookback}
-                  ({channelSimulationResult.maxCrosses} crosses, {channelSimulationResult.crossPercentage}%)
+                  Optimal: {channelSimulationResult.optimalLookback} / Δ{channelSimulationResult.optimalDelta}
+                  ({channelSimulationResult.maxBoundCrosses} bound crosses, {channelSimulationResult.boundCrossPercentage}%)
                 </div>
               )}
             </div>
