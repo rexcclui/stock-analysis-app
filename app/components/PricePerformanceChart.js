@@ -1476,7 +1476,7 @@ export function PricePerformanceChart({
           {colorMode === 'trend' && chartCompareStocks.length === 0 && selectedStock && (
             <div className="flex items-center gap-2 ml-1">
               <div className="flex items-center gap-1" title="Regression lookback bars">
-                <label className="text-[10px] text-gray-300 font-medium">Lookback: {trendChannelLookback}</label>
+                <label className="text-[11px] text-gray-300 font-medium">Lookback: {trendChannelLookback}</label>
                 <input
                   type="range"
                   min="20"
