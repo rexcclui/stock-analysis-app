@@ -2174,6 +2174,10 @@ export function PricePerformanceChart({
               if (colorMode === 'trend') {
                 multiData = buildConfigurableTrendChannel(multiData, trendChannelLookback, trendChannelStdMultiplier);
               }
+              // Apply standard deviation channel calculation when in channel mode
+              if (colorMode === 'channel' && chartCompareStocks.length === 0) {
+                multiData = calculateStdDevChannel(multiData, channelLookback, channelStdDevMultiplier, channelSource);
+              }
               if (colorMode === 'sma' && chartCompareStocks.length === 0) {
                 const smaAnalysis = detectTurningPoints(multiData);
                 smaSegments = addSmaDataKeys(multiData, smaAnalysis.turningPoints);
