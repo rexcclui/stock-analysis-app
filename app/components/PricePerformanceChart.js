@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react';
-import { LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceDot, Scatter, ReferenceArea } from 'recharts';
+import { LineChart, Line, Area, XAxis, YAxis, CartesianGrid, Tooltip, Legend, ResponsiveContainer, ReferenceLine, ReferenceDot, Scatter, ReferenceArea } from 'recharts';
 import { LoadingState } from './LoadingState';
 import { useAIPriceAnalysis } from '../hooks/useAIPriceAnalysis';
 import { useAICycleAnalysis } from '../hooks/useAICycleAnalysis';
@@ -559,7 +559,10 @@ export function PricePerformanceChart({
           centerLine: null,
           upperBound: null,
           lowerBound: null,
-          stdDev: null
+          stdDev: null,
+          zoneLower: null,
+          zoneMid: null,
+          zoneUpper: null
         };
       }
 
@@ -574,7 +577,10 @@ export function PricePerformanceChart({
           centerLine: null,
           upperBound: null,
           lowerBound: null,
-          stdDev: null
+          stdDev: null,
+          zoneLower: null,
+          zoneMid: null,
+          zoneUpper: null
         };
       }
 
@@ -596,12 +602,20 @@ export function PricePerformanceChart({
       const upperBound = centerLine + (stdDev * stdDevMultiplier);
       const lowerBound = centerLine - (stdDev * stdDevMultiplier);
 
+      // Calculate zone heights for stacked area rendering
+      const zoneLower = lowerBound; // Base layer: from 0 to lowerBound
+      const zoneMid = centerLine - lowerBound; // Middle layer: height between lowerBound and centerLine
+      const zoneUpper = upperBound - centerLine; // Top layer: height between centerLine and upperBound
+
       return {
         ...point,
         centerLine,
         upperBound,
         lowerBound,
-        stdDev
+        stdDev,
+        zoneLower,
+        zoneMid,
+        zoneUpper
       };
     });
   };
@@ -2187,6 +2201,18 @@ export function PricePerformanceChart({
                   onMouseMove={handleMouseMove}
                   onMouseUp={handleMouseUp}
                 >
+                  <defs>
+                    {/* Gradient for upper channel zone (centerLine to upperBound) */}
+                    <linearGradient id="upperChannelGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#ef4444" stopOpacity={0.4} />
+                      <stop offset="100%" stopColor="#8b5cf6" stopOpacity={0.15} />
+                    </linearGradient>
+                    {/* Gradient for lower channel zone (lowerBound to centerLine) */}
+                    <linearGradient id="lowerChannelGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#8b5cf6" stopOpacity={0.15} />
+                      <stop offset="100%" stopColor="#10b981" stopOpacity={0.4} />
+                    </linearGradient>
+                  </defs>
                   <CartesianGrid stroke="#1F2937" strokeDasharray="3 3" />
                   <XAxis
                     dataKey="date"
@@ -2433,8 +2459,39 @@ export function PricePerformanceChart({
                       return lines;
                     })()
                   ) : colorMode === 'channel' ? (
-                    // Channel Mode: Render price line + channel lines
+                    // Channel Mode: Render price line + channel lines with gradient zones
                     <>
+                      {/* Stacked gradient fill zones */}
+                      {/* Layer 1 (bottom): Base to lowerBound - green tint */}
+                      <Area
+                        type="monotone"
+                        dataKey="zoneLower"
+                        stackId="1"
+                        stroke="none"
+                        fill="transparent"
+                        fillOpacity={1}
+                        isAnimationActive={false}
+                      />
+                      {/* Layer 2 (middle): lowerBound to centerLine - lower gradient */}
+                      <Area
+                        type="monotone"
+                        dataKey="zoneMid"
+                        stackId="1"
+                        stroke="none"
+                        fill="url(#lowerChannelGradient)"
+                        fillOpacity={1}
+                        isAnimationActive={false}
+                      />
+                      {/* Layer 3 (top): centerLine to upperBound - upper gradient */}
+                      <Area
+                        type="monotone"
+                        dataKey="zoneUpper"
+                        stackId="1"
+                        stroke="none"
+                        fill="url(#upperChannelGradient)"
+                        fillOpacity={1}
+                        isAnimationActive={false}
+                      />
                       <Line
                         type="monotone"
                         dataKey="price"
