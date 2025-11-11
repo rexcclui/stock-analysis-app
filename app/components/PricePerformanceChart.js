@@ -689,13 +689,15 @@ export function PricePerformanceChart({
       return { optimalLookback, maxCrosses, lookbackResults };
     };
 
+    // Find the std dev multiplier (delta) that keeps the most points inside the channel
+    // while ensuring both the upper and lower bounds are touched at least once when possible.
     const runDeltaSimulation = async (data, lookback) => {
       const minDelta = 0.5;
       const maxDelta = 4.0;
       const deltaStep = 0.5;
 
-      let optimalDelta = minDelta;
-      let maxBoundCrosses = 0;
+      let bestWithTouches = null;
+      let bestOverall = null;
       const deltaResults = [];
 
       for (let delta = minDelta; delta <= maxDelta; delta += deltaStep) {
@@ -705,34 +707,65 @@ export function PricePerformanceChart({
           delta
         );
 
-        let boundCrossCount = 0;
+        let coverageCount = 0;
+        let upperTouched = false;
+        let lowerTouched = false;
         const boundTolerance = 0.01;
 
         dataWithChannel.forEach(point => {
-          if (point.trendUpper !== null && point.trendLower !== null && point.price) {
-            const upperDiff = Math.abs(point.price - point.trendUpper);
-            const upperPercent = upperDiff / point.trendUpper;
+          if (point.trendUpper !== null && point.trendLower !== null && typeof point.price === 'number') {
+            const price = point.price;
+            const upperBound = point.trendUpper;
+            const lowerBound = point.trendLower;
 
-            const lowerDiff = Math.abs(point.price - point.trendLower);
-            const lowerPercent = lowerDiff / point.trendLower;
+            if (price >= lowerBound && price <= upperBound) {
+              coverageCount++;
+            }
 
-            if (upperPercent <= boundTolerance || lowerPercent <= boundTolerance) {
-              boundCrossCount++;
+            if (!upperTouched) {
+              const upperDiff = Math.abs(price - upperBound);
+              const upperPercent = upperDiff / upperBound;
+              if (upperPercent <= boundTolerance) {
+                upperTouched = true;
+              }
+            }
+
+            if (!lowerTouched) {
+              const lowerDiff = Math.abs(price - lowerBound);
+              const lowerPercent = lowerDiff / lowerBound;
+              if (lowerPercent <= boundTolerance) {
+                lowerTouched = true;
+              }
             }
           }
         });
 
-        deltaResults.push({ delta, boundCrossCount });
+        const touchesBothBounds = upperTouched && lowerTouched;
 
-        if (boundCrossCount > maxBoundCrosses) {
-          maxBoundCrosses = boundCrossCount;
-          optimalDelta = delta;
+        const resultEntry = { delta, coverageCount, touchesBothBounds };
+        deltaResults.push(resultEntry);
+
+        if (!bestOverall || coverageCount > bestOverall.coverageCount) {
+          bestOverall = resultEntry;
+        }
+
+        if (touchesBothBounds) {
+          if (!bestWithTouches || coverageCount > bestWithTouches.coverageCount) {
+            bestWithTouches = resultEntry;
+          }
         }
 
         await new Promise(resolve => setTimeout(resolve, 0));
       }
 
-      return { optimalDelta, maxBoundCrosses, deltaResults };
+      const chosen = bestWithTouches || bestOverall || { delta: minDelta, coverageCount: 0, touchesBothBounds: false };
+
+      return {
+        optimalDelta: chosen.delta,
+        maxCoverageCount: chosen.coverageCount,
+        touchesBothBounds: chosen.touchesBothBounds,
+        deltaResults
+      };
     };
 
     const fullLookbackResult = await runLookbackSimulation(currentData);
@@ -748,20 +781,22 @@ export function PricePerformanceChart({
       optimalLookback: fullLookbackResult.optimalLookback,
       optimalDelta: fullDeltaResult.optimalDelta,
       maxCrosses: fullLookbackResult.maxCrosses,
-      maxBoundCrosses: fullDeltaResult.maxBoundCrosses,
+      maxCoverageCount: fullDeltaResult.maxCoverageCount,
+      touchesBothBounds: fullDeltaResult.touchesBothBounds,
       totalPoints: currentData.length,
       crossPercentage: ((fullLookbackResult.maxCrosses / currentData.length) * 100).toFixed(2),
-      boundCrossPercentage: ((fullDeltaResult.maxBoundCrosses / currentData.length) * 100).toFixed(2),
+      coveragePercentage: ((fullDeltaResult.maxCoverageCount / currentData.length) * 100).toFixed(2),
       lookbackResults: fullLookbackResult.lookbackResults,
       deltaResults: fullDeltaResult.deltaResults,
       recent: {
         optimalLookback: recentLookbackResult.optimalLookback,
         optimalDelta: recentDeltaResult.optimalDelta,
         maxCrosses: recentLookbackResult.maxCrosses,
-        maxBoundCrosses: recentDeltaResult.maxBoundCrosses,
+        maxCoverageCount: recentDeltaResult.maxCoverageCount,
+        touchesBothBounds: recentDeltaResult.touchesBothBounds,
         totalPoints: recentData.length,
         crossPercentage: ((recentLookbackResult.maxCrosses / recentData.length) * 100).toFixed(2),
-        boundCrossPercentage: ((recentDeltaResult.maxBoundCrosses / recentData.length) * 100).toFixed(2),
+        coveragePercentage: ((recentDeltaResult.maxCoverageCount / recentData.length) * 100).toFixed(2),
         lookbackResults: recentLookbackResult.lookbackResults,
         deltaResults: recentDeltaResult.deltaResults
       }
