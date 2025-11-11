@@ -161,7 +161,7 @@ export default function StockAnalysisDashboard() {
   const [savedComparisons, setSavedComparisons] = useState({});
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState('table');
-  const [heatmapColorBy, setHeatmapColorBy] = useState('7D');
+  const [heatmapColorBy, setHeatmapColorBy] = useState('1D');
   const [heatmapSizeBy, setHeatmapSizeBy] = useState('marketCap');
   const [searchHistory, setSearchHistory] = useState([]);
   const [news, setNews] = useState([]);
@@ -829,7 +829,8 @@ export default function StockAnalysisDashboard() {
     }
   };
 
-  const periods = ['7D', '1M', '3M', '6M', '1Y', '3Y', '5Y'];
+  const chartPeriods = ['7D', '1M', '3M', '6M', '1Y', '3Y', '5Y'];
+  const comparisonPeriods = ['1D', '7D', '1M', '3M', '6M', '1Y', '3Y', '5Y'];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-800 p-6 pl-20">
@@ -951,7 +952,7 @@ export default function StockAnalysisDashboard() {
                         selectedStock={selectedStock}
                         chartPeriod={chartPeriod}
                         setChartPeriod={setChartPeriod}
-                        periods={periods}
+                        periods={chartPeriods}
                         chartCompareStocks={chartCompareStocks}
                         addChartCompareStock={addChartCompareStock}
                         removeChartCompareStock={removeChartCompareStock}
@@ -987,7 +988,7 @@ export default function StockAnalysisDashboard() {
                   onHeatmapColorByChange={setHeatmapColorBy}
                   heatmapSizeBy={heatmapSizeBy}
                   onHeatmapSizeByChange={setHeatmapSizeBy}
-                  periods={periods}
+                  periods={comparisonPeriods}
                   searchHistoryStocks={searchHistoryStocks}
                   searchHistoryFullStocks={searchHistoryFullStocks}
                   onSearchHistoryCodeClick={(code)=> { handleSearch(code); }}
