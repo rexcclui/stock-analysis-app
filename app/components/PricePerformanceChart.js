@@ -608,12 +608,40 @@ export function PricePerformanceChart({
     }
 
     const tolerance = stdDev > 0 ? stdDev * 1e-6 : 1e-6;
-    const touchesUpper = extremeMagnitude === 0
-      ? true
-      : adjustedResiduals.some(diff => Math.abs(diff - extremeMagnitude) <= tolerance);
-    const touchesLower = extremeMagnitude === 0
-      ? true
-      : adjustedResiduals.some(diff => Math.abs(diff + extremeMagnitude) <= tolerance);
+    const boundaryWindow = Math.max(1, Math.floor(n * 0.05));
+
+    let touchesUpper = false;
+    let touchesLower = false;
+    let touchesUpperBoundary = false;
+    let touchesLowerBoundary = false;
+
+    if (extremeMagnitude === 0) {
+      touchesUpper = true;
+      touchesLower = true;
+      touchesUpperBoundary = true;
+      touchesLowerBoundary = true;
+    } else {
+      adjustedResiduals.forEach((diff, idx) => {
+        const isBoundaryIndex = idx < boundaryWindow || idx >= n - boundaryWindow;
+
+        if (Math.abs(diff - extremeMagnitude) <= tolerance) {
+          touchesUpper = true;
+          if (isBoundaryIndex) {
+            touchesUpperBoundary = true;
+          }
+        }
+
+        if (Math.abs(diff + extremeMagnitude) <= tolerance) {
+          touchesLower = true;
+          if (isBoundaryIndex) {
+            touchesLowerBoundary = true;
+          }
+        }
+      });
+
+      touchesUpper = touchesUpper && touchesUpperBoundary;
+      touchesLower = touchesLower && touchesLowerBoundary;
+    }
 
     const interceptWithShift = baseIntercept + interceptShift;
     const coverageCount = slice.reduce((count, pt, idx) => {
