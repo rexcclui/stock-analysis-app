@@ -1817,8 +1817,8 @@ export function PricePerformanceChart({
               value={chartCompareInput}
               onChange={(e)=> setChartCompareInput(e.target.value)}
               onKeyDown={(e)=> e.key==='Enter' && addChartCompareStock()}
-              className="w-32 px-2 py-1 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500 placeholder-gray-400"
-              style={{ minWidth: '100px', maxWidth: '140px' }}
+              className="w-24 px-2 py-1 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500 placeholder-gray-400"
+              style={{ minWidth: '80px', maxWidth: '120px' }}
             />
             <button
               onClick={addChartCompareStock}
