@@ -2505,7 +2505,7 @@ export function PricePerformanceChart({
                 <div>• <span className="text-purple-400 font-semibold">Center Line:</span> Shows the dominant price trend direction based on linear regression</div>
                 <div>• <span className="text-red-400 font-semibold">Upper/Lower Bounds:</span> Statistical boundaries ({channelStdDevMultiplier.toFixed(1)} standard deviations) where price is likely to stay within</div>
                 <div>• <span className="text-yellow-400 font-semibold">POC & HVNs:</span> Price levels with high trading volume indicate strong support/resistance zones</div>
-                <div>• <span className="text-green-400 font-semibold">Trading Signal:</span> When price touches a bound near POC/HVN, it's a stronger support/resistance level</div>
+                <div>• <span className="text-green-400 font-semibold">Trading Signal:</span> When price touches a bound near POC/HVN, it&apos;s a stronger support/resistance level</div>
                 <div>• <span className="text-orange-400 font-semibold">Breakout Signal:</span> Price breaking through a bound suggests potential trend change</div>
               </div>
             </div>
