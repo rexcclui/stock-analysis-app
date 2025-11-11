@@ -161,7 +161,7 @@ export default function StockAnalysisDashboard() {
   const [savedComparisons, setSavedComparisons] = useState({});
   const [loading, setLoading] = useState(false);
   const [viewMode, setViewMode] = useState('table');
-  const [heatmapColorBy, setHeatmapColorBy] = useState('1D');
+  const [heatmapColorBy, setHeatmapColorBy] = useState('7D');
   const [heatmapSizeBy, setHeatmapSizeBy] = useState('marketCap');
   const [searchHistory, setSearchHistory] = useState([]);
   const [news, setNews] = useState([]);
@@ -283,7 +283,7 @@ export default function StockAnalysisDashboard() {
     // Load chartPeriod from localStorage
     const savedPeriod = localStorage.getItem('chartPeriod');
     if (savedPeriod) {
-      setChartPeriod(savedPeriod);
+      setChartPeriod(savedPeriod === '1D' ? '1M' : savedPeriod);
     }
     // Load selected stock and related data from localStorage
     const savedStock = localStorage.getItem('selectedStock');
@@ -829,7 +829,7 @@ export default function StockAnalysisDashboard() {
     }
   };
 
-  const periods = ['1D', '7D', '1M', '3M', '6M', '1Y', '3Y', '5Y'];
+  const periods = ['7D', '1M', '3M', '6M', '1Y', '3Y', '5Y'];
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-gray-900 via-slate-900 to-gray-800 p-6 pl-20">
