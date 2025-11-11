@@ -41,7 +41,7 @@ export function PricePerformanceChart({
   const chartData = useMemo(() => selectedStock?.chartData?.[chartPeriod] || [], [selectedStock, chartPeriod]);
   const fullHistoricalData = useMemo(() => selectedStock?.chartData?.fullHistorical || [], [selectedStock]);
   const [dataOffset, setDataOffset] = useState(0); // Offset in days from most recent
-  const [colorMode, setColorMode] = useState('default'); // 'default', 'rvi', 'vspy', 'sma', 'volumeBar', or 'channel'
+  const [colorMode, setColorMode] = useState('default'); // 'default', 'rvi', 'vspy', 'sma', 'volumeBar', 'channel', or 'trend'
   const [spyData, setSpyData] = useState([]); // SPY historical data for VSPY calculation
   const [spyLoading, setSpyLoading] = useState(false); // Loading state for SPY data
   const [smaPeriod, setSmaPeriod] = useState(20); // SMA period for peak/bottom mode
@@ -55,6 +55,9 @@ export function PricePerformanceChart({
   const [channelSource, setChannelSource] = useState('close'); // Price source: 'close', 'hl2', 'ohlc4'
   const [channelVolumeBins, setChannelVolumeBins] = useState(70); // Volume profile bins
   const [channelProximityThreshold, setChannelProximityThreshold] = useState(0.02); // 2% proximity threshold
+
+  // Trend Channel (Linear Regression) configuration
+  const [trendLookback, setTrendLookback] = useState(100); // Lookback period for trend calculation
 
   // AI Analysis using custom hook
   const {
@@ -487,6 +490,54 @@ export function PricePerformanceChart({
     const intercept = (sumY - slope * sumX) / n;
 
     return { slope, intercept, n };
+  };
+
+  // Calculate Trend Channel with Upper & Lower Parallel Bounds using Linear Regression
+  const calculateTrendChannel = (data) => {
+    if (!data || data.length < 2) return data;
+
+    // Calculate linear regression on all visible data
+    const n = data.length;
+
+    // Calculate linear regression: y = mx + b
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+
+    data.forEach((point, idx) => {
+      const x = idx;
+      const y = point.price || 0;
+      sumX += x;
+      sumY += y;
+      sumXY += x * y;
+      sumX2 += x * x;
+    });
+
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+
+    // Calculate standard deviation of residuals
+    let sumSquaredDiff = 0;
+    data.forEach((point, idx) => {
+      const trendValue = slope * idx + intercept;
+      const price = point.price || 0;
+      const diff = price - trendValue;
+      sumSquaredDiff += diff * diff;
+    });
+
+    const stdDev = Math.sqrt(sumSquaredDiff / n);
+
+    // Map the trend line and bounds to each data point
+    return data.map((point, idx) => {
+      const trendLine = slope * idx + intercept;
+      const upperBound = trendLine + (2 * stdDev); // +2σ
+      const lowerBound = trendLine - (2 * stdDev); // -2σ
+
+      return {
+        ...point,
+        trendLine,
+        trendUpper: upperBound,
+        trendLower: lowerBound
+      };
+    });
   };
 
   // Calculate Standard Deviation Channel
@@ -975,6 +1026,11 @@ export function PricePerformanceChart({
       return dataWithConfluence;
     }
 
+    // Apply Trend Channel calculation if in trend mode
+    if (colorMode === 'trend') {
+      return calculateTrendChannel(slicedData);
+    }
+
     return slicedData;
   };
 
@@ -1311,6 +1367,22 @@ export function PricePerformanceChart({
               title={colorMode === 'channel' ? 'Disable Trend Channel mode' : 'Enable Trend Channel mode'}
             >
               Trend Line
+            </button>
+          )}
+
+          {/* Trend Channel (Linear Regression) Mode Toggle */}
+          {chartCompareStocks.length === 0 && selectedStock && (
+            <button
+              onClick={() => setColorMode(colorMode === 'trend' ? 'default' : 'trend')}
+              className="px-3 py-2 rounded-lg text-xs font-medium transition"
+              style={{
+                backgroundColor: colorMode === 'trend' ? '#FBBF24' : '#374151',
+                color: colorMode === 'trend' ? '#000000' : '#D1D5DB',
+                fontWeight: 'bold'
+              }}
+              title={colorMode === 'trend' ? 'Disable Trend mode' : 'Enable Trend mode (Linear Regression)'}
+            >
+              Trend
             </button>
           )}
 
@@ -2322,6 +2394,51 @@ export function PricePerformanceChart({
                         name="Lower Bound"
                         stroke="#10b981"
                         strokeWidth={2}
+                        strokeOpacity={0.8}
+                        strokeDasharray="5 5"
+                        dot={false}
+                        connectNulls={false}
+                      />
+                    </>
+                  ) : colorMode === 'trend' ? (
+                    // Trend Mode: Render price line + linear regression trend channel
+                    <>
+                      <Line
+                        type="monotone"
+                        dataKey="price"
+                        name={`${selectedStock?.code || ''} Price`}
+                        stroke="#3B82F6"
+                        strokeWidth={2}
+                        dot={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="trendUpper"
+                        name="Upper Bound (+2σ)"
+                        stroke="#A855F7"
+                        strokeWidth={1.5}
+                        strokeOpacity={0.8}
+                        strokeDasharray="5 5"
+                        dot={false}
+                        connectNulls={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="trendLine"
+                        name="Trend Line"
+                        stroke="#9333EA"
+                        strokeWidth={2}
+                        strokeOpacity={0.9}
+                        strokeDasharray="5 5"
+                        dot={false}
+                        connectNulls={false}
+                      />
+                      <Line
+                        type="monotone"
+                        dataKey="trendLower"
+                        name="Lower Bound (-2σ)"
+                        stroke="#A855F7"
+                        strokeWidth={1.5}
                         strokeOpacity={0.8}
                         strokeDasharray="5 5"
                         dot={false}
