@@ -58,6 +58,9 @@ export function PricePerformanceChart({
 
   // Trend Channel (Linear Regression) configuration
   const [trendLookback, setTrendLookback] = useState(100); // Lookback period for trend calculation
+  // Channel (trend mode) configuration - user configurable lookback & std dev (delta)
+  const [trendChannelLookback, setTrendChannelLookback] = useState(120); // default lookback for whole-range regression
+  const [trendChannelStdMultiplier, setTrendChannelStdMultiplier] = useState(2); // sigma multiplier
 
   // AI Analysis using custom hook
   const {
@@ -496,46 +499,47 @@ export function PricePerformanceChart({
   const calculateTrendChannel = (data) => {
     if (!data || data.length < 2) return data;
 
-    // Calculate linear regression on all visible data
-    const n = data.length;
+    // Legacy global trend channel removed; return data unchanged
+    return data;
+  };
 
-    // Calculate linear regression: y = mx + b
+  // Build configurable Trend Channel (regression over last lookback points only when in 'trend')
+  const buildConfigurableTrendChannel = (data, lookback, stdMult) => {
+    if (!data || data.length < 2) return data;
+    const slice = lookback && lookback < data.length ? data.slice(-lookback) : data;
+    const n = slice.length;
+    if (n < 2) return data;
     let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-
-    data.forEach((point, idx) => {
-      const x = idx;
-      const y = point.price || 0;
-      sumX += x;
-      sumY += y;
-      sumXY += x * y;
-      sumX2 += x * x;
+    slice.forEach((pt, i) => {
+      const x = i;
+      const y = pt.price || 0;
+      sumX += x; sumY += y; sumXY += x * y; sumX2 += x * x;
     });
-
-    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const denom = (n * sumX2 - sumX * sumX);
+    if (denom === 0) return data;
+    const slope = (n * sumXY - sumX * sumY) / denom;
     const intercept = (sumY - slope * sumX) / n;
-
-    // Calculate standard deviation of residuals
-    let sumSquaredDiff = 0;
-    data.forEach((point, idx) => {
-      const trendValue = slope * idx + intercept;
-      const price = point.price || 0;
-      const diff = price - trendValue;
-      sumSquaredDiff += diff * diff;
+    let resSum = 0;
+    slice.forEach((pt, i) => {
+      const model = slope * i + intercept;
+      const diff = (pt.price || 0) - model;
+      resSum += diff * diff;
     });
-
-    const stdDev = Math.sqrt(sumSquaredDiff / n);
-
-    // Map the trend line and bounds to each data point
-    return data.map((point, idx) => {
-      const trendLine = slope * idx + intercept;
-      const upperBound = trendLine + (2 * stdDev); // +2σ
-      const lowerBound = trendLine - (2 * stdDev); // -2σ
-
+    const stdDev = Math.sqrt(resSum / Math.max(1, n - 1));
+    // Map across entire data; only enrich slice window
+    const startIndex = data.length - n;
+    return data.map((pt, idx) => {
+      if (idx < startIndex) {
+        // Null out earlier values so line doesn't bend from a previous regression
+        return { ...pt, trendLine: null, trendUpper: null, trendLower: null };
+      }
+      const localX = idx - startIndex;
+      const center = slope * localX + intercept;
       return {
-        ...point,
-        trendLine,
-        trendUpper: upperBound,
-        trendLower: lowerBound
+        ...pt,
+        trendLine: center,
+        trendUpper: center + stdMult * stdDev,
+        trendLower: center - stdMult * stdDev
       };
     });
   };
@@ -1380,10 +1384,47 @@ export function PricePerformanceChart({
                 color: colorMode === 'trend' ? '#000000' : '#D1D5DB',
                 fontWeight: 'bold'
               }}
-              title={colorMode === 'trend' ? 'Disable Trend mode' : 'Enable Trend mode (Linear Regression)'}
+              title={colorMode === 'trend' ? 'Disable Channel mode' : 'Enable Channel mode (Linear Regression)'}
             >
-              Trend
+              Channel
             </button>
+          )}
+
+          {/* Trend Channel Configuration (when in trend mode) */}
+          {colorMode === 'trend' && chartCompareStocks.length === 0 && selectedStock && (
+            <div className="flex items-center gap-2 ml-1">
+              <div className="flex items-center gap-1" title="Regression lookback bars">
+                <label className="text-xs text-gray-300 font-medium">Lookback: {trendChannelLookback}</label>
+                <input
+                  type="range"
+                  min="20"
+                  // Max becomes dynamic: visible data length
+                  max={getCurrentDataSlice().length}
+                  step={Math.max(1, Math.round(getCurrentDataSlice().length / 100))}
+                  value={Math.min(trendChannelLookback, getCurrentDataSlice().length)}
+                  onChange={(e)=> {
+                    const v = parseInt(e.target.value);
+                    setTrendChannelLookback(v);
+                  }}
+                  className="w-32 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-yellow-500"
+                />
+                {trendChannelLookback > getCurrentDataSlice().length && (
+                  <span className="text-[10px] text-red-400 font-semibold ml-1">(clamped to {getCurrentDataSlice().length})</span>
+                )}
+              </div>
+              <div className="flex items-center gap-1" title="Std Dev Multiplier (Delta)">
+                <label className="text-xs text-gray-300 font-medium">Δσ: {trendChannelStdMultiplier.toFixed(1)}</label>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="4"
+                  step="0.5"
+                  value={trendChannelStdMultiplier}
+                  onChange={(e)=> setTrendChannelStdMultiplier(parseFloat(e.target.value))}
+                  className="w-24 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-amber-500"
+                />
+              </div>
+            </div>
           )}
 
           {/* SMA Period Slider */}
@@ -1487,6 +1528,8 @@ export function PricePerformanceChart({
               </select>
             </div>
           )}
+
+          {/* No recent trend overlay anymore */}
 
           <div className="flex items-center" style={{ marginLeft: '12px' }}>
             <input
@@ -1943,6 +1986,10 @@ export function PricePerformanceChart({
 
               // For SMA mode, add segment dataKeys based on turning points
               let smaSegments = null;
+              // Apply configurable trend channel (overwrites default trend calc) when in trend mode
+              if (colorMode === 'trend') {
+                multiData = buildConfigurableTrendChannel(multiData, trendChannelLookback, trendChannelStdMultiplier);
+              }
               if (colorMode === 'sma' && chartCompareStocks.length === 0) {
                 const smaAnalysis = detectTurningPoints(multiData);
                 smaSegments = addSmaDataKeys(multiData, smaAnalysis.turningPoints);
@@ -1951,7 +1998,6 @@ export function PricePerformanceChart({
 
               console.log('Rendering chart with offset:', dataOffset, 'dataLength:', fullData.length, 'showing:', startIndex, 'to', endIndex, 'Color mode:', colorMode, 'SMA mode:', colorMode === 'sma');
 
-              // Debug cycle analysis state
               if (showCycleAnalysis) {
                 console.log('=== CYCLE ANALYSIS STATE ===');
                 console.log('showCycleAnalysis:', showCycleAnalysis);
@@ -1964,8 +2010,14 @@ export function PricePerformanceChart({
               }
 
               return (
-                <LineChart data={multiData}>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#374151" />
+                <LineChart
+                  data={multiData}
+                  margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
+                  onMouseDown={handleMouseDown}
+                  onMouseMove={handleMouseMove}
+                  onMouseUp={handleMouseUp}
+                >
+                  <CartesianGrid stroke="#1F2937" strokeDasharray="3 3" />
                   <XAxis
                     dataKey="date"
                     stroke="#9CA3AF"
@@ -1986,7 +2038,6 @@ export function PricePerformanceChart({
                         stroke="#9CA3AF"
                         allowDecimals={false}
                         domain={[intMin, intMax]}
-                        tickFormatter={(v) => Math.round(v)}
                       />
                     );
                   })()
@@ -1995,151 +2046,7 @@ export function PricePerformanceChart({
                     stroke="#9CA3AF"
                     tickFormatter={(v)=> `${Math.round(v)}%`}
                     domain={['auto','auto']}
-                    allowDecimals={false}
                   />
-                )}
-                <Tooltip
-                  contentStyle={{ backgroundColor: '#1F2937', border: '1px solid #374151', borderRadius: '8px' }}
-                  labelStyle={{ color: '#F3F4F6' }}
-                  formatter={(value, name) => [chartCompareStocks.length === 0 ? `$${value.toFixed(2)}` : `${value.toFixed(2)}%`, name]}
-                />
-                <Legend wrapperStyle={{ paddingTop: '0px', marginTop: '0px', marginLeft: '0px', paddingLeft: '0px', width: 'auto' }} layout="vertical" verticalAlign="top" height={30} />
-                {chartCompareStocks.length === 0 && selectedStock?.resistance && (
-                  <>
-                    <ReferenceLine
-                      y={selectedStock.resistance}
-                      stroke="#ef4444"
-                      strokeDasharray="5 5"
-                      label={{ value: `Resistance: $${selectedStock.resistance.toFixed(2)}`, position: 'right', fill: '#ef4444', fontSize: 12 }}
-                    />
-                    {selectedStock?.support && (
-                      <ReferenceLine
-                        y={selectedStock.support}
-                        stroke="#10b981"
-                        strokeDasharray="5 5"
-                        label={{ value: `Support: $${selectedStock.support.toFixed(2)}`, position: 'right', fill: '#10b981', fontSize: 12 }}
-                      />
-                    )}
-                  </>
-                )}
-
-                {/* AI Cycle Analysis - Vertical boundary markers and horizontal price ranges */}
-                {showCycleAnalysis && cycleAnalysis && chartCompareStocks.length === 0 && cycleAnalysis.cycles && multiData.length > 0 && (
-                  <>
-                    {/* Vertical lines marking cycle boundaries - all periods use YY-MM-DD format */}
-                    {cycleAnalysis.cycles.flatMap((cycle, idx) => {
-                      // Check if cycle is within visible chart range
-                      const cycleStart = new Date(cycle.startDate).getTime();
-                      const cycleEnd = new Date(cycle.endDate).getTime();
-
-                      // Get visible chart range - all periods now use YY-MM-DD format
-                      const firstDate = multiData[0].date;
-                      const lastDate = multiData[multiData.length - 1].date;
-
-                      // Convert YY-MM-DD to 20YY-MM-DD for comparison
-                      const chartStart = new Date(firstDate.replace(/^(\d{2})-/, '20$1-')).getTime();
-                      const chartEnd = new Date(lastDate.replace(/^(\d{2})-/, '20$1-')).getTime();
-
-                      // Skip cycles completely outside visible range
-                      if (cycleEnd < chartStart || cycleStart > chartEnd) {
-                        return [];
-                      }
-
-                      // Find matching dates in chart data
-                      const findClosestDate = (originalDate) => {
-                        const targetTime = new Date(originalDate).getTime();
-                        let closest = multiData[0];
-                        let closestDiff = Infinity;
-
-                        multiData.forEach(d => {
-                          if (!d.date) return;
-                          // Convert YY-MM-DD to 20YY-MM-DD
-                          const parts = d.date.split('-');
-                          const dateStr = parts[0].length === 2 ? `20${parts[0]}-${parts[1]}-${parts[2]}` : d.date;
-
-                          const time = new Date(dateStr).getTime();
-                          if (isNaN(time)) return;
-                          const diff = Math.abs(time - targetTime);
-                          if (diff < closestDiff) {
-                            closestDiff = diff;
-                            closest = d;
-                          }
-                        });
-                        return closest;
-                      };
-
-                      const startDateObj = findClosestDate(cycle.startDate);
-                      const endDateObj = findClosestDate(cycle.endDate);
-                      const startDate = startDateObj.date;
-                      const endDate = endDateObj.date;
-
-                      const strokeColor = cycle.type === 'bull' ? '#22c55e' :
-                                         cycle.type === 'bear' ? '#ef4444' :
-                                         '#eab308';
-
-                      return [
-                        <ReferenceLine
-                          key={`cycle-start-${idx}`}
-                          x={startDate}
-                          stroke={strokeColor}
-                          strokeWidth={2}
-                          label={{
-                            value: `${cycle.type.toUpperCase()} ${idx + 1}`,
-                            position: 'top',
-                            fill: strokeColor,
-                            fontSize: 10,
-                            fontWeight: 'bold'
-                          }}
-                        />,
-                        <ReferenceLine
-                          key={`cycle-end-${idx}`}
-                          x={endDate}
-                          stroke={strokeColor}
-                          strokeWidth={2}
-                          strokeDasharray="5 5"
-                          label={{
-                            value: `END`,
-                            position: 'bottom',
-                            fill: strokeColor,
-                            fontSize: 10,
-                            fontWeight: 'bold'
-                          }}
-                        />
-                      ];
-                    })}
-
-                    {/* Horizontal price range lines for current cycle */}
-                    {cycleAnalysis.currentCycle && (
-                      <>
-                        <ReferenceLine
-                          y={cycleAnalysis.currentCycle.priceRange.high}
-                          stroke="#22c55e"
-                          strokeDasharray="5 5"
-                          strokeWidth={2}
-                          label={{
-                            value: `Cycle High: $${cycleAnalysis.currentCycle.priceRange.high?.toFixed(2)}`,
-                            position: 'right',
-                            fill: '#22c55e',
-                            fontSize: 11,
-                            fontWeight: 'bold'
-                          }}
-                        />
-                        <ReferenceLine
-                          y={cycleAnalysis.currentCycle.priceRange.low}
-                          stroke="#ef4444"
-                          strokeDasharray="5 5"
-                          strokeWidth={2}
-                          label={{
-                            value: `Cycle Low: $${cycleAnalysis.currentCycle.priceRange.low?.toFixed(2)}`,
-                            position: 'right',
-                            fill: '#ef4444',
-                            fontSize: 11,
-                            fontWeight: 'bold'
-                          }}
-                        />
-                      </>
-                    )}
-                  </>
                 )}
 
                 {/* AI Analysis Overlay - Buy/Sell Signals and Support/Resistance */}
@@ -2399,6 +2306,7 @@ export function PricePerformanceChart({
                         dot={false}
                         connectNulls={false}
                       />
+                      {/* Recent Trend overlay removed */}
                     </>
                   ) : colorMode === 'trend' ? (
                     // Trend Mode: Render price line + linear regression trend channel
@@ -2414,7 +2322,7 @@ export function PricePerformanceChart({
                       <Line
                         type="monotone"
                         dataKey="trendUpper"
-                        name="Upper Bound (+2σ)"
+                        name={`Upper Bound (+${trendChannelStdMultiplier.toFixed(1)}σ)`}
                         stroke="#A855F7"
                         strokeWidth={1.5}
                         strokeOpacity={0.8}
@@ -2436,7 +2344,7 @@ export function PricePerformanceChart({
                       <Line
                         type="monotone"
                         dataKey="trendLower"
-                        name="Lower Bound (-2σ)"
+                        name={`Lower Bound (-${trendChannelStdMultiplier.toFixed(1)}σ)`}
                         stroke="#A855F7"
                         strokeWidth={1.5}
                         strokeOpacity={0.8}
