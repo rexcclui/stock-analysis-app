@@ -606,8 +606,8 @@ export function PricePerformanceChart({
     });
   };
 
-  // Simulate channel lookback to find optimal value
-  const simulateChannelLookback = async () => {
+  // Simulate trend channel lookback to find optimal value (for Channel mode)
+  const simulateTrendChannelLookback = async () => {
     if (!selectedStock || isChannelSimulating) return;
 
     setIsChannelSimulating(true);
@@ -621,25 +621,25 @@ export function PricePerformanceChart({
       return;
     }
 
-    const fixedStdDev = 0.5; // Fixed delta value
+    // === PHASE 1: Find optimal lookback with fixed delta ===
+    const fixedStdMult = 0.5; // Fixed delta value for lookback simulation
     const minLookback = 20;
-    const maxLookback = Math.min(200, currentData.length);
+    const maxLookback = currentData.length; // Test from lowest to highest available
 
     let optimalLookback = minLookback;
     let maxCrosses = 0;
-    const results = [];
+    const lookbackResults = [];
 
     // Allow UI to update
     await new Promise(resolve => setTimeout(resolve, 50));
 
     // Iterate through lookback values
     for (let lookback = minLookback; lookback <= maxLookback; lookback++) {
-      // Calculate channel with current lookback
-      const dataWithChannel = calculateStdDevChannel(
+      // Calculate trend channel with current lookback
+      const dataWithChannel = buildConfigurableTrendChannel(
         currentData,
         lookback,
-        fixedStdDev,
-        channelSource
+        fixedStdMult
       );
 
       // Count how many price points the center line crosses or is close to
@@ -647,9 +647,9 @@ export function PricePerformanceChart({
       const tolerance = 0.01; // 1% tolerance for "crossing"
 
       dataWithChannel.forEach(point => {
-        if (point.centerLine !== null && point.price) {
-          const priceDiff = Math.abs(point.price - point.centerLine);
-          const pricePercent = priceDiff / point.centerLine;
+        if (point.trendLine !== null && point.price) {
+          const priceDiff = Math.abs(point.price - point.trendLine);
+          const pricePercent = priceDiff / point.trendLine;
 
           // Consider it a cross if price is within tolerance of center line
           if (pricePercent <= tolerance) {
@@ -658,7 +658,7 @@ export function PricePerformanceChart({
         }
       });
 
-      results.push({ lookback, crossCount });
+      lookbackResults.push({ lookback, crossCount });
 
       // Update optimal if this lookback has more crosses
       if (crossCount > maxCrosses) {
@@ -672,16 +672,72 @@ export function PricePerformanceChart({
       }
     }
 
+    // === PHASE 2: Find optimal delta using optimal lookback ===
+    const minDelta = 0.5;
+    const maxDelta = 4.0;
+    const deltaStep = 0.5;
+
+    let optimalDelta = minDelta;
+    let maxBoundCrosses = 0;
+    const deltaResults = [];
+
+    // Iterate through delta values
+    for (let delta = minDelta; delta <= maxDelta; delta += deltaStep) {
+      // Calculate trend channel with optimal lookback and current delta
+      const dataWithChannel = buildConfigurableTrendChannel(
+        currentData,
+        optimalLookback,
+        delta
+      );
+
+      // Count how many times price crosses upper or lower bounds
+      let boundCrossCount = 0;
+      const boundTolerance = 0.01; // 1% tolerance for bound crossing
+
+      dataWithChannel.forEach(point => {
+        if (point.trendUpper !== null && point.trendLower !== null && point.price) {
+          // Check if price is near upper bound
+          const upperDiff = Math.abs(point.price - point.trendUpper);
+          const upperPercent = upperDiff / point.trendUpper;
+
+          // Check if price is near lower bound
+          const lowerDiff = Math.abs(point.price - point.trendLower);
+          const lowerPercent = lowerDiff / point.trendLower;
+
+          // Count if price crosses either bound
+          if (upperPercent <= boundTolerance || lowerPercent <= boundTolerance) {
+            boundCrossCount++;
+          }
+        }
+      });
+
+      deltaResults.push({ delta, boundCrossCount });
+
+      // Update optimal if this delta has more bound crosses
+      if (boundCrossCount > maxBoundCrosses) {
+        maxBoundCrosses = boundCrossCount;
+        optimalDelta = delta;
+      }
+
+      // Yield to UI
+      await new Promise(resolve => setTimeout(resolve, 0));
+    }
+
     setChannelSimulationResult({
       optimalLookback,
+      optimalDelta,
       maxCrosses,
+      maxBoundCrosses,
       totalPoints: currentData.length,
       crossPercentage: ((maxCrosses / currentData.length) * 100).toFixed(2),
-      allResults: results
+      boundCrossPercentage: ((maxBoundCrosses / currentData.length) * 100).toFixed(2),
+      lookbackResults,
+      deltaResults
     });
 
-    // Apply optimal lookback
-    setChannelLookback(optimalLookback);
+    // Apply optimal lookback and delta
+    setTrendChannelLookback(optimalLookback);
+    setTrendChannelStdMultiplier(optimalDelta);
     setIsChannelSimulating(false);
   };
 
@@ -1477,7 +1533,7 @@ export function PricePerformanceChart({
           {colorMode === 'trend' && chartCompareStocks.length === 0 && selectedStock && (
             <div className="flex items-center gap-2 ml-1">
               <div className="flex items-center gap-1" title="Regression lookback bars">
-                <label className="text-xs text-gray-300 font-medium">Lookback: {trendChannelLookback}</label>
+                <label className="text-[11px] text-gray-300 font-medium">Lookback: {trendChannelLookback}</label>
                 <input
                   type="range"
                   min="20"
@@ -1507,6 +1563,37 @@ export function PricePerformanceChart({
                   className="w-24 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-amber-500"
                 />
               </div>
+
+              {/* Simulation Button */}
+              <button
+                onClick={simulateTrendChannelLookback}
+                disabled={isChannelSimulating}
+                className="px-3 py-1 rounded text-xs font-medium transition"
+                style={{
+                  backgroundColor: isChannelSimulating ? '#6B7280' : '#10B981',
+                  color: '#FFFFFF',
+                  cursor: isChannelSimulating ? 'not-allowed' : 'pointer',
+                  opacity: isChannelSimulating ? 0.6 : 1
+                }}
+                title="Find optimal lookback period (fixed delta: 0.5)"
+              >
+                {isChannelSimulating ? 'Simulating...' : 'Find Optimal'}
+              </button>
+
+              {/* Simulation Result Display */}
+              {channelSimulationResult && (
+                <div
+                  className="text-xs text-green-400 font-medium cursor-pointer hover:text-green-300 transition"
+                  onClick={() => {
+                    setTrendChannelLookback(channelSimulationResult.optimalLookback);
+                    setTrendChannelStdMultiplier(channelSimulationResult.optimalDelta);
+                  }}
+                  title="Click to restore optimal settings"
+                >
+                  Optimal: {channelSimulationResult.optimalLookback} / Δ{channelSimulationResult.optimalDelta}
+                  ({channelSimulationResult.maxBoundCrosses} bound crosses, {channelSimulationResult.boundCrossPercentage}%)
+                </div>
+              )}
             </div>
           )}
 
@@ -1609,30 +1696,6 @@ export function PricePerformanceChart({
                 <option value="hl2">HL/2</option>
                 <option value="ohlc4">OHLC/4</option>
               </select>
-
-              {/* Simulation Button */}
-              <button
-                onClick={simulateChannelLookback}
-                disabled={isChannelSimulating}
-                className="px-3 py-1 rounded text-xs font-medium transition"
-                style={{
-                  backgroundColor: isChannelSimulating ? '#6B7280' : '#10B981',
-                  color: '#FFFFFF',
-                  cursor: isChannelSimulating ? 'not-allowed' : 'pointer',
-                  opacity: isChannelSimulating ? 0.6 : 1
-                }}
-                title="Find optimal lookback period (fixed delta: 0.5)"
-              >
-                {isChannelSimulating ? 'Simulating...' : 'Find Optimal'}
-              </button>
-
-              {/* Simulation Result Display */}
-              {channelSimulationResult && (
-                <div className="text-xs text-green-400 font-medium">
-                  Optimal: {channelSimulationResult.optimalLookback}
-                  ({channelSimulationResult.maxCrosses} crosses, {channelSimulationResult.crossPercentage}%)
-                </div>
-              )}
             </div>
           )}
 
