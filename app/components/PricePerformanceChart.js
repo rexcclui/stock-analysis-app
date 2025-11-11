@@ -1525,7 +1525,11 @@ export function PricePerformanceChart({
 
               {/* Simulation Result Display */}
               {channelSimulationResult && (
-                <div className="text-xs text-green-400 font-medium">
+                <div
+                  className="text-xs text-green-400 font-medium cursor-pointer hover:text-green-300 transition"
+                  onClick={() => setTrendChannelLookback(channelSimulationResult.optimalLookback)}
+                  title="Click to restore optimal settings"
+                >
                   Optimal: {channelSimulationResult.optimalLookback}
                   ({channelSimulationResult.maxCrosses} crosses, {channelSimulationResult.crossPercentage}%)
                 </div>
