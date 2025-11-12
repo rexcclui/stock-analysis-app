@@ -622,6 +622,41 @@ export function PricePerformanceChart({
     const tolerance = stdDev > 0 ? stdDev * 1e-6 : 1e-6;
     const boundaryWindow = Math.max(1, Math.floor(n * 0.08));
 
+    // Apply SMA3 to prices for smoothing
+    const sma3Prices = slice.map((pt, i) => {
+      if (i < 2) return pt.price || 0;
+      const sum = (slice[i-2].price || 0) + (slice[i-1].price || 0) + (pt.price || 0);
+      return sum / 3;
+    });
+
+    // Calculate residuals using SMA3 prices
+    const sma3Residuals = sma3Prices.map((price, i) => {
+      const model = slope * i + baseIntercept;
+      return price - model;
+    });
+
+    // Calculate adjusted residuals for SMA3
+    const sma3MaxResidual = Math.max(...sma3Residuals);
+    const sma3MinResidual = Math.min(...sma3Residuals);
+    const sma3InterceptShift = (sma3MaxResidual + sma3MinResidual) / 2;
+    const sma3AdjustedResiduals = sma3Residuals.map(diff => diff - sma3InterceptShift);
+
+    // Detect turning points: where residual changes sign (crosses from negative to positive or vice versa)
+    const turningPoints = [];
+    for (let i = 1; i < n; i++) {
+      const prev = sma3AdjustedResiduals[i - 1];
+      const curr = sma3AdjustedResiduals[i];
+
+      // Check for sign change
+      if ((prev < 0 && curr >= 0) || (prev > 0 && curr <= 0) || (prev === 0 && curr !== 0)) {
+        turningPoints.push({
+          index: i,
+          residual: adjustedResiduals[i], // Use original residual for extreme checking
+          direction: curr >= 0 ? 'up' : 'down' // Direction after the turn
+        });
+      }
+    }
+
     let touchesUpper = false;
     let touchesLower = false;
     let touchesUpperBoundary = false;
@@ -633,17 +668,20 @@ export function PricePerformanceChart({
       touchesUpperBoundary = true;
       touchesLowerBoundary = true;
     } else {
-      adjustedResiduals.forEach((diff, idx) => {
-        const isBoundaryIndex = idx < boundaryWindow || idx >= n - boundaryWindow;
+      // Check turning points for touches at extremes within boundary regions
+      turningPoints.forEach(tp => {
+        const isBoundaryIndex = tp.index < boundaryWindow || tp.index >= n - boundaryWindow;
 
-        if (Math.abs(diff - extremeMagnitude) <= tolerance) {
+        // Check if this turning point is at the upper extreme
+        if (Math.abs(tp.residual - extremeMagnitude) <= tolerance) {
           touchesUpper = true;
           if (isBoundaryIndex) {
             touchesUpperBoundary = true;
           }
         }
 
-        if (Math.abs(diff + extremeMagnitude) <= tolerance) {
+        // Check if this turning point is at the lower extreme
+        if (Math.abs(tp.residual + extremeMagnitude) <= tolerance) {
           touchesLower = true;
           if (isBoundaryIndex) {
             touchesLowerBoundary = true;
@@ -915,6 +953,7 @@ export function PricePerformanceChart({
       const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
       console.log(`✅ [${label}] Delta Simulation Complete in ${totalTime}s`);
       console.log(`   Result: delta=${alignment.optimalDelta.toFixed(3)}, coverage=${alignment.coverageCount}/${alignment.totalPoints}, touchesBoth=${alignment.touchesUpper && alignment.touchesLower}`);
+      console.log(`   Touch validation: Upper=${alignment.touchesUpper}, Lower=${alignment.touchesLower} (using SMA3 + turning point detection)`);
 
       return {
         optimalDelta: alignment.optimalDelta,
