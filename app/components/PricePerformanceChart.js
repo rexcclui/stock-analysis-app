@@ -1064,9 +1064,13 @@ export function PricePerformanceChart({
   // ratio: 0 (bottom/support) → 1 (top/resistance)
   // Gradient path: emerald (#10B981) → teal (#14B8A6) → blue (#3B82F6) → purple (#8B5CF6) → pink (#EC4899) → red (#EF4444)
   // We interpolate across 5 segments between 6 anchor colors.
-  const getChannelBandColor = (ratio) => {
+  const getChannelBandColor = (ratio, volumeIntensity = 0) => {
     if (isNaN(ratio)) return 'rgba(255,255,255,0.05)';
     const r = Math.max(0, Math.min(1, ratio));
+    // Treat volume as the "ink" that deepens each band. We squeeze the lower
+    // half of the range so even modest participation meaningfully darkens the
+    // fill, while truly heavy volume pushes the color toward its anchor hue.
+    const volumeDepth = Math.pow(Math.max(0, Math.min(1, volumeIntensity)), 0.6);
     const anchors = [
       { r: 16,  g:185, b:129 }, // emerald
       { r: 20,  g:184, b:166 }, // teal
@@ -1081,12 +1085,27 @@ export function PricePerformanceChart({
     const t = scaled - i;
     const a = anchors[i];
     const b = anchors[i + 1];
-    const rr = Math.round(a.r + (b.r - a.r) * t);
-    const gg = Math.round(a.g + (b.g - a.g) * t);
-    const bb = Math.round(a.b + (b.b - a.b) * t);
-    // Slight transparency so overlapping areas blend smoothly
-    const alpha = 0.18 + 0.05 * r; // a bit more opaque toward resistance
-    return `rgba(${rr}, ${gg}, ${bb}, ${alpha.toFixed(3)})`;
+    const rrBase = Math.round(a.r + (b.r - a.r) * t);
+    const ggBase = Math.round(a.g + (b.g - a.g) * t);
+    const bbBase = Math.round(a.b + (b.b - a.b) * t);
+
+    // For low participation, blend heavily with white to keep the band subtle.
+    const lightenFactor = 0.75 * (1 - volumeDepth);
+    const rrLight = rrBase + (255 - rrBase) * lightenFactor;
+    const ggLight = ggBase + (255 - ggBase) * lightenFactor;
+    const bbLight = bbBase + (255 - bbBase) * lightenFactor;
+
+    // For high participation, blend toward black to make the band visibly denser.
+    const darkenFactor = 0.45 * volumeDepth;
+    const rr = Math.round(rrLight * (1 - darkenFactor));
+    const gg = Math.round(ggLight * (1 - darkenFactor));
+    const bb = Math.round(bbLight * (1 - darkenFactor));
+
+    // Increase opacity with both resistance proximity and volume depth.
+    const alphaBase = 0.18 + 0.07 * r;
+    const alpha = alphaBase + 0.35 * volumeDepth;
+
+    return `rgba(${rr}, ${gg}, ${bb}, ${Math.min(alpha, 0.95).toFixed(3)})`;
   };
 
   // Calculate Volume Bar data for horizontal background zones
@@ -2360,6 +2379,40 @@ export function PricePerformanceChart({
                 console.log('chartPeriod:', chartPeriod);
               }
 
+              const maxVolumeInView = multiData.reduce((max, point) => {
+                const vol = point?.volume;
+                return vol && Number.isFinite(vol) ? Math.max(max, vol) : max;
+              }, 0);
+
+              const getZoneVolumeIntensity = (pointA, pointB, lower, upper) => {
+                if (!maxVolumeInView) return 0;
+                const zoneMin = Math.min(lower, upper);
+                const zoneMax = Math.max(lower, upper);
+                let contributingVolume = 0;
+                let contributorCount = 0;
+
+                const considerPoint = (point) => {
+                  if (!point) return;
+                  const price = point.price;
+                  if (price == null) return;
+                  if (price >= zoneMin && price <= zoneMax) {
+                    contributingVolume += point.volume || 0;
+                    contributorCount += 1;
+                  }
+                };
+
+                considerPoint(pointA);
+                considerPoint(pointB);
+
+                if (contributorCount === 0) return 0;
+                const averageVolume = contributingVolume / contributorCount;
+                const normalized = Math.max(0, Math.min(1, averageVolume / maxVolumeInView));
+                // Stretch the lower half of the curve so moderate volume still
+                // registers visually, and cap the upper bound smoothly to avoid
+                // every band snapping to full saturation.
+                return Math.pow(normalized, 0.7);
+              };
+
               return (
                 <LineChart
                   data={multiData}
@@ -2634,6 +2687,7 @@ export function PricePerformanceChart({
                           const zoneLower = Math.min(ptLower, nextLower);
                           const zoneUpper = Math.max(ptUpper, nextUpper);
                           const ratioMid = (b + 0.5) / CHANNEL_BANDS; // mid-point for color
+                          const volumeIntensity = getZoneVolumeIntensity(pt, next, zoneLower, zoneUpper);
                           zones.push(
                             <ReferenceArea
                               key={`channel-band-${i}-${b}`}
@@ -2641,7 +2695,7 @@ export function PricePerformanceChart({
                               x2={next.date}
                               y1={zoneLower}
                               y2={zoneUpper}
-                              fill={getChannelBandColor(ratioMid)}
+                              fill={getChannelBandColor(ratioMid, volumeIntensity)}
                               strokeOpacity={0}
                               ifOverflow="discard"
                             />
@@ -2872,10 +2926,121 @@ export function PricePerformanceChart({
 
       {/* Standard Deviation Channel Legend */}
       {colorMode === 'channel' && chartCompareStocks.length === 0 && selectedStock && (() => {
-        const currentData = getCurrentDataSlice();
-        const volumeProfile = currentData._volumeProfile;
+        const currentData = getCurrentDataSlice() || [];
+        const hasChannelGeometry = currentData.some(point => (
+          Number.isFinite(point?.lowerBound) && Number.isFinite(point?.upperBound)
+        ));
 
-        if (!volumeProfile) return null;
+        if (!hasChannelGeometry) {
+          return (
+            <div className="mb-4 px-4">
+              <div className="rounded-lg border border-blue-500/30 bg-gray-900/60 p-4 text-xs text-blue-200">
+                Not enough channel data yet to derive the volume-weighted color legend. Increase the lookback or pick a longer
+                period to populate the channel bands.
+              </div>
+            </div>
+          );
+        }
+
+        const volumeProfile = currentData._volumeProfile || calculateVolumeProfile(currentData, channelVolumeBins);
+
+        const maxPointVolume = currentData.reduce((max, point) => {
+          const vol = point?.volume;
+          return Number.isFinite(vol) ? Math.max(max, vol) : max;
+        }, 0);
+
+        const bandStats = Array.from({ length: CHANNEL_BANDS }, () => ({
+          priceMin: Number.POSITIVE_INFINITY,
+          priceMax: Number.NEGATIVE_INFINITY,
+          totalVolume: 0,
+          count: 0
+        }));
+
+        currentData.forEach((point, idx) => {
+          const nextPoint = currentData[idx + 1];
+
+          for (let bandIndex = 0; bandIndex < CHANNEL_BANDS; bandIndex++) {
+            const lowerKey = bandIndex === 0 ? 'lowerBound' : `channelBand_${bandIndex}`;
+            const upperKey = bandIndex === CHANNEL_BANDS - 1 ? 'upperBound' : `channelBand_${bandIndex + 1}`;
+
+            const boundarySamples = [];
+            const pushBoundary = (value) => {
+              if (typeof value === 'number' && Number.isFinite(value)) {
+                boundarySamples.push(value);
+              }
+            };
+
+            pushBoundary(point?.[lowerKey]);
+            pushBoundary(point?.[upperKey]);
+
+            if (nextPoint) {
+              pushBoundary(nextPoint?.[lowerKey]);
+              pushBoundary(nextPoint?.[upperKey]);
+            }
+
+            if (boundarySamples.length < 2) continue;
+
+            const zoneMin = Math.min(...boundarySamples);
+            const zoneMax = Math.max(...boundarySamples);
+
+            bandStats[bandIndex].priceMin = Math.min(bandStats[bandIndex].priceMin, zoneMin);
+            bandStats[bandIndex].priceMax = Math.max(bandStats[bandIndex].priceMax, zoneMax);
+
+            const considerPoint = (candidate) => {
+              if (!candidate) return;
+              const price = candidate.price;
+              const volume = candidate.volume;
+              if (!Number.isFinite(price) || !Number.isFinite(volume)) return;
+              if (price >= zoneMin && price <= zoneMax) {
+                bandStats[bandIndex].totalVolume += volume;
+                bandStats[bandIndex].count += 1;
+              }
+            };
+
+            considerPoint(point);
+            considerPoint(nextPoint);
+          }
+        });
+
+        const bandLabels = [
+          { title: 'Lower Support', subtitle: 'Deepest oversold pocket' },
+          { title: 'Lower Neutral', subtitle: 'Buyers taking control' },
+          { title: 'Center Support', subtitle: 'Below regression mean' },
+          { title: 'Center Resistance', subtitle: 'Above regression mean' },
+          { title: 'Upper Neutral', subtitle: 'Sellers leaning in' },
+          { title: 'Upper Resistance', subtitle: 'Extreme overbought pocket' }
+        ];
+
+        const bandLegendData = bandLabels.map((label, index) => {
+          const stats = bandStats[index];
+          const averageVolume = stats.count > 0 ? stats.totalVolume / stats.count : 0;
+          const normalizedVolume = maxPointVolume > 0
+            ? Math.max(0, Math.min(1, averageVolume / maxPointVolume))
+            : 0;
+          const intensity = Math.pow(normalizedVolume, 0.7);
+          const color = getChannelBandColor((index + 0.5) / CHANNEL_BANDS, intensity);
+          const hasRange = Number.isFinite(stats.priceMin) && Number.isFinite(stats.priceMax);
+
+          return {
+            ...label,
+            color,
+            intensity,
+            priceRange: hasRange
+              ? `$${stats.priceMin.toFixed(2)} → $${stats.priceMax.toFixed(2)}`
+              : 'No touches in view',
+            averageVolume
+          };
+        });
+
+        if (!volumeProfile) {
+          return (
+            <div className="mb-4 px-4">
+              <div className="rounded-lg border border-blue-500/30 bg-gray-900/60 p-4 text-xs text-blue-200">
+                Volume data is unavailable for the current slice, so the channel color legend can't be rendered.
+              </div>
+            </div>
+          );
+        }
 
         return (
           <div className="mb-4 px-4">
@@ -2886,6 +3051,33 @@ export function PricePerformanceChart({
                 </div>
                 <div className="text-xs text-gray-400">
                   Trend lines validated by volume density
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <div className="text-xs font-semibold text-sky-300 mb-2">Color Legend (Volume Weighted)</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {bandLegendData.map((band, idx) => (
+                    <div
+                      key={`channel-band-legend-${idx}`}
+                      className="flex items-center gap-3 rounded-lg border border-white/5 bg-gray-900/40 p-2 shadow-inner"
+                    >
+                      <div
+                        className="h-12 w-12 shrink-0 rounded-md border border-white/10 shadow"
+                        style={{ background: band.color }}
+                        title={`${band.title}\n${band.subtitle}\nAvg Volume: ${band.averageVolume.toLocaleString()}\nIntensity: ${(band.intensity * 100).toFixed(0)}%`}
+                      ></div>
+                      <div className="flex flex-col text-[11px] leading-snug">
+                        <span className="font-semibold text-white">{band.title}</span>
+                        <span className="text-gray-400 text-[10px]">{band.subtitle}</span>
+                        <span className="text-gray-300">{band.priceRange}</span>
+                        <span className="text-gray-500 text-[10px]">Volume intensity: {(band.intensity * 100).toFixed(0)}%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-2 text-[10px] text-gray-500">
+                  Darker swatches indicate zones that captured more volume while price traded inside them.
                 </div>
               </div>
 
