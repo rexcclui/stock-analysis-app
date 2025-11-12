@@ -68,6 +68,7 @@ export function PricePerformanceChart({
   const [trendChannelLookback, setTrendChannelLookback] = useState(120); // default lookback for whole-range regression
   const [trendChannelStdMultiplier, setTrendChannelStdMultiplier] = useState(2); // sigma multiplier
   const [trendChannelInterceptShift, setTrendChannelInterceptShift] = useState(0); // vertical adjustment for optimal touch alignment
+  const [trendChannelEndAt, setTrendChannelEndAt] = useState(0); // end point offset from last data point (0 = use all data)
 
   // AI Analysis using custom hook
   const {
@@ -513,10 +514,16 @@ export function PricePerformanceChart({
   // Build configurable Trend Channel (regression over last lookback points only when in 'trend')
   const buildConfigurableTrendChannel = (data, lookback, stdMult, options = {}) => {
     if (!data || data.length < 2) return data;
-    const slice = lookback && lookback < data.length ? data.slice(-lookback) : data;
+    const { interceptShift = 0, endAt = 0 } = options;
+
+    // Calculate the data window considering endAt parameter
+    // If endAt > 0, we work with data up to (data.length - endAt)
+    const effectiveEndIndex = data.length - endAt;
+    const effectiveData = endAt > 0 ? data.slice(0, effectiveEndIndex) : data;
+
+    const slice = lookback && lookback < effectiveData.length ? effectiveData.slice(-lookback) : effectiveData;
     const n = slice.length;
     if (n < 2) return data;
-    const { interceptShift = 0 } = options;
     let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
     slice.forEach((pt, i) => {
       const x = i;
@@ -536,10 +543,10 @@ export function PricePerformanceChart({
     });
     const stdDev = Math.sqrt(resSum / Math.max(1, n - 1));
     // Map across entire data; only enrich slice window
-    const startIndex = data.length - n;
+    const startIndex = effectiveEndIndex - n;
     return data.map((pt, idx) => {
-      if (idx < startIndex) {
-        // Null out earlier values so line doesn't bend from a previous regression
+      if (idx < startIndex || idx >= effectiveEndIndex) {
+        // Null out values outside the channel window (before start or after endAt point)
         return { ...pt, trendLine: null, trendUpper: null, trendLower: null };
       }
       const localX = idx - startIndex;
@@ -564,9 +571,14 @@ export function PricePerformanceChart({
   };
 
   // Compute intercept shift and delta ensuring both channel bounds touch price extremes
-  const computeTrendChannelTouchAlignment = (data, lookback) => {
+  const computeTrendChannelTouchAlignment = (data, lookback, endAt = 0) => {
     if (!data || data.length < 2) return null;
-    const slice = lookback && lookback < data.length ? data.slice(-lookback) : data;
+
+    // Calculate the data window considering endAt parameter
+    const effectiveEndIndex = data.length - endAt;
+    const effectiveData = endAt > 0 ? data.slice(0, effectiveEndIndex) : data;
+
+    const slice = lookback && lookback < effectiveData.length ? effectiveData.slice(-lookback) : effectiveData;
     const n = slice.length;
     if (n < 2) return null;
 
@@ -751,54 +763,64 @@ export function PricePerformanceChart({
     const minLookback = 20;
 
     const runLookbackSimulation = async (data) => {
+      // 2D optimization: simulate both lookback and endAt parameters
+      const maxEndAt = Math.floor(data.length / 10);
       const maxLookback = data.length;
       let optimalLookback = minLookback;
+      let optimalEndAt = 0;
       let maxCrosses = 0;
       const lookbackResults = [];
 
       // Allow UI to update before heavy work begins
       await new Promise(resolve => setTimeout(resolve, 50));
 
-      for (let lookback = minLookback; lookback <= maxLookback; lookback++) {
-        const dataWithChannel = buildConfigurableTrendChannel(
-          data,
-          lookback,
-          fixedStdMult
-        );
+      // Loop through endAt from 0 to max (1/10 of data length)
+      for (let endAt = 0; endAt <= maxEndAt; endAt++) {
+        // Loop through lookback, incrementing by 2 to save resources
+        for (let lookback = minLookback; lookback <= maxLookback - endAt; lookback += 2) {
+          const dataWithChannel = buildConfigurableTrendChannel(
+            data,
+            lookback,
+            fixedStdMult,
+            { endAt }
+          );
 
-        let crossCount = 0;
-        const tolerance = 0.01;
+          let crossCount = 0;
+          const tolerance = 0.01;
 
-        dataWithChannel.forEach(point => {
-          if (point.trendLine !== null && point.price) {
-            const priceDiff = Math.abs(point.price - point.trendLine);
-            const pricePercent = priceDiff / point.trendLine;
+          dataWithChannel.forEach(point => {
+            if (point.trendLine !== null && point.price) {
+              const priceDiff = Math.abs(point.price - point.trendLine);
+              const pricePercent = priceDiff / point.trendLine;
 
-            if (pricePercent <= tolerance) {
-              crossCount++;
+              if (pricePercent <= tolerance) {
+                crossCount++;
+              }
             }
+          });
+
+          lookbackResults.push({ lookback, endAt, crossCount });
+
+          if (crossCount > maxCrosses) {
+            maxCrosses = crossCount;
+            optimalLookback = lookback;
+            optimalEndAt = endAt;
           }
-        });
 
-        lookbackResults.push({ lookback, crossCount });
-
-        if (crossCount > maxCrosses) {
-          maxCrosses = crossCount;
-          optimalLookback = lookback;
-        }
-
-        if (lookback % 10 === 0) {
-          await new Promise(resolve => setTimeout(resolve, 0));
+          // Allow UI updates every 20 iterations
+          if (lookbackResults.length % 20 === 0) {
+            await new Promise(resolve => setTimeout(resolve, 0));
+          }
         }
       }
 
-      return { optimalLookback, maxCrosses, lookbackResults };
+      return { optimalLookback, optimalEndAt, maxCrosses, lookbackResults };
     };
 
     // Find the std dev multiplier (delta) that keeps the most points inside the channel
     // while ensuring both the upper and lower bounds are touched at least once when possible.
-    const runDeltaSimulation = async (data, lookback) => {
-      const alignment = computeTrendChannelTouchAlignment(data, lookback);
+    const runDeltaSimulation = async (data, lookback, endAt = 0) => {
+      const alignment = computeTrendChannelTouchAlignment(data, lookback, endAt);
       if (!alignment) {
         return {
           optimalDelta: 0,
@@ -825,16 +847,17 @@ export function PricePerformanceChart({
     };
 
     const fullLookbackResult = await runLookbackSimulation(currentData);
-    const fullDeltaResult = await runDeltaSimulation(currentData, fullLookbackResult.optimalLookback);
+    const fullDeltaResult = await runDeltaSimulation(currentData, fullLookbackResult.optimalLookback, fullLookbackResult.optimalEndAt);
 
     const recentDataLength = Math.max(minLookback, Math.floor(currentData.length * 0.25));
     const recentData = currentData.slice(-recentDataLength);
 
     const recentLookbackResult = await runLookbackSimulation(recentData);
-    const recentDeltaResult = await runDeltaSimulation(recentData, recentLookbackResult.optimalLookback);
+    const recentDeltaResult = await runDeltaSimulation(recentData, recentLookbackResult.optimalLookback, recentLookbackResult.optimalEndAt);
 
     setChannelSimulationResult({
       optimalLookback: fullLookbackResult.optimalLookback,
+      optimalEndAt: fullLookbackResult.optimalEndAt,
       optimalDelta: fullDeltaResult.optimalDelta,
       maxCrosses: fullLookbackResult.maxCrosses,
       maxCoverageCount: fullDeltaResult.maxCoverageCount,
@@ -849,6 +872,7 @@ export function PricePerformanceChart({
       optimalInterceptShift: fullDeltaResult.interceptShift,
       recent: {
         optimalLookback: recentLookbackResult.optimalLookback,
+        optimalEndAt: recentLookbackResult.optimalEndAt,
         optimalDelta: recentDeltaResult.optimalDelta,
         maxCrosses: recentLookbackResult.maxCrosses,
         maxCoverageCount: recentDeltaResult.maxCoverageCount,
@@ -864,8 +888,9 @@ export function PricePerformanceChart({
       }
     });
 
-    // Apply optimal lookback and delta (full data set)
+    // Apply optimal lookback, endAt, and delta (full data set)
     setTrendChannelLookback(fullLookbackResult.optimalLookback);
+    setTrendChannelEndAt(fullLookbackResult.optimalEndAt);
     setTrendChannelStdMultiplier(fullDeltaResult.optimalDelta);
     setTrendChannelInterceptShift(fullDeltaResult.interceptShift || 0);
     setIsChannelSimulating(false);
@@ -1801,7 +1826,7 @@ export function PricePerformanceChart({
                   cursor: isChannelSimulating ? 'not-allowed' : 'pointer',
                   opacity: isChannelSimulating ? 0.6 : 1
                 }}
-                title="Find optimal lookback period (fixed delta: 0.5)"
+                title="Find optimal lookback and endAt parameters (2D optimization, fixed delta: 0.5)"
               >
                 {isChannelSimulating ? 'Simulating...' : 'Find Optimal'}
               </button>
@@ -1813,24 +1838,26 @@ export function PricePerformanceChart({
                     className="text-[10px] text-green-400 font-medium cursor-pointer hover:text-green-300 transition"
                     onClick={() => {
                       setTrendChannelLookback(channelSimulationResult.optimalLookback);
+                      setTrendChannelEndAt(channelSimulationResult.optimalEndAt);
                       setTrendChannelStdMultiplier(channelSimulationResult.optimalDelta);
                       setTrendChannelInterceptShift(channelSimulationResult.optimalInterceptShift || 0);
                     }}
                     title="Click to restore optimal settings (full range)"
                   >
-                    Optimal (Full): {channelSimulationResult.optimalLookback} / Δ{channelSimulationResult.optimalDelta}
+                    Optimal (Full): {channelSimulationResult.optimalLookback} / End:{channelSimulationResult.optimalEndAt} / Δ{channelSimulationResult.optimalDelta}
                   </div>
                   {channelSimulationResult.recent && (
                     <div
                       className="text-[10px] text-emerald-300 font-medium cursor-pointer hover:text-emerald-200 transition"
                       onClick={() => {
                         setTrendChannelLookback(channelSimulationResult.recent.optimalLookback);
+                        setTrendChannelEndAt(channelSimulationResult.recent.optimalEndAt);
                         setTrendChannelStdMultiplier(channelSimulationResult.recent.optimalDelta);
                         setTrendChannelInterceptShift(channelSimulationResult.recent.optimalInterceptShift || 0);
                       }}
                       title="Click to apply recent optimal settings"
                     >
-                      Optimal (Recent 25%): {channelSimulationResult.recent.optimalLookback} / Δ{channelSimulationResult.recent.optimalDelta}
+                      Optimal (Recent 25%): {channelSimulationResult.recent.optimalLookback} / End:{channelSimulationResult.recent.optimalEndAt} / Δ{channelSimulationResult.recent.optimalDelta}
                     </div>
                   )}
                 </div>
@@ -2403,7 +2430,7 @@ export function PricePerformanceChart({
                   multiData,
                   trendChannelLookback,
                   trendChannelStdMultiplier,
-                  { interceptShift: trendChannelInterceptShift }
+                  { interceptShift: trendChannelInterceptShift, endAt: trendChannelEndAt }
                 );
               }
               if (colorMode === 'sma' && chartCompareStocks.length === 0) {
