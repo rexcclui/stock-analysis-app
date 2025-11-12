@@ -1067,7 +1067,10 @@ export function PricePerformanceChart({
   const getChannelBandColor = (ratio, volumeIntensity = 0) => {
     if (isNaN(ratio)) return 'rgba(255,255,255,0.05)';
     const r = Math.max(0, Math.min(1, ratio));
-    const volumeDepth = Math.max(0, Math.min(1, volumeIntensity));
+    // Treat volume as the "ink" that deepens each band. We squeeze the lower
+    // half of the range so even modest participation meaningfully darkens the
+    // fill, while truly heavy volume pushes the color toward its anchor hue.
+    const volumeDepth = Math.pow(Math.max(0, Math.min(1, volumeIntensity)), 0.6);
     const anchors = [
       { r: 16,  g:185, b:129 }, // emerald
       { r: 20,  g:184, b:166 }, // teal
@@ -1086,18 +1089,23 @@ export function PricePerformanceChart({
     const ggBase = Math.round(a.g + (b.g - a.g) * t);
     const bbBase = Math.round(a.b + (b.b - a.b) * t);
 
-    // Lighten the base hue when volume is sparse so areas with
-    // participation stay visually subtle while heavy-volume areas pop.
-    const lightenFactor = 0.6 * (1 - volumeDepth);
-    const rr = Math.round(rrBase + (255 - rrBase) * lightenFactor);
-    const gg = Math.round(ggBase + (255 - ggBase) * lightenFactor);
-    const bb = Math.round(bbBase + (255 - bbBase) * lightenFactor);
+    // For low participation, blend heavily with white to keep the band subtle.
+    const lightenFactor = 0.75 * (1 - volumeDepth);
+    const rrLight = rrBase + (255 - rrBase) * lightenFactor;
+    const ggLight = ggBase + (255 - ggBase) * lightenFactor;
+    const bbLight = bbBase + (255 - bbBase) * lightenFactor;
+
+    // For high participation, blend toward black to make the band visibly denser.
+    const darkenFactor = 0.45 * volumeDepth;
+    const rr = Math.round(rrLight * (1 - darkenFactor));
+    const gg = Math.round(ggLight * (1 - darkenFactor));
+    const bb = Math.round(bbLight * (1 - darkenFactor));
 
     // Increase opacity with both resistance proximity and volume depth.
-    const alphaBase = 0.14 + 0.05 * r;
-    const alpha = alphaBase + 0.25 * volumeDepth;
+    const alphaBase = 0.18 + 0.07 * r;
+    const alpha = alphaBase + 0.35 * volumeDepth;
 
-    return `rgba(${rr}, ${gg}, ${bb}, ${Math.min(alpha, 0.92).toFixed(3)})`;
+    return `rgba(${rr}, ${gg}, ${bb}, ${Math.min(alpha, 0.95).toFixed(3)})`;
   };
 
   // Calculate Volume Bar data for horizontal background zones
@@ -2398,7 +2406,11 @@ export function PricePerformanceChart({
 
                 if (contributorCount === 0) return 0;
                 const averageVolume = contributingVolume / contributorCount;
-                return Math.max(0, Math.min(1, averageVolume / maxVolumeInView));
+                const normalized = Math.max(0, Math.min(1, averageVolume / maxVolumeInView));
+                // Stretch the lower half of the curve so moderate volume still
+                // registers visually, and cap the upper bound smoothly to avoid
+                // every band snapping to full saturation.
+                return Math.pow(normalized, 0.7);
               };
 
               return (
