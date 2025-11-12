@@ -1064,9 +1064,10 @@ export function PricePerformanceChart({
   // ratio: 0 (bottom/support) → 1 (top/resistance)
   // Gradient path: emerald (#10B981) → teal (#14B8A6) → blue (#3B82F6) → purple (#8B5CF6) → pink (#EC4899) → red (#EF4444)
   // We interpolate across 5 segments between 6 anchor colors.
-  const getChannelBandColor = (ratio) => {
+  const getChannelBandColor = (ratio, volumeIntensity = 0) => {
     if (isNaN(ratio)) return 'rgba(255,255,255,0.05)';
     const r = Math.max(0, Math.min(1, ratio));
+    const volumeDepth = Math.max(0, Math.min(1, volumeIntensity));
     const anchors = [
       { r: 16,  g:185, b:129 }, // emerald
       { r: 20,  g:184, b:166 }, // teal
@@ -1081,12 +1082,22 @@ export function PricePerformanceChart({
     const t = scaled - i;
     const a = anchors[i];
     const b = anchors[i + 1];
-    const rr = Math.round(a.r + (b.r - a.r) * t);
-    const gg = Math.round(a.g + (b.g - a.g) * t);
-    const bb = Math.round(a.b + (b.b - a.b) * t);
-    // Slight transparency so overlapping areas blend smoothly
-    const alpha = 0.18 + 0.05 * r; // a bit more opaque toward resistance
-    return `rgba(${rr}, ${gg}, ${bb}, ${alpha.toFixed(3)})`;
+    const rrBase = Math.round(a.r + (b.r - a.r) * t);
+    const ggBase = Math.round(a.g + (b.g - a.g) * t);
+    const bbBase = Math.round(a.b + (b.b - a.b) * t);
+
+    // Lighten the base hue when volume is sparse so areas with
+    // participation stay visually subtle while heavy-volume areas pop.
+    const lightenFactor = 0.6 * (1 - volumeDepth);
+    const rr = Math.round(rrBase + (255 - rrBase) * lightenFactor);
+    const gg = Math.round(ggBase + (255 - ggBase) * lightenFactor);
+    const bb = Math.round(bbBase + (255 - bbBase) * lightenFactor);
+
+    // Increase opacity with both resistance proximity and volume depth.
+    const alphaBase = 0.14 + 0.05 * r;
+    const alpha = alphaBase + 0.25 * volumeDepth;
+
+    return `rgba(${rr}, ${gg}, ${bb}, ${Math.min(alpha, 0.92).toFixed(3)})`;
   };
 
   // Calculate Volume Bar data for horizontal background zones
@@ -2360,6 +2371,36 @@ export function PricePerformanceChart({
                 console.log('chartPeriod:', chartPeriod);
               }
 
+              const maxVolumeInView = multiData.reduce((max, point) => {
+                const vol = point?.volume;
+                return vol && Number.isFinite(vol) ? Math.max(max, vol) : max;
+              }, 0);
+
+              const getZoneVolumeIntensity = (pointA, pointB, lower, upper) => {
+                if (!maxVolumeInView) return 0;
+                const zoneMin = Math.min(lower, upper);
+                const zoneMax = Math.max(lower, upper);
+                let contributingVolume = 0;
+                let contributorCount = 0;
+
+                const considerPoint = (point) => {
+                  if (!point) return;
+                  const price = point.price;
+                  if (price == null) return;
+                  if (price >= zoneMin && price <= zoneMax) {
+                    contributingVolume += point.volume || 0;
+                    contributorCount += 1;
+                  }
+                };
+
+                considerPoint(pointA);
+                considerPoint(pointB);
+
+                if (contributorCount === 0) return 0;
+                const averageVolume = contributingVolume / contributorCount;
+                return Math.max(0, Math.min(1, averageVolume / maxVolumeInView));
+              };
+
               return (
                 <LineChart
                   data={multiData}
@@ -2634,6 +2675,7 @@ export function PricePerformanceChart({
                           const zoneLower = Math.min(ptLower, nextLower);
                           const zoneUpper = Math.max(ptUpper, nextUpper);
                           const ratioMid = (b + 0.5) / CHANNEL_BANDS; // mid-point for color
+                          const volumeIntensity = getZoneVolumeIntensity(pt, next, zoneLower, zoneUpper);
                           zones.push(
                             <ReferenceArea
                               key={`channel-band-${i}-${b}`}
@@ -2641,7 +2683,7 @@ export function PricePerformanceChart({
                               x2={next.date}
                               y1={zoneLower}
                               y2={zoneUpper}
-                              fill={getChannelBandColor(ratioMid)}
+                              fill={getChannelBandColor(ratioMid, volumeIntensity)}
                               strokeOpacity={0}
                               ifOverflow="discard"
                             />
