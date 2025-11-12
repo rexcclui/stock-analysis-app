@@ -2010,63 +2010,6 @@ export function PricePerformanceChart({
 
           {/* No recent trend overlay anymore */}
 
-          <div className="flex items-center" style={{ marginLeft: '12px' }}>
-            <input
-              type="text"
-              placeholder="Input stock"
-              value={chartCompareInput}
-              onChange={(e)=> setChartCompareInput(e.target.value)}
-              onKeyDown={(e)=> e.key==='Enter' && addChartCompareStock()}
-              className="w-24 px-2 py-1 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500 placeholder-gray-400"
-              style={{ minWidth: '80px', maxWidth: '120px' }}
-            />
-            <button
-              onClick={addChartCompareStock}
-              className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition"
-              style={{ marginLeft: '4px' }}
-            >Add to Chart</button>
-          </div>
-          {(zoomDomain.start !== 0 || zoomDomain.end !== 100) && (
-            <button
-              onClick={resetZoom}
-              className="px-3 py-1 rounded-lg text-xs font-medium bg-gray-700 text-gray-300 hover:bg-gray-600 transition"
-              title="Reset zoom"
-            >
-              Reset Zoom
-            </button>
-          )}
-          {dataOffset > 0 && (
-            <button
-              onClick={() => setDataOffset(0)}
-              className="px-3 py-1 rounded-lg text-xs font-medium bg-blue-700 text-white hover:bg-blue-600 transition"
-              title="Jump to most recent data"
-            >
-              ← Back to Present ({dataOffset} days ago)
-            </button>
-          )}
-        </div>
-        <div className="flex gap-2">
-          {periods.map(period => (
-            <button
-              key={period}
-              onClick={() => {
-                setChartPeriod(period);
-                setZoomDomain({ start: 0, end: 100 });
-                if (typeof window !== 'undefined') {
-                  localStorage.setItem('chartPeriod', period);
-                }
-              }}
-              className="px-3 py-1 rounded-lg text-sm font-medium transition"
-              style={{
-                backgroundColor: chartPeriod === period ? '#2563eb' : '#374151',
-                color: chartPeriod === period ? '#ffffff' : '#9ca3af',
-                border: chartPeriod === period ? '2px solid #3b82f6' : '2px solid transparent',
-                fontWeight: chartPeriod === period ? 'bold' : 'normal'
-              }}
-            >
-              {period}
-            </button>
-          ))}
         </div>
       </div>
   <div className="bg-gray-800 rounded-xl shadow-xl border border-gray-700" style={{ padding: '4px 24px -24px -24px', margin: 0 }}>
@@ -2964,6 +2907,69 @@ export function PricePerformanceChart({
             );
           })()}
         </ResponsiveContainer>
+        </div>
+      </div>
+
+      {/* Chart Controls - Below Chart */}
+      <div className="flex items-center justify-between mt-4 mb-2 px-2">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center">
+            <input
+              type="text"
+              placeholder="Input stock"
+              value={chartCompareInput}
+              onChange={(e)=> setChartCompareInput(e.target.value)}
+              onKeyDown={(e)=> e.key==='Enter' && addChartCompareStock()}
+              className="w-24 px-2 py-1 bg-gray-700 border border-gray-600 rounded-lg text-white text-sm focus:outline-none focus:border-blue-500 placeholder-gray-400"
+              style={{ minWidth: '80px', maxWidth: '120px' }}
+            />
+            <button
+              onClick={addChartCompareStock}
+              className="px-3 py-1 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-sm font-medium transition"
+              style={{ marginLeft: '4px' }}
+            >Add to Chart</button>
+          </div>
+          {(zoomDomain.start !== 0 || zoomDomain.end !== 100) && (
+            <button
+              onClick={resetZoom}
+              className="px-3 py-1 rounded-lg text-xs font-medium bg-gray-700 text-gray-300 hover:bg-gray-600 transition"
+              title="Reset zoom"
+            >
+              Reset Zoom
+            </button>
+          )}
+          {dataOffset > 0 && (
+            <button
+              onClick={() => setDataOffset(0)}
+              className="px-3 py-1 rounded-lg text-xs font-medium bg-blue-700 text-white hover:bg-blue-600 transition"
+              title="Jump to most recent data"
+            >
+              ← Back to Present ({dataOffset} days ago)
+            </button>
+          )}
+        </div>
+        <div className="flex gap-2">
+          {periods.map(period => (
+            <button
+              key={period}
+              onClick={() => {
+                setChartPeriod(period);
+                setZoomDomain({ start: 0, end: 100 });
+                if (typeof window !== 'undefined') {
+                  localStorage.setItem('chartPeriod', period);
+                }
+              }}
+              className="px-3 py-1 rounded-lg text-sm font-medium transition"
+              style={{
+                backgroundColor: chartPeriod === period ? '#2563eb' : '#374151',
+                color: chartPeriod === period ? '#ffffff' : '#9ca3af',
+                border: chartPeriod === period ? '2px solid #3b82f6' : '2px solid transparent',
+                fontWeight: chartPeriod === period ? 'bold' : 'normal'
+              }}
+            >
+              {period}
+            </button>
+          ))}
         </div>
       </div>
 
