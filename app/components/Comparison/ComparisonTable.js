@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { X, ArrowUp, ArrowDown, LineChart } from 'lucide-react';
 import SentimentChart from '../SentimentChart';
 import { HeatmapView } from './HeatmapView';
+import LeadLagView from './LeadLagView';
 import { LoadingState } from '../LoadingState';
 
 const getColorForPerformance = (value) => {
@@ -234,6 +235,13 @@ export function ComparisonTable({
                   }`}
                   style={viewMode === 'heatmap' ? { backgroundColor: '#FBBF24', color: '#0ea5ff', boxShadow: '0 6px 12px rgba(0,0,0,0.06)' } : undefined}
                 >Heatmap</button>
+                <button
+                  onClick={() => onViewModeChange('leadlag')}
+                  className={`px-3 py-1 rounded-md text-sm font-semibold transition ${
+                    viewMode === 'leadlag' ? 'bg-green-600 text-white shadow-lg' : 'text-gray-300 hover:text-white hover:bg-gray-600'
+                  }`}
+                  style={viewMode === 'leadlag' ? { backgroundColor: '#FBBF24', color: '#0ea5ff', boxShadow: '0 6px 12px rgba(0,0,0,0.06)' } : undefined}
+                >Lead/Lag</button>
               </div>
           </div>
           {viewMode === 'table' && (
@@ -319,7 +327,7 @@ export function ComparisonTable({
             showMarketDetail={showMarketDetail}
           />
         </>
-      ) : (
+      ) : viewMode === 'heatmap' ? (
         <HeatmapView
           selectedStock={selectedStock}
           comparisonStocks={filteredComparisonStocks}
@@ -331,7 +339,16 @@ export function ComparisonTable({
           chartCompareStocks={chartCompareStocks}
           loading={!selectedStock || !selectedStock.performance}
         />
-      )}
+      ) : viewMode === 'leadlag' ? (
+        <div className="px-6 py-6">
+          <LeadLagView
+            selectedStock={selectedStock}
+            comparisonStocks={filteredComparisonStocks}
+            comparisonRowSize={comparisonRowSize}
+            relationshipTypeFilter={relationshipTypeFilter}
+          />
+        </div>
+      ) : null}
       
       {/* Controls moved to header; heatmap-specific controls could be repositioned later if needed */}
     </div>
