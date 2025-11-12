@@ -570,9 +570,18 @@ export function PricePerformanceChart({
     });
   };
 
+  // Get SMA period based on chart period for touch detection
+  const getSmaPeriodForTouchDetection = (period) => {
+    const smaMap = { '7D': 1, '1M': 2, '3M': 3, '6M': 5, '1Y': 10, '3Y': 14, '5Y': 20 };
+    return smaMap[period] || 3; // Default to 3 if period not found
+  };
+
   // Compute intercept shift and delta ensuring both channel bounds touch price extremes
-  const computeTrendChannelTouchAlignment = (data, lookback, endAt = 0) => {
+  const computeTrendChannelTouchAlignment = (data, lookback, endAt = 0, chartPeriod = '3M') => {
     if (!data || data.length < 2) return null;
+
+    // Get dynamic SMA period based on chart timeframe
+    const smaPeriod = getSmaPeriodForTouchDetection(chartPeriod);
 
     // Calculate the data window considering endAt parameter
     const effectiveEndIndex = data.length - endAt;
@@ -622,30 +631,36 @@ export function PricePerformanceChart({
     const tolerance = stdDev > 0 ? stdDev * 1e-6 : 1e-6;
     const boundaryWindow = Math.max(1, Math.floor(n * 0.08));
 
-    // Apply SMA3 to prices for smoothing
-    const sma3Prices = slice.map((pt, i) => {
-      if (i < 2) return pt.price || 0;
-      const sum = (slice[i-2].price || 0) + (slice[i-1].price || 0) + (pt.price || 0);
-      return sum / 3;
+    // Apply dynamic SMA to prices for smoothing (based on chart period)
+    const smaPrices = slice.map((pt, i) => {
+      if (smaPeriod === 1) return pt.price || 0; // No smoothing for 7D
+      if (i < smaPeriod - 1) return pt.price || 0; // Not enough data for full SMA yet
+
+      // Calculate SMA using dynamic period
+      let sum = 0;
+      for (let j = 0; j < smaPeriod; j++) {
+        sum += (slice[i - j].price || 0);
+      }
+      return sum / smaPeriod;
     });
 
-    // Calculate residuals using SMA3 prices
-    const sma3Residuals = sma3Prices.map((price, i) => {
+    // Calculate residuals using smoothed prices
+    const smaResiduals = smaPrices.map((price, i) => {
       const model = slope * i + baseIntercept;
       return price - model;
     });
 
-    // Calculate adjusted residuals for SMA3
-    const sma3MaxResidual = Math.max(...sma3Residuals);
-    const sma3MinResidual = Math.min(...sma3Residuals);
-    const sma3InterceptShift = (sma3MaxResidual + sma3MinResidual) / 2;
-    const sma3AdjustedResiduals = sma3Residuals.map(diff => diff - sma3InterceptShift);
+    // Calculate adjusted residuals for smoothed prices
+    const smaMaxResidual = Math.max(...smaResiduals);
+    const smaMinResidual = Math.min(...smaResiduals);
+    const smaInterceptShift = (smaMaxResidual + smaMinResidual) / 2;
+    const smaAdjustedResiduals = smaResiduals.map(diff => diff - smaInterceptShift);
 
     // Detect turning points: where residual changes sign (crosses from negative to positive or vice versa)
     const turningPoints = [];
     for (let i = 1; i < n; i++) {
-      const prev = sma3AdjustedResiduals[i - 1];
-      const curr = sma3AdjustedResiduals[i];
+      const prev = smaAdjustedResiduals[i - 1];
+      const curr = smaAdjustedResiduals[i];
 
       // Check for sign change
       if ((prev < 0 && curr >= 0) || (prev > 0 && curr <= 0) || (prev === 0 && curr !== 0)) {
@@ -934,7 +949,7 @@ export function PricePerformanceChart({
       console.log(`   Using: lookback=${lookback}, endAt=${endAt}`);
 
       const startTime = Date.now();
-      const alignment = computeTrendChannelTouchAlignment(data, lookback, endAt);
+      const alignment = computeTrendChannelTouchAlignment(data, lookback, endAt, chartPeriod);
 
       if (!alignment) {
         console.log(`⚠️  [${label}] Delta Simulation: No alignment found`);
@@ -951,9 +966,10 @@ export function PricePerformanceChart({
       }
 
       const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
+      const smaPeriod = getSmaPeriodForTouchDetection(chartPeriod);
       console.log(`✅ [${label}] Delta Simulation Complete in ${totalTime}s`);
       console.log(`   Result: delta=${alignment.optimalDelta.toFixed(3)}, coverage=${alignment.coverageCount}/${alignment.totalPoints}, touchesBoth=${alignment.touchesUpper && alignment.touchesLower}`);
-      console.log(`   Touch validation: Upper=${alignment.touchesUpper}, Lower=${alignment.touchesLower} (using SMA3 + turning point detection)`);
+      console.log(`   Touch validation: Upper=${alignment.touchesUpper}, Lower=${alignment.touchesLower} (using SMA${smaPeriod} + turning point detection)`);
 
       return {
         optimalDelta: alignment.optimalDelta,
