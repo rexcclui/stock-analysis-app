@@ -2929,6 +2929,94 @@ export function PricePerformanceChart({
         const currentData = getCurrentDataSlice();
         const volumeProfile = currentData._volumeProfile;
 
+        const maxPointVolume = currentData.reduce((max, point) => {
+          const vol = point?.volume;
+          return Number.isFinite(vol) ? Math.max(max, vol) : max;
+        }, 0);
+
+        const bandStats = Array.from({ length: CHANNEL_BANDS }, () => ({
+          priceMin: Number.POSITIVE_INFINITY,
+          priceMax: Number.NEGATIVE_INFINITY,
+          totalVolume: 0,
+          count: 0
+        }));
+
+        currentData.forEach((point, idx) => {
+          const nextPoint = currentData[idx + 1];
+
+          for (let bandIndex = 0; bandIndex < CHANNEL_BANDS; bandIndex++) {
+            const lowerKey = bandIndex === 0 ? 'lowerBound' : `channelBand_${bandIndex}`;
+            const upperKey = bandIndex === CHANNEL_BANDS - 1 ? 'upperBound' : `channelBand_${bandIndex + 1}`;
+
+            const boundarySamples = [];
+            const pushBoundary = (value) => {
+              if (typeof value === 'number' && Number.isFinite(value)) {
+                boundarySamples.push(value);
+              }
+            };
+
+            pushBoundary(point?.[lowerKey]);
+            pushBoundary(point?.[upperKey]);
+
+            if (nextPoint) {
+              pushBoundary(nextPoint?.[lowerKey]);
+              pushBoundary(nextPoint?.[upperKey]);
+            }
+
+            if (boundarySamples.length < 2) continue;
+
+            const zoneMin = Math.min(...boundarySamples);
+            const zoneMax = Math.max(...boundarySamples);
+
+            bandStats[bandIndex].priceMin = Math.min(bandStats[bandIndex].priceMin, zoneMin);
+            bandStats[bandIndex].priceMax = Math.max(bandStats[bandIndex].priceMax, zoneMax);
+
+            const considerPoint = (candidate) => {
+              if (!candidate) return;
+              const price = candidate.price;
+              const volume = candidate.volume;
+              if (!Number.isFinite(price) || !Number.isFinite(volume)) return;
+              if (price >= zoneMin && price <= zoneMax) {
+                bandStats[bandIndex].totalVolume += volume;
+                bandStats[bandIndex].count += 1;
+              }
+            };
+
+            considerPoint(point);
+            considerPoint(nextPoint);
+          }
+        });
+
+        const bandLabels = [
+          { title: 'Lower Support', subtitle: 'Deepest oversold pocket' },
+          { title: 'Lower Neutral', subtitle: 'Buyers taking control' },
+          { title: 'Center Support', subtitle: 'Below regression mean' },
+          { title: 'Center Resistance', subtitle: 'Above regression mean' },
+          { title: 'Upper Neutral', subtitle: 'Sellers leaning in' },
+          { title: 'Upper Resistance', subtitle: 'Extreme overbought pocket' }
+        ];
+
+        const bandLegendData = bandLabels.map((label, index) => {
+          const stats = bandStats[index];
+          const averageVolume = stats.count > 0 ? stats.totalVolume / stats.count : 0;
+          const normalizedVolume = maxPointVolume > 0
+            ? Math.max(0, Math.min(1, averageVolume / maxPointVolume))
+            : 0;
+          const intensity = Math.pow(normalizedVolume, 0.7);
+          const color = getChannelBandColor((index + 0.5) / CHANNEL_BANDS, intensity);
+          const hasRange = Number.isFinite(stats.priceMin) && Number.isFinite(stats.priceMax);
+
+          return {
+            ...label,
+            color,
+            intensity,
+            priceRange: hasRange
+              ? `$${stats.priceMin.toFixed(2)} → $${stats.priceMax.toFixed(2)}`
+              : 'No touches in view',
+            averageVolume
+          };
+        });
+
         if (!volumeProfile) return null;
 
         return (
@@ -2940,6 +3028,33 @@ export function PricePerformanceChart({
                 </div>
                 <div className="text-xs text-gray-400">
                   Trend lines validated by volume density
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <div className="text-xs font-semibold text-sky-300 mb-2">Color Legend (Volume Weighted)</div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+                  {bandLegendData.map((band, idx) => (
+                    <div
+                      key={`channel-band-legend-${idx}`}
+                      className="flex items-center gap-3 rounded-lg border border-white/5 bg-gray-900/40 p-2 shadow-inner"
+                    >
+                      <div
+                        className="h-12 w-12 shrink-0 rounded-md border border-white/10 shadow"
+                        style={{ background: band.color }}
+                        title={`${band.title}\n${band.subtitle}\nAvg Volume: ${band.averageVolume.toLocaleString()}\nIntensity: ${(band.intensity * 100).toFixed(0)}%`}
+                      ></div>
+                      <div className="flex flex-col text-[11px] leading-snug">
+                        <span className="font-semibold text-white">{band.title}</span>
+                        <span className="text-gray-400 text-[10px]">{band.subtitle}</span>
+                        <span className="text-gray-300">{band.priceRange}</span>
+                        <span className="text-gray-500 text-[10px]">Volume intensity: {(band.intensity * 100).toFixed(0)}%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <div className="mt-2 text-[10px] text-gray-500">
+                  Darker swatches indicate zones that captured more volume while price traded inside them.
                 </div>
               </div>
 
