@@ -759,10 +759,13 @@ export function PricePerformanceChart({
       return;
     }
 
+    console.log('🚀 Starting Channel Find Optimal - 2D Optimization');
+    console.log(`📊 Data length: ${currentData.length} points`);
+
     const fixedStdMult = 0.5; // Fixed delta value for lookback simulation
     const minLookback = 20;
 
-    const runLookbackSimulation = async (data) => {
+    const runLookbackSimulation = async (data, label = 'Full') => {
       // 2D optimization: simulate both lookback and endAt parameters
       const maxEndAt = Math.floor(data.length / 10);
       const maxLookback = data.length;
@@ -771,8 +774,16 @@ export function PricePerformanceChart({
       let maxCrosses = 0;
       const lookbackResults = [];
 
+      const totalIterations = (maxEndAt + 1) * Math.ceil((maxLookback - minLookback + 1) / 2);
+      console.log(`\n🔍 [${label}] Lookback Simulation Starting`);
+      console.log(`   Range: lookback [${minLookback}-${maxLookback}], endAt [0-${maxEndAt}]`);
+      console.log(`   Total iterations: ~${totalIterations}`);
+
       // Allow UI to update before heavy work begins
       await new Promise(resolve => setTimeout(resolve, 50));
+
+      const startTime = Date.now();
+      let lastLogTime = startTime;
 
       // Loop through endAt from 0 to max (1/10 of data length)
       for (let endAt = 0; endAt <= maxEndAt; endAt++) {
@@ -807,21 +818,38 @@ export function PricePerformanceChart({
             optimalEndAt = endAt;
           }
 
-          // Allow UI updates every 20 iterations
+          // Log progress every 20 iterations and every 500ms
+          const currentTime = Date.now();
           if (lookbackResults.length % 20 === 0) {
+            if (currentTime - lastLogTime >= 500) {
+              const progress = ((lookbackResults.length / totalIterations) * 100).toFixed(1);
+              const elapsed = ((currentTime - startTime) / 1000).toFixed(1);
+              console.log(`   Progress: ${progress}% (${lookbackResults.length}/${totalIterations}) | Best: lookback=${optimalLookback}, endAt=${optimalEndAt}, crosses=${maxCrosses} | ${elapsed}s`);
+              lastLogTime = currentTime;
+            }
             await new Promise(resolve => setTimeout(resolve, 0));
           }
         }
       }
+
+      const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
+      console.log(`✅ [${label}] Lookback Simulation Complete in ${totalTime}s`);
+      console.log(`   Result: lookback=${optimalLookback}, endAt=${optimalEndAt}, maxCrosses=${maxCrosses}`);
 
       return { optimalLookback, optimalEndAt, maxCrosses, lookbackResults };
     };
 
     // Find the std dev multiplier (delta) that keeps the most points inside the channel
     // while ensuring both the upper and lower bounds are touched at least once when possible.
-    const runDeltaSimulation = async (data, lookback, endAt = 0) => {
+    const runDeltaSimulation = async (data, lookback, endAt = 0, label = 'Full') => {
+      console.log(`\n🎯 [${label}] Delta Simulation Starting`);
+      console.log(`   Using: lookback=${lookback}, endAt=${endAt}`);
+
+      const startTime = Date.now();
       const alignment = computeTrendChannelTouchAlignment(data, lookback, endAt);
+
       if (!alignment) {
+        console.log(`⚠️  [${label}] Delta Simulation: No alignment found`);
         return {
           optimalDelta: 0,
           maxCoverageCount: 0,
@@ -833,6 +861,10 @@ export function PricePerformanceChart({
           deltaResults: []
         };
       }
+
+      const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
+      console.log(`✅ [${label}] Delta Simulation Complete in ${totalTime}s`);
+      console.log(`   Result: delta=${alignment.optimalDelta.toFixed(3)}, coverage=${alignment.coverageCount}/${alignment.totalPoints}, touchesBoth=${alignment.touchesUpper && alignment.touchesLower}`);
 
       return {
         optimalDelta: alignment.optimalDelta,
@@ -846,14 +878,15 @@ export function PricePerformanceChart({
       };
     };
 
-    const fullLookbackResult = await runLookbackSimulation(currentData);
-    const fullDeltaResult = await runDeltaSimulation(currentData, fullLookbackResult.optimalLookback, fullLookbackResult.optimalEndAt);
+    const fullLookbackResult = await runLookbackSimulation(currentData, 'Full');
+    const fullDeltaResult = await runDeltaSimulation(currentData, fullLookbackResult.optimalLookback, fullLookbackResult.optimalEndAt, 'Full');
 
     const recentDataLength = Math.max(minLookback, Math.floor(currentData.length * 0.25));
     const recentData = currentData.slice(-recentDataLength);
 
-    const recentLookbackResult = await runLookbackSimulation(recentData);
-    const recentDeltaResult = await runDeltaSimulation(recentData, recentLookbackResult.optimalLookback, recentLookbackResult.optimalEndAt);
+    console.log(`\n📈 Starting Recent (25%) Simulation with ${recentData.length} points`);
+    const recentLookbackResult = await runLookbackSimulation(recentData, 'Recent');
+    const recentDeltaResult = await runDeltaSimulation(recentData, recentLookbackResult.optimalLookback, recentLookbackResult.optimalEndAt, 'Recent');
 
     setChannelSimulationResult({
       optimalLookback: fullLookbackResult.optimalLookback,
@@ -889,6 +922,14 @@ export function PricePerformanceChart({
     });
 
     // Apply optimal lookback, endAt, and delta (full data set)
+    console.log('\n🎉 Channel Optimization Complete!');
+    console.log('📊 Applying Full Dataset Results:');
+    console.log(`   Lookback: ${fullLookbackResult.optimalLookback}`);
+    console.log(`   EndAt: ${fullLookbackResult.optimalEndAt}`);
+    console.log(`   Delta: ${fullDeltaResult.optimalDelta.toFixed(3)}`);
+    console.log(`   Intercept Shift: ${(fullDeltaResult.interceptShift || 0).toFixed(3)}`);
+    console.log(`   Coverage: ${((fullDeltaResult.maxCoverageCount / currentData.length) * 100).toFixed(2)}%`);
+
     setTrendChannelLookback(fullLookbackResult.optimalLookback);
     setTrendChannelEndAt(fullLookbackResult.optimalEndAt);
     setTrendChannelStdMultiplier(fullDeltaResult.optimalDelta);
