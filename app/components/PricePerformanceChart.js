@@ -2702,6 +2702,11 @@ export function PricePerformanceChart({
                             const zoneUpper = Math.max(ptUpper, nextUpper);
                             const ratioMid = (b + 0.5) / CHANNEL_BANDS; // mid-point for color
                             const volumePercent = zoneVolumeDistribution[b] || 0;
+
+                            // Show label on the last segment (rightmost) for each zone
+                            const isLastSegment = i === multiData.length - 2;
+                            const showLabel = isLastSegment && volumePercent >= 1.0; // Show if >= 1% volume
+
                             zones.push(
                               <ReferenceArea
                                 key={`channel-band-${i}-${b}`}
@@ -2712,6 +2717,15 @@ export function PricePerformanceChart({
                                 fill={getChannelBandColor(ratioMid, volumePercent)}
                                 strokeOpacity={0}
                                 ifOverflow="discard"
+                                label={showLabel ? {
+                                  value: `${volumePercent.toFixed(1)}%`,
+                                  position: 'right',
+                                  fill: '#ffffff',
+                                  fontSize: 10,
+                                  fontWeight: 'bold',
+                                  stroke: '#000000',
+                                  strokeWidth: 0.5
+                                } : null}
                               />
                             );
                           }
@@ -2786,6 +2800,11 @@ export function PricePerformanceChart({
                             const zoneUpper = Math.max(ptUpper, nextUpper);
                             const ratioMid = (b + 0.5) / CHANNEL_BANDS;
                             const volumePercent = zoneVolumeDistribution[b] || 0;
+
+                            // Show label on the last segment (rightmost) for each zone
+                            const isLastSegment = i === multiData.length - 2;
+                            const showLabel = isLastSegment && volumePercent >= 1.0; // Show if >= 1% volume
+
                             zones.push(
                               <ReferenceArea
                                 key={`trend-band-${i}-${b}`}
@@ -2796,6 +2815,15 @@ export function PricePerformanceChart({
                                 fill={getChannelBandColor(ratioMid, volumePercent)}
                                 strokeOpacity={0}
                                 ifOverflow="discard"
+                                label={showLabel ? {
+                                  value: `${volumePercent.toFixed(1)}%`,
+                                  position: 'right',
+                                  fill: '#ffffff',
+                                  fontSize: 10,
+                                  fontWeight: 'bold',
+                                  stroke: '#000000',
+                                  strokeWidth: 0.5
+                                } : null}
                               />
                             );
                           }
