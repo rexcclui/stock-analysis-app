@@ -519,9 +519,8 @@ export function PricePerformanceChart({
     // Calculate the data window considering endAt parameter
     // If endAt > 0, we work with data up to (data.length - endAt)
     const effectiveEndIndex = data.length - endAt;
-    const effectiveData = endAt > 0 ? data.slice(0, effectiveEndIndex) : data;
-
-    const slice = lookback && lookback < effectiveData.length ? effectiveData.slice(-lookback) : effectiveData;
+    // Always count lookback from the last data point, not from endAt
+    const slice = lookback && lookback < data.length ? data.slice(-lookback) : data;
     const n = slice.length;
     if (n < 2) return data;
     let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
@@ -543,7 +542,8 @@ export function PricePerformanceChart({
     });
     const stdDev = Math.sqrt(resSum / Math.max(1, n - 1));
     // Map across entire data; only enrich slice window
-    const startIndex = effectiveEndIndex - n;
+    // Slice always starts from (data.length - n) since lookback counts from last point
+    const startIndex = data.length - n;
     return data.map((pt, idx) => {
       if (idx < startIndex || idx >= effectiveEndIndex) {
         // Null out values outside the channel window (before start or after endAt point)
@@ -572,7 +572,7 @@ export function PricePerformanceChart({
 
   // Get SMA period based on chart period for touch detection
   const getSmaPeriodForTouchDetection = (period) => {
-    const smaMap = { '7D': 1, '1M': 2, '3M': 3, '6M': 5, '1Y': 10, '3Y': 14, '5Y': 20 };
+    const smaMap = { '7D': 1, '1M': 3, '3M': 5, '6M': 10, '1Y': 14, '3Y': 20, '5Y': 30 };
     return smaMap[period] || 3; // Default to 3 if period not found
   };
 
@@ -585,9 +585,8 @@ export function PricePerformanceChart({
 
     // Calculate the data window considering endAt parameter
     const effectiveEndIndex = data.length - endAt;
-    const effectiveData = endAt > 0 ? data.slice(0, effectiveEndIndex) : data;
-
-    const slice = lookback && lookback < effectiveData.length ? effectiveData.slice(-lookback) : effectiveData;
+    // Always count lookback from the last data point, not from endAt
+    const slice = lookback && lookback < data.length ? data.slice(-lookback) : data;
     const n = slice.length;
     if (n < 2) return null;
 
