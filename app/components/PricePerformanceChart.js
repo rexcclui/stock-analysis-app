@@ -2587,11 +2587,33 @@ export function PricePerformanceChart({
                 {chartCompareStocks.length === 0 ? (
                   (() => {
                     const hasData = chartData.length > 0;
-                    // Calculate y-axis range: min = lowest * 0.85, max = highest * 1.15
-                    const rawMin = hasData ? Math.min(...chartData.map(d => d.price)) * 0.85 : 0;
-                    const rawMax = hasData ? Math.max(...chartData.map(d => d.price)) * 1.15 : 10;
+                    if (!hasData) {
+                      return (
+                        <YAxis
+                          stroke="#9CA3AF"
+                          allowDecimals={false}
+                          tickFormatter={(v)=> Math.round(v)}
+                          domain={[0, 10]}
+                        />
+                      );
+                    }
+
+                    // Calculate y-axis range with balanced padding
+                    // 1. Find lowest and highest values
+                    const lowestValue = Math.min(...chartData.map(d => d.price));
+                    const highestValue = Math.max(...chartData.map(d => d.price));
+
+                    // 2. Calculate range
+                    const range = highestValue - lowestValue;
+
+                    // 3. Add 15% of range as padding on both sides
+                    const padding = range * 0.15;
+                    const rawMin = lowestValue - padding;
+                    const rawMax = highestValue + padding;
+
                     const intMin = Math.floor(rawMin);
                     const intMax = Math.ceil(rawMax);
+
                     return (
                       <YAxis
                         stroke="#9CA3AF"
