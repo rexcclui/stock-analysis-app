@@ -2587,8 +2587,9 @@ export function PricePerformanceChart({
                 {chartCompareStocks.length === 0 ? (
                   (() => {
                     const hasData = chartData.length > 0;
-                    const rawMin = hasData ? Math.min(...chartData.map(d => d.price)) * 0.95 : 0;
-                    const rawMax = hasData ? Math.max(...chartData.map(d => d.price)) * 1.05 : 10;
+                    // Calculate y-axis range: min = lowest * 0.85, max = highest * 1.15
+                    const rawMin = hasData ? Math.min(...chartData.map(d => d.price)) * 0.85 : 0;
+                    const rawMax = hasData ? Math.max(...chartData.map(d => d.price)) * 1.15 : 10;
                     const intMin = Math.floor(rawMin);
                     const intMax = Math.ceil(rawMax);
                     return (
