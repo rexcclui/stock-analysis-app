@@ -767,6 +767,7 @@ export function PricePerformanceChart({
 
     const runLookbackSimulation = async (data, label = 'Full') => {
       // 2D optimization: simulate both lookback and endAt parameters
+      // Limit to 50x50 grid for performance (max 2500 simulations)
       const maxEndAt = Math.floor(data.length / 10);
       const maxLookback = data.length;
       let optimalLookback = minLookback;
@@ -774,10 +775,18 @@ export function PricePerformanceChart({
       let maxCrosses = 0;
       const lookbackResults = [];
 
-      const totalIterations = (maxEndAt + 1) * Math.ceil((maxLookback - minLookback + 1) / 2);
+      // Calculate increments to achieve ~50 samples for each dimension
+      const targetSamples = 50;
+      const lookbackIncrement = Math.max(1, Math.floor((maxLookback - minLookback) / (targetSamples - 1)));
+      const endAtIncrement = Math.max(1, Math.floor(maxEndAt / (targetSamples - 1)));
+
+      const lookbackSamples = Math.ceil((maxLookback - minLookback) / lookbackIncrement) + 1;
+      const endAtSamples = Math.ceil(maxEndAt / endAtIncrement) + 1;
+      const totalIterations = lookbackSamples * endAtSamples;
+
       console.log(`\n🔍 [${label}] Lookback Simulation Starting`);
-      console.log(`   Range: lookback [${minLookback}-${maxLookback}], endAt [0-${maxEndAt}]`);
-      console.log(`   Total iterations: ~${totalIterations}`);
+      console.log(`   Range: lookback [${minLookback}-${maxLookback}] (increment: ${lookbackIncrement}), endAt [0-${maxEndAt}] (increment: ${endAtIncrement})`);
+      console.log(`   Grid: ${lookbackSamples}x${endAtSamples} = ${totalIterations} simulations (optimized from full grid)`);
 
       // Allow UI to update before heavy work begins
       await new Promise(resolve => setTimeout(resolve, 50));
@@ -785,10 +794,10 @@ export function PricePerformanceChart({
       const startTime = Date.now();
       let lastLogTime = startTime;
 
-      // Loop through endAt from 0 to max (1/10 of data length)
-      for (let endAt = 0; endAt <= maxEndAt; endAt++) {
-        // Loop through lookback, incrementing by 2 to save resources
-        for (let lookback = minLookback; lookback <= maxLookback - endAt; lookback += 2) {
+      // Loop through endAt from 0 to max with calculated increment
+      for (let endAt = 0; endAt <= maxEndAt; endAt += endAtIncrement) {
+        // Loop through lookback with calculated increment
+        for (let lookback = minLookback; lookback <= maxLookback - endAt; lookback += lookbackIncrement) {
           const dataWithChannel = buildConfigurableTrendChannel(
             data,
             lookback,
@@ -832,9 +841,50 @@ export function PricePerformanceChart({
         }
       }
 
+      // Ensure we test the exact maximum values if not already tested
+      const testMaximumValues = async () => {
+        const valuesToTest = [];
+
+        // Test maxLookback with endAt=0 if not already tested
+        if ((maxLookback - minLookback) % lookbackIncrement !== 0) {
+          valuesToTest.push({ lookback: maxLookback, endAt: 0 });
+        }
+
+        // Test endAt=maxEndAt with reasonable lookback if not already tested
+        if (maxEndAt % endAtIncrement !== 0) {
+          valuesToTest.push({ lookback: minLookback, endAt: maxEndAt });
+        }
+
+        for (const { lookback, endAt } of valuesToTest) {
+          if (lookback > maxLookback - endAt) continue;
+
+          const dataWithChannel = buildConfigurableTrendChannel(data, lookback, fixedStdMult, { endAt });
+          let crossCount = 0;
+          const tolerance = 0.01;
+
+          dataWithChannel.forEach(point => {
+            if (point.trendLine !== null && point.price) {
+              const priceDiff = Math.abs(point.price - point.trendLine);
+              const pricePercent = priceDiff / point.trendLine;
+              if (pricePercent <= tolerance) crossCount++;
+            }
+          });
+
+          lookbackResults.push({ lookback, endAt, crossCount });
+          if (crossCount > maxCrosses) {
+            maxCrosses = crossCount;
+            optimalLookback = lookback;
+            optimalEndAt = endAt;
+          }
+        }
+      };
+
+      await testMaximumValues();
+
       const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
       console.log(`✅ [${label}] Lookback Simulation Complete in ${totalTime}s`);
       console.log(`   Result: lookback=${optimalLookback}, endAt=${optimalEndAt}, maxCrosses=${maxCrosses}`);
+      console.log(`   Tested ${lookbackResults.length} parameter combinations`);
 
       return { optimalLookback, optimalEndAt, maxCrosses, lookbackResults };
     };
@@ -2462,6 +2512,7 @@ export function PricePerformanceChart({
                       <YAxis
                         stroke="#9CA3AF"
                         allowDecimals={false}
+                        tickFormatter={(v)=> Math.round(v)}
                         domain={[intMin, intMax]}
                       />
                     );
