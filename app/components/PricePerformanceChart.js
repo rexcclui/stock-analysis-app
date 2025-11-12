@@ -8,6 +8,35 @@ import { AIPriceAnalysisPanel } from './ai/AIPriceAnalysisPanel';
 import { AICycleAnalysisButton } from './ai/AICycleAnalysisButton';
 import { AICycleAnalysisPanel } from './ai/AICycleAnalysisPanel';
 
+// Import calculation utilities
+import {
+  getPeriodDays,
+  getRviN,
+  getSmaPeriodForTouchDetection,
+  calculate3DayMA,
+  calculateRVI,
+  calculateVSPY,
+  calculateSMA,
+  calculateLinearRegression,
+  buildConfigurableTrendChannel,
+  calculateStdDevChannel,
+  formatChartDate,
+  getRviColor,
+  getVspyColor,
+  getColorIndexValue,
+  addRviDataKeys,
+  getVolumeBarColor,
+  getChannelBandColor,
+  calculateVolumeProfile,
+  analyzeChannelConfluence,
+  calculateZoneVolumeDistribution,
+  calculateVolumeBarData,
+  computeTrendChannelTouchAlignment
+} from '../utils/chartCalculations';
+
+// Import chart constants
+import { CHANNEL_BANDS, COLOR_MODES, DEFAULT_CONFIG } from '../utils/chartConstants';
+
 /**
  * PricePerformanceChart
  * Displays either raw price chart for single stock or normalized percentage comparison lines.
@@ -59,8 +88,6 @@ export function PricePerformanceChart({
   // Channel simulation state
   const [isChannelSimulating, setIsChannelSimulating] = useState(false);
   const [channelSimulationResult, setChannelSimulationResult] = useState(null);
-  // Partition band count for channel/trend visual segmentation
-  const CHANNEL_BANDS = 6; // creates 6 colored zones between lower and upper (adjustable)
 
   // Trend Channel (Linear Regression) configuration
   const [trendLookback, setTrendLookback] = useState(100); // Lookback period for trend calculation
@@ -114,17 +141,6 @@ export function PricePerformanceChart({
     setMaxSmaGain({ gain: 0, period: 20, percentage: 0 });
   }, [selectedStock?.code, chartPeriod, dataOffset]);
 
-  // Helper to get period size in days
-  const getPeriodDays = (period) => {
-    const periodMap = { '1D': 1, '7D': 7, '1M': 30, '3M': 90, '6M': 180, '1Y': 252, '3Y': 756, '5Y': 1260 };
-    return periodMap[period] || 30;
-  };
-
-  // Helper to get N value for RVI calculation based on period
-  const getRviN = (period) => {
-    const nMap = { '1D': 1, '7D': 2, '1M': 3, '3M': 5, '6M': 6, '1Y': 7, '3Y': 10, '5Y': 20 };
-    return nMap[period] || 5;
-  };
 
   // Fetch SPY data when switching to VSPY mode
   useEffect(() => {
@@ -151,50 +167,6 @@ export function PricePerformanceChart({
     fetchSpyData();
   }, [colorMode, spyData.length]);
 
-  // Calculate RVI (Relative Volume Index) for each data point
-  const calculateRVI = (data, period) => {
-    if (!data || data.length === 0) return data;
-
-    const N = getRviN(period);
-    const longWindow = N * 5;
-
-    return data.map((point, idx) => {
-      // Need enough data for the long window
-      if (idx < longWindow - 1) {
-        return { ...point, rvi: 1 }; // Default RVI = 1
-      }
-
-      // Calculate average volume for N days (short window)
-      const shortWindowData = data.slice(Math.max(0, idx - N + 1), idx + 1);
-      const shortAvg = shortWindowData.reduce((sum, d) => sum + (d.volume || 0), 0) / shortWindowData.length;
-
-      // Calculate average volume for N * 5 days (long window)
-      const longWindowData = data.slice(Math.max(0, idx - longWindow + 1), idx + 1);
-      const longAvg = longWindowData.reduce((sum, d) => sum + (d.volume || 0), 0) / longWindowData.length;
-
-      // RVI = short average / long average
-      const rvi = longAvg > 0 ? shortAvg / longAvg : 1;
-
-      return { ...point, rvi };
-    });
-  };
-
-  // Calculate 3-day moving average
-  const calculate3DayMA = (data) => {
-    if (!data || data.length === 0) return [];
-
-    return data.map((point, idx) => {
-      if (idx < 2) {
-        // Not enough data for 3-day MA, use actual price
-        return { ...point, ma3: point.price };
-      }
-
-      const sum = data.slice(idx - 2, idx + 1).reduce((acc, d) => acc + (d.price || 0), 0);
-      const ma3 = sum / 3;
-
-      return { ...point, ma3 };
-    });
-  };
 
   // Calculate VSPY (Relative Performance vs SPY on 3-day MA) for each data point
   const calculateVSPY = (data, period, spyHistoricalData) => {
