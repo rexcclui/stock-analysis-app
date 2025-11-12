@@ -150,6 +150,13 @@ const fetchCompleteStockData = async (symbol, apiCounts = null, forceReload = fa
 
 export default function StockAnalysisDashboard() {
   const [searchInput, setSearchInput] = useState('');
+  const searchInputRef = React.useRef('');
+  const hydrationCompleteRef = React.useRef(false);
+  const handleSearchRef = React.useRef(() => {});
+
+  React.useEffect(() => {
+    searchInputRef.current = searchInput;
+  }, [searchInput]);
   const [selectedStock, setSelectedStock] = useState(null);
   const [chartPeriod, setChartPeriod] = useState('1M');
   const [comparisonStocks, setComparisonStocks] = useState([]);
@@ -203,9 +210,8 @@ export default function StockAnalysisDashboard() {
   }, []);
 
   const MAX_ROWS = 3;
-  const maxCapacity = () => historyCols * MAX_ROWS;
 
-  const addSearchHistoryStock = (entry) => {
+  const addSearchHistoryStock = React.useCallback((entry) => {
     setSearchHistoryStocks(prev => {
       const filtered = prev.filter(e => e.code !== entry.code); // dedupe
       const updated = [{
@@ -213,13 +219,13 @@ export default function StockAnalysisDashboard() {
         dayChange: normalizeDayChange(entry.dayChange),
         lastUpdated: entry.lastUpdated || new Date().toISOString()
       }, ...filtered];
-      const capacity = maxCapacity();
+      const capacity = historyCols * MAX_ROWS;
       if (updated.length > capacity) {
         return updated.slice(0, capacity); // drop oldest beyond capacity
       }
       return updated;
     });
-  };
+  }, [historyCols]);
 
   const removeSearchHistoryStock = (code) => {
     setSearchHistoryStocks(prev => prev.filter(e => e.code !== code));
@@ -261,6 +267,8 @@ export default function StockAnalysisDashboard() {
 
 
   React.useEffect(() => {
+    if (hydrationCompleteRef.current) return;
+    hydrationCompleteRef.current = true;
     setIsClient(true);
     // Load searchHistory from localStorage
     const saved = localStorage.getItem('stockSearchHistory');
@@ -291,7 +299,7 @@ export default function StockAnalysisDashboard() {
       try {
         const stockData = JSON.parse(savedStock);
         if (stockData && stockData.code) {
-          handleSearch(stockData.code);
+          handleSearchRef.current?.(stockData.code);
         }
       } catch {}
     }
@@ -466,15 +474,19 @@ export default function StockAnalysisDashboard() {
 
 
   // Save search history to localStorage
-  const addToSearchHistory = (stockCode) => {
+  const addToSearchHistory = React.useCallback((stockCode) => {
     const code = stockCode.toUpperCase();
-    let updated = [code, ...searchHistory.filter(s => s !== code)];
-    if (updated.length > 10) {
-      updated = updated.slice(0, 10);
-    }
-    setSearchHistory(updated);
-    localStorage.setItem('stockSearchHistory', JSON.stringify(updated));
-  };
+    setSearchHistory(prev => {
+      let updated = [code, ...prev.filter(s => s !== code)];
+      if (updated.length > 10) {
+        updated = updated.slice(0, 10);
+      }
+      try {
+        localStorage.setItem('stockSearchHistory', JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  }, []);
 
   // Fetch AI news analysis - 12 HOUR CACHE
   const fetchAINewsAnalysis = async (symbol, newsData, forceReload = false) => {
@@ -520,9 +532,9 @@ export default function StockAnalysisDashboard() {
     }, forceReload).catch(err => console.error('[AI Analysis] Failed:', err));
   };
 
-  const handleSearch = async (overrideCode) => {
+  const handleSearch = React.useCallback(async (overrideCode) => {
     setLoading(true);
-    const stockCode = (overrideCode || searchInput).toUpperCase();
+    const stockCode = (overrideCode || searchInputRef.current || '').toUpperCase();
     if (!stockCode) { setLoading(false); return; }
 
     // Clear previous data immediately to avoid confusion
@@ -625,7 +637,11 @@ export default function StockAnalysisDashboard() {
     }
     
     setLoading(false);
-  };
+  }, [addSearchHistoryStock, addToSearchHistory, chartPeriod, savedComparisons]);
+
+  React.useEffect(() => {
+    handleSearchRef.current = handleSearch;
+  }, [handleSearch]);
 
   // Force reload: Clear all caches (client + server) and reload current stock
   const handleForceReload = async () => {

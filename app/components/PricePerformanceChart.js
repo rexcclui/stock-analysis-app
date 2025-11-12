@@ -3036,7 +3036,7 @@ export function PricePerformanceChart({
           return (
             <div className="mb-4 px-4">
               <div className="rounded-lg border border-blue-500/30 bg-gray-900/60 p-4 text-xs text-blue-200">
-                Volume data is unavailable for the current slice, so the channel color legend can't be rendered.
+                Volume data is unavailable for the current slice, so the channel color legend cannot be rendered.
               </div>
             </div>
           );
