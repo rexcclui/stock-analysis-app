@@ -768,7 +768,7 @@ export function PricePerformanceChart({
     const runLookbackSimulation = async (data, label = 'Full') => {
       // 2D optimization: simulate both lookback and endAt parameters
       // Limit to 50x50 grid for performance (max 2500 simulations)
-      const maxEndAt = Math.floor(data.length / 10);
+      const maxEndAt = Math.floor(data.length / 5);
       const maxLookback = data.length;
       let optimalLookback = minLookback;
       let optimalEndAt = 0;
@@ -1895,7 +1895,7 @@ export function PricePerformanceChart({
                 <input
                   type="range"
                   min="0"
-                  max={Math.floor(getCurrentDataSlice().length / 10)}
+                  max={Math.floor(getCurrentDataSlice().length / 5)}
                   step={Math.max(1, Math.round(getCurrentDataSlice().length / 1000))}
                   value={trendChannelEndAt}
                   onChange={(e)=> {
