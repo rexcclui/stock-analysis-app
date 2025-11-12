@@ -2926,8 +2926,23 @@ export function PricePerformanceChart({
 
       {/* Standard Deviation Channel Legend */}
       {colorMode === 'channel' && chartCompareStocks.length === 0 && selectedStock && (() => {
-        const currentData = getCurrentDataSlice();
-        const volumeProfile = currentData._volumeProfile;
+        const currentData = getCurrentDataSlice() || [];
+        const hasChannelGeometry = currentData.some(point => (
+          Number.isFinite(point?.lowerBound) && Number.isFinite(point?.upperBound)
+        ));
+
+        if (!hasChannelGeometry) {
+          return (
+            <div className="mb-4 px-4">
+              <div className="rounded-lg border border-blue-500/30 bg-gray-900/60 p-4 text-xs text-blue-200">
+                Not enough channel data yet to derive the volume-weighted color legend. Increase the lookback or pick a longer
+                period to populate the channel bands.
+              </div>
+            </div>
+          );
+        }
+
+        const volumeProfile = currentData._volumeProfile || calculateVolumeProfile(currentData, channelVolumeBins);
 
         const maxPointVolume = currentData.reduce((max, point) => {
           const vol = point?.volume;
@@ -3017,7 +3032,15 @@ export function PricePerformanceChart({
           };
         });
 
-        if (!volumeProfile) return null;
+        if (!volumeProfile) {
+          return (
+            <div className="mb-4 px-4">
+              <div className="rounded-lg border border-blue-500/30 bg-gray-900/60 p-4 text-xs text-blue-200">
+                Volume data is unavailable for the current slice, so the channel color legend can't be rendered.
+              </div>
+            </div>
+          );
+        }
 
         return (
           <div className="mb-4 px-4">
