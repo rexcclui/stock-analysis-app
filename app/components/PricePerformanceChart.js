@@ -37,6 +37,16 @@ import {
 // Import chart constants
 import { CHANNEL_BANDS, COLOR_MODES, DEFAULT_CONFIG } from '../utils/chartConstants';
 
+// Import performance monitoring
+import {
+  useRenderPerformance,
+  useLifecyclePerformance,
+  useMeasuredMemo,
+  useMeasuredEffect,
+  usePerformanceContext,
+  useDataProcessing
+} from '../hooks/usePerformance';
+
 /**
  * PricePerformanceChart
  * Displays either raw price chart for single stock or normalized percentage comparison lines.
@@ -67,8 +77,23 @@ export function PricePerformanceChart({
   buildMultiStockDataset,
   loading = false
 }) {
-  const chartData = useMemo(() => selectedStock?.chartData?.[chartPeriod] || [], [selectedStock, chartPeriod]);
-  const fullHistoricalData = useMemo(() => selectedStock?.chartData?.fullHistorical || [], [selectedStock]);
+  // Performance monitoring
+  useLifecyclePerformance('PricePerformanceChart');
+  useRenderPerformance('PricePerformanceChart');
+  const perfContext = usePerformanceContext('PricePerformanceChart');
+
+  // Memoized chart data with performance tracking
+  const chartData = useMeasuredMemo(
+    'chartData',
+    () => selectedStock?.chartData?.[chartPeriod] || [],
+    [selectedStock, chartPeriod]
+  );
+
+  const fullHistoricalData = useMeasuredMemo(
+    'fullHistoricalData',
+    () => selectedStock?.chartData?.fullHistorical || [],
+    [selectedStock]
+  );
   const [dataOffset, setDataOffset] = useState(0); // Offset in days from most recent
   const [colorMode, setColorMode] = useState('default'); // 'default', 'rvi', 'vspy', 'sma', 'volumeBar', 'channel', or 'trend'
   const [spyData, setSpyData] = useState([]); // SPY historical data for VSPY calculation
@@ -1470,7 +1495,10 @@ export function PricePerformanceChart({
 
     // Apply RVI calculation if in RVI color mode
     if (colorMode === 'rvi') {
-      return calculateRVI(slicedData, chartPeriod);
+      const end = perfContext.startMeasurement('calculateRVI');
+      const result = calculateRVI(slicedData, chartPeriod);
+      end();
+      return result;
     }
 
     // Apply VSPY calculation if in VSPY color mode
@@ -1493,7 +1521,9 @@ export function PricePerformanceChart({
           price: d.price,
           volume: d.volume || 0
         }));
+        const end = perfContext.startMeasurement('calculateVSPY');
         const dataWithVSPY = calculateVSPY(unformattedSlicedData, chartPeriod, spySlicedData);
+        end();
 
         // Now format the dates
         return dataWithVSPY.map(d => ({
@@ -1505,25 +1535,34 @@ export function PricePerformanceChart({
 
     // Apply SMA calculation if in SMA mode
     if (colorMode === 'sma') {
-      return calculateSMA(slicedData, smaPeriod);
+      const end = perfContext.startMeasurement('calculateSMA');
+      const result = calculateSMA(slicedData, smaPeriod);
+      end();
+      return result;
     }
 
     // Apply Standard Deviation Channel calculation if in channel mode
     if (colorMode === 'channel') {
+      const endChannel = perfContext.startMeasurement('calculateStdDevChannel');
       const dataWithChannel = calculateStdDevChannel(
         slicedData,
         channelLookback,
         channelStdDevMultiplier,
         channelSource
       );
+      endChannel();
 
       // Calculate volume profile
+      const endVolume = perfContext.startMeasurement('calculateVolumeProfile');
       const volumeProfile = calculateVolumeProfile(slicedData, channelVolumeBins);
+      endVolume();
 
       // Apply confluence analysis
+      const endConfluence = perfContext.startMeasurement('analyzeChannelConfluence');
       const dataWithConfluence = volumeProfile
         ? analyzeChannelConfluence(dataWithChannel, volumeProfile, channelProximityThreshold)
         : dataWithChannel;
+      endConfluence();
 
       // Attach volume profile metadata to the data for use in rendering
       if (dataWithConfluence.length > 0) {
@@ -1545,6 +1584,7 @@ export function PricePerformanceChart({
   const runSimulation = async () => {
     if (isSimulating) return; // Prevent multiple simultaneous simulations
 
+    const simEnd = perfContext.startMeasurement('runSimulation');
     setIsSimulating(true);
     setSimulationResults([]);
     setMaxSmaGain({ gain: 0, period: 20, percentage: 0 }); // Reset max gain
@@ -1594,6 +1634,7 @@ export function PricePerformanceChart({
 
     setSimulationResults(results);
     setIsSimulating(false);
+    simEnd();
 
     // Set the slider to the best result
     if (bestResult.period) {
