@@ -1890,6 +1890,22 @@ export function PricePerformanceChart({
                   <span className="text-[10px] text-red-400 font-semibold ml-1">(clamped to {getCurrentDataSlice().length})</span>
                 )}
               </div>
+              <div className="flex items-center gap-1" title="End offset from last data point">
+                <label className="text-[11px] text-gray-300 font-medium">EndAt: {trendChannelEndAt}</label>
+                <input
+                  type="range"
+                  min="0"
+                  max={Math.floor(getCurrentDataSlice().length / 10)}
+                  step={Math.max(1, Math.round(getCurrentDataSlice().length / 1000))}
+                  value={trendChannelEndAt}
+                  onChange={(e)=> {
+                    const v = parseInt(e.target.value);
+                    setTrendChannelEndAt(v);
+                    setTrendChannelInterceptShift(0);
+                  }}
+                  className="w-32 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500"
+                />
+              </div>
               <div className="flex items-center gap-1" title="Std Dev Multiplier (Delta)">
                 <label className="text-xs text-gray-300 font-medium">Δσ: {trendChannelStdMultiplier.toFixed(1)}</label>
                 <input
