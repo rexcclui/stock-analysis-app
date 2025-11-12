@@ -4,44 +4,83 @@ import React, { useMemo, useState } from 'react';
 import { analyzeLeadLag } from '@/app/utils/leadLagAnalysis';
 
 /**
- * Get color for Beta value based on ranges
+ * Interpolate between two RGB colors
+ */
+const interpolateColor = (color1, color2, factor) => {
+  const c1 = parseInt(color1.slice(1), 16);
+  const c2 = parseInt(color2.slice(1), 16);
+
+  const r1 = (c1 >> 16) & 0xff;
+  const g1 = (c1 >> 8) & 0xff;
+  const b1 = c1 & 0xff;
+
+  const r2 = (c2 >> 16) & 0xff;
+  const g2 = (c2 >> 8) & 0xff;
+  const b2 = c2 & 0xff;
+
+  const r = Math.round(r1 + factor * (r2 - r1));
+  const g = Math.round(g1 + factor * (g2 - g1));
+  const b = Math.round(b1 + factor * (b2 - b1));
+
+  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
+};
+
+/**
+ * Get color for Beta value based on absolute value
+ * Positive: light green to deep green
+ * Negative: light red to deep red
  */
 const getBetaColor = (beta) => {
   if (beta === 'N/A') return '#9ca3af'; // gray
   const value = parseFloat(beta);
+  const absValue = Math.abs(value);
 
-  if (value > 1.5) return '#8b5cf6'; // purple - very high sensitivity
-  if (value > 1.2) return '#a78bfa'; // light purple
-  if (value > 0.8) return '#10b981'; // green - moderate positive
-  if (value > 0.5) return '#34d399'; // light green
-  if (value > 0) return '#6ee7b7'; // very light green
-  if (value > -0.5) return '#fbbf24'; // yellow - small negative
-  if (value > -1) return '#f59e0b'; // orange
-  return '#ef4444'; // red - strong inverse
+  // Very weak values close to zero
+  if (absValue < 0.1) return '#d1d5db'; // light gray
+
+  if (value > 0) {
+    // Positive: light green to deep green
+    // Range: 0 to 2.0 (cap at 2.0 for color scaling)
+    const lightGreen = '#d1fae5'; // very light green
+    const deepGreen = '#065f46';  // very deep green
+    const factor = Math.min(absValue / 2.0, 1.0);
+    return interpolateColor(lightGreen, deepGreen, factor);
+  } else {
+    // Negative: light red to deep red
+    // Range: 0 to -2.0 (cap at -2.0 for color scaling)
+    const lightRed = '#fee2e2'; // very light red
+    const deepRed = '#7f1d1d';  // very deep red
+    const factor = Math.min(absValue / 2.0, 1.0);
+    return interpolateColor(lightRed, deepRed, factor);
+  }
 };
 
 /**
- * Get color for Correlation value based on strength
+ * Get color for Correlation value based on absolute value
+ * Positive: light green to deep green
+ * Negative: light red to deep red
  */
 const getCorrelationColor = (correlation) => {
   if (correlation === 'N/A') return '#9ca3af'; // gray
   const value = parseFloat(correlation);
   const absValue = Math.abs(value);
 
-  // Strong correlation
-  if (absValue >= 0.7) {
-    return value > 0 ? '#10b981' : '#ef4444'; // Strong green/red
+  // Very weak correlation close to zero
+  if (absValue < 0.1) return '#d1d5db'; // light gray
+
+  if (value > 0) {
+    // Positive: light green to deep green
+    // Range: 0 to 1.0
+    const lightGreen = '#d1fae5'; // very light green
+    const deepGreen = '#065f46';  // very deep green
+    return interpolateColor(lightGreen, deepGreen, absValue);
+  } else {
+    // Negative: light red to deep red
+    // Range: 0 to -1.0
+    const lightRed = '#fee2e2'; // very light red
+    const deepRed = '#7f1d1d';  // very deep red
+    return interpolateColor(lightRed, deepRed, absValue);
   }
-  // Moderate correlation
-  if (absValue >= 0.5) {
-    return value > 0 ? '#34d399' : '#f87171'; // Moderate green/red
-  }
-  // Weak correlation
-  if (absValue >= 0.3) {
-    return value > 0 ? '#6ee7b7' : '#fca5a5'; // Weak green/red
-  }
-  // Very weak
-  return '#9ca3af'; // gray
 };
 
 /**
