@@ -148,6 +148,24 @@ export function PricePerformanceChart({
   const [zoomDomain, setZoomDomain] = useState({ start: 0, end: 100 });
   const zoomDomainRef = useRef({ start: 0, end: 100 });
   const chartContainerRef = useRef(null);
+  // Crosshair state
+  const [crosshair, setCrosshair] = useState({ x: null, y: null, dataX: null, dataY: null });
+  // Recharts crosshair positioning using internal event payload
+  const handleChartHover = useCallback((state) => {
+    if (!state || state.isTooltipActive === false || !state.activePayload || state.activePayload.length === 0) {
+      setCrosshair({ x: null, y: null, dataX: null, dataY: null });
+      return;
+    }
+    const { chartX, chartY, activeLabel, activePayload } = state;
+    // Determine y value (price in single mode, percentage in compare mode)
+    let value = null;
+    if (chartCompareStocks.length === 0) {
+      value = activePayload[0]?.payload?.price ?? null;
+    } else {
+      value = activePayload[0]?.value ?? null; // percentage series value
+    }
+    setCrosshair({ x: chartX, y: chartY, dataX: activeLabel || null, dataY: value });
+  }, [chartCompareStocks.length]);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, startOffset: 0 });
 
@@ -1730,7 +1748,7 @@ export function PricePerformanceChart({
 
   const handleMouseMove = useCallback((e) => {
     if (!dragStartRef.current?.isDragging) {
-      return;
+      return; // hover handled by handleChartHover
     }
 
     e.preventDefault();
@@ -1771,7 +1789,13 @@ export function PricePerformanceChart({
       dragStartRef.current.isDragging = false;
     }
     setIsDragging(false);
+    // Keep crosshair after drag end (do not clear)
   }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setCrosshair({ x: null, y: null, dataX: null, dataY: null });
+    handleMouseUp();
+  }, [handleMouseUp]);
 
   // Attach wheel and mouse event listeners
   useEffect(() => {
@@ -2433,7 +2457,7 @@ export function PricePerformanceChart({
             msUserSelect: 'none',
             position: 'relative'
           }}
-          onMouseLeave={handleMouseUp}
+          onMouseLeave={handleMouseLeave}
         >
           {/* SPY Data Loading Overlay */}
           {colorMode === 'vspy' && spyLoading && (
@@ -2475,7 +2499,8 @@ export function PricePerformanceChart({
               `}</style>
             </div>
           )}
-          <ResponsiveContainer width="100%" height={400} style={{ margin: 0, padding: 0 }}>
+          {/* Increased chart height by 25%: 400 -> 500 */}
+          <ResponsiveContainer width="100%" height={500} style={{ margin: 0, padding: 0 }}>
             {(() => {
               // Get current data slice based on offset
               const currentData = getCurrentDataSlice();
@@ -2572,7 +2597,7 @@ export function PricePerformanceChart({
                   data={multiData}
                   margin={{ top: 20, right: 30, left: 10, bottom: 20 }}
                   onMouseDown={handleMouseDown}
-                  onMouseMove={handleMouseMove}
+                  onMouseMove={handleChartHover}
                   onMouseUp={handleMouseUp}
                 >
                   <CartesianGrid stroke="#1F2937" strokeDasharray="3 3" />
@@ -3064,6 +3089,54 @@ export function PricePerformanceChart({
             );
           })()}
         </ResponsiveContainer>
+        {/* Crosshair overlay */}
+        {crosshair.x !== null && crosshair.y !== null && (
+          <div style={{ position: 'absolute', inset: 0, pointerEvents: 'none' }}>
+            {/* Vertical line */}
+            <div style={{
+              position: 'absolute',
+              left: crosshair.x,
+              top: 0,
+              bottom: 0,
+              width: '1px',
+              background: 'rgba(255,255,255,0.35)',
+              transform: 'translateX(-0.5px)'
+            }} />
+            {/* Horizontal line */}
+            <div style={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              top: crosshair.y,
+              height: '1px',
+              background: 'rgba(255,255,255,0.35)',
+              transform: 'translateY(-0.5px)'
+            }} />
+            {/* Tooltip */}
+            <div style={{
+              position: 'absolute',
+              left: Math.min(Math.max(0, crosshair.x + 12), (chartContainerRef.current?.offsetWidth || 0) - 160),
+              top: Math.min(Math.max(0, crosshair.y + 12), (chartContainerRef.current?.offsetHeight || 0) - 60),
+              background: 'rgba(17,24,39,0.85)',
+              color: '#F3F4F6',
+              padding: '6px 8px',
+              fontSize: '11px',
+              borderRadius: '6px',
+              border: '1px solid #374151',
+              boxShadow: '0 4px 12px rgba(0,0,0,0.4)',
+              pointerEvents: 'none',
+              minWidth: '140px'
+            }}>
+              <div style={{ fontWeight: 600, color: '#93C5FD' }}>{crosshair.dataX || '—'}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '2px' }}>
+                <span style={{ color: '#9CA3AF' }}>{chartCompareStocks.length === 0 ? 'Price:' : 'Value:'}</span>
+                <span style={{ fontWeight: 600 }}>
+                  {crosshair.dataY !== null ? (chartCompareStocks.length === 0 ? `$${Number(crosshair.dataY).toFixed(2)}` : `${Number(crosshair.dataY).toFixed(2)}%`) : '—'}
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
         </div>
       </div>
 

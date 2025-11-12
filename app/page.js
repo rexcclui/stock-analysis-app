@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, Profiler } from 'react';
 // Chart now extracted to PricePerformanceChart component
 import { Search, BarChart3, RotateCcw } from 'lucide-react';
 import { ComparisonSection } from './components/Comparison/ComparisonSection';
@@ -14,6 +14,8 @@ import { LoadingState } from './components/LoadingState';
 import { Tabs, TabPanel } from './components/Tabs';
 import { AINewsSummary } from './components/AINewsSummary';
 import { fetchWithCache, fetchPostWithCache, CACHE_DURATIONS, clearAllClientCache } from '../lib/clientCache';
+import { mark, measureMarks, startMeasure, configurePerformanceLogger, LOG_LEVEL } from './utils/performanceLogger';
+import PerfProfiler from './components/PerfProfiler';
 
 // Helper function to fetch with timeout
 const fetchWithTimeout = (url, timeout = 10000) => {
@@ -150,6 +152,8 @@ const fetchCompleteStockData = async (symbol, apiCounts = null, forceReload = fa
 
 export default function StockAnalysisDashboard() {
   const [searchInput, setSearchInput] = useState('');
+  // Unique identifier for current search cycle (timestamp + stock code)
+  const [searchCycleId, setSearchCycleId] = useState(null);
   const [selectedStock, setSelectedStock] = useState(null);
   const [chartPeriod, setChartPeriod] = useState('1M');
   const [comparisonStocks, setComparisonStocks] = useState([]);
@@ -262,6 +266,8 @@ export default function StockAnalysisDashboard() {
 
   React.useEffect(() => {
     setIsClient(true);
+    // Ensure performance logger enabled in development (can be toggled later)
+    configurePerformanceLogger({ enabled: true, logLevel: LOG_LEVEL.INFO });
     // Load searchHistory from localStorage
     const saved = localStorage.getItem('stockSearchHistory');
     if (saved) {
@@ -524,6 +530,11 @@ export default function StockAnalysisDashboard() {
     setLoading(true);
     const stockCode = (overrideCode || searchInput).toUpperCase();
     if (!stockCode) { setLoading(false); return; }
+    // Start cycle id and performance marks
+    const cycleId = `${Date.now()}-${stockCode}`;
+    setSearchCycleId(cycleId);
+    mark('search:start');
+    const endFetchMeasure = startMeasure('Search.Fetch.All');
 
     // Clear previous data immediately to avoid confusion
     setSelectedStock(null);
@@ -543,7 +554,8 @@ export default function StockAnalysisDashboard() {
     const apiCounts = { stock: 0, sentiment: 0, news: 0, competitors: 0 };
     
     try {
-      const stockData = await fetchCompleteStockData(stockCode, apiCounts);
+  const stockData = await fetchCompleteStockData(stockCode, apiCounts);
+  mark('search:primaryDataReady');
       
       if (!stockData) {
         alert('Stock not found or API error. Please check your API keys in .env.local');
@@ -551,7 +563,8 @@ export default function StockAnalysisDashboard() {
         return;
       }
       
-      setSelectedStock(stockData);
+  setSelectedStock(stockData);
+  mark('search:selectedStockSet');
       setNews(stockData.news);
       setGoogleNews(stockData.googleNews);
       setYahooNews(stockData.yahooNews);
@@ -562,7 +575,8 @@ export default function StockAnalysisDashboard() {
       // Always fetch SPY and QQQ for comparison (unless the selected stock is SPY or QQQ)
       const benchmarkCodes = ['SPY', 'QQQ'].filter(code => code !== stockCode);
       const benchmarkPromises = benchmarkCodes.map(code => fetchCompleteStockData(code, apiCounts, false, true));
-      const benchmarkData = await Promise.all(benchmarkPromises);
+  const benchmarkData = await Promise.all(benchmarkPromises);
+  mark('search:benchmarksReady');
       const validBenchmarks = benchmarkData.filter(b => b !== null);
 
       // Filter out SPY and QQQ from related stocks to avoid duplicates
@@ -573,7 +587,8 @@ export default function StockAnalysisDashboard() {
             stock ? { ...stock, relationshipType: item.relationshipType } : null
           )
         );
-      const relatedData = await Promise.all(relatedPromises);
+  const relatedData = await Promise.all(relatedPromises);
+  mark('search:relatedReady');
       const validRelated = relatedData.filter(c => c !== null);
 
       const saved = savedComparisons[stockCode] || [];
@@ -581,7 +596,8 @@ export default function StockAnalysisDashboard() {
       const savedPromises = saved
         .filter(code => code !== 'SPY' && code !== 'QQQ')
         .map(code => fetchCompleteStockData(code, apiCounts, false, true));
-      const savedData = await Promise.all(savedPromises);
+  const savedData = await Promise.all(savedPromises);
+  mark('search:savedReady');
       const validSaved = savedData.filter(s => s !== null);
 
       // SPY and QQQ first, then related stocks and saved stocks
@@ -593,7 +609,8 @@ export default function StockAnalysisDashboard() {
         }
         return acc;
       }, []);
-      setComparisonStocks(uniqueStocks);
+  setComparisonStocks(uniqueStocks);
+  mark('search:comparisonStocksSet');
 
       // Add to detailed history table
       addSearchHistoryStock({
@@ -624,6 +641,9 @@ export default function StockAnalysisDashboard() {
       alert('Error fetching stock data. Please check your API keys and try again.');
     }
     
+    endFetchMeasure();
+    mark('search:fetchComplete');
+    measureMarks('search.fetchDuration', 'search:start', 'search:fetchComplete');
     setLoading(false);
   };
 
@@ -914,7 +934,9 @@ export default function StockAnalysisDashboard() {
               {loading && (
                 <LoadingState message="Fetching latest stock data..." className="mb-6" />
               )}
-              <StockResultCard stock={selectedStock} loading={loading} />
+              <PerfProfiler id="StockResultCard" cycleId={searchCycleId}>
+                <StockResultCard stock={selectedStock} loading={loading} />
+              </PerfProfiler>
 
               <Tabs
                 activeTab={activeTab}
@@ -948,69 +970,83 @@ export default function StockAnalysisDashboard() {
                     }}
                   >
                     {showPriceChart && (
-                      <PricePerformanceChart
-                        selectedStock={selectedStock}
-                        chartPeriod={chartPeriod}
-                        setChartPeriod={setChartPeriod}
-                        periods={chartPeriods}
-                        chartCompareStocks={chartCompareStocks}
-                        addChartCompareStock={addChartCompareStock}
-                        removeChartCompareStock={removeChartCompareStock}
-                        chartCompareInput={chartCompareInput}
-                        setChartCompareInput={setChartCompareInput}
-                        buildNormalizedSeries={buildNormalizedSeries}
-                        buildMultiStockDataset={buildMultiStockDataset}
-                        loading={loading}
-                      />
+                      <PerfProfiler id="PricePerformanceChart" cycleId={searchCycleId}>
+                        <PricePerformanceChart
+                          selectedStock={selectedStock}
+                          chartPeriod={chartPeriod}
+                          setChartPeriod={setChartPeriod}
+                          periods={chartPeriods}
+                          chartCompareStocks={chartCompareStocks}
+                          addChartCompareStock={addChartCompareStock}
+                          removeChartCompareStock={removeChartCompareStock}
+                          chartCompareInput={chartCompareInput}
+                          setChartCompareInput={setChartCompareInput}
+                          buildNormalizedSeries={buildNormalizedSeries}
+                          buildMultiStockDataset={buildMultiStockDataset}
+                          loading={loading}
+                        />
+                      </PerfProfiler>
                     )}
                   </div>
                 </div>
-                <SentimentTimeSeriesChart
-                  sentimentTimeSeries={selectedStock.sentimentTimeSeries}
-                  loading={loading}
-                />
-                <ComparisonSection
-                  selectedStock={selectedStock}
-                  comparisonStocks={comparisonStocks}
-                  comparisonType={comparisonType}
-                  relationshipTypeFilter={relationshipTypeFilter}
-                  onRelationshipTypeFilterChange={setRelationshipTypeFilter}
-                  comparisonRowSize={comparisonRowSize}
-                  onComparisonRowSizeChange={setComparisonRowSize}
-                  manualStock={manualStock}
-                  onManualStockChange={setManualStock}
-                  onAddComparison={addManualComparison}
-                  onRemoveComparison={removeComparison}
-                  loading={loading}
-                  viewMode={viewMode}
-                  onViewModeChange={setViewMode}
-                  heatmapColorBy={heatmapColorBy}
-                  onHeatmapColorByChange={setHeatmapColorBy}
-                  heatmapSizeBy={heatmapSizeBy}
-                  onHeatmapSizeByChange={setHeatmapSizeBy}
-                  periods={comparisonPeriods}
-                  searchHistoryStocks={searchHistoryStocks}
-                  searchHistoryFullStocks={searchHistoryFullStocks}
-                  onSearchHistoryCodeClick={(code)=> { handleSearch(code); }}
-                  onRemoveSearchHistoryStock={removeSearchHistoryStock}
-                  onReloadSearchHistory={reloadRecentSearches}
-                  onAddToChart={handleAddToChart}
-                  chartCompareStocks={chartCompareStocks}
-                />
-                <SentimentSection sentiment={selectedStock.sentiment} loading={loading} />
-                <AINewsSummary
-                  analysis={aiNewsAnalysis}
-                  loading={aiAnalysisLoading}
-                  error={aiAnalysisError}
-                  onAnalyze={handleAnalyzeNews}
-                  hasNews={news.length > 0 || googleNews.length > 0 || yahooNews.length > 0 || bloombergNews.length > 0}
-                  symbol={selectedStock.code}
-                />
-                <NewsSection newsApiNews={news} googleNews={googleNews} yahooNews={yahooNews} bloombergNews={bloombergNews} loading={loading} symbol={selectedStock.code} />
+                <PerfProfiler id="SentimentTimeSeriesChart" cycleId={searchCycleId}>
+                  <SentimentTimeSeriesChart
+                    sentimentTimeSeries={selectedStock.sentimentTimeSeries}
+                    loading={loading}
+                  />
+                </PerfProfiler>
+                <PerfProfiler id="ComparisonSection" cycleId={searchCycleId}>
+                  <ComparisonSection
+                    selectedStock={selectedStock}
+                    comparisonStocks={comparisonStocks}
+                    comparisonType={comparisonType}
+                    relationshipTypeFilter={relationshipTypeFilter}
+                    onRelationshipTypeFilterChange={setRelationshipTypeFilter}
+                    comparisonRowSize={comparisonRowSize}
+                    onComparisonRowSizeChange={setComparisonRowSize}
+                    manualStock={manualStock}
+                    onManualStockChange={setManualStock}
+                    onAddComparison={addManualComparison}
+                    onRemoveComparison={removeComparison}
+                    loading={loading}
+                    viewMode={viewMode}
+                    onViewModeChange={setViewMode}
+                    heatmapColorBy={heatmapColorBy}
+                    onHeatmapColorByChange={setHeatmapColorBy}
+                    heatmapSizeBy={heatmapSizeBy}
+                    onHeatmapSizeByChange={setHeatmapSizeBy}
+                    periods={comparisonPeriods}
+                    searchHistoryStocks={searchHistoryStocks}
+                    searchHistoryFullStocks={searchHistoryFullStocks}
+                    onSearchHistoryCodeClick={(code)=> { handleSearch(code); }}
+                    onRemoveSearchHistoryStock={removeSearchHistoryStock}
+                    onReloadSearchHistory={reloadRecentSearches}
+                    onAddToChart={handleAddToChart}
+                    chartCompareStocks={chartCompareStocks}
+                  />
+                </PerfProfiler>
+                <PerfProfiler id="SentimentSection" cycleId={searchCycleId}>
+                  <SentimentSection sentiment={selectedStock.sentiment} loading={loading} />
+                </PerfProfiler>
+                <PerfProfiler id="AINewsSummary" cycleId={searchCycleId}>
+                  <AINewsSummary
+                    analysis={aiNewsAnalysis}
+                    loading={aiAnalysisLoading}
+                    error={aiAnalysisError}
+                    onAnalyze={handleAnalyzeNews}
+                    hasNews={news.length > 0 || googleNews.length > 0 || yahooNews.length > 0 || bloombergNews.length > 0}
+                    symbol={selectedStock.code}
+                  />
+                </PerfProfiler>
+                <PerfProfiler id="NewsSection" cycleId={searchCycleId}>
+                  <NewsSection newsApiNews={news} googleNews={googleNews} yahooNews={yahooNews} bloombergNews={bloombergNews} loading={loading} symbol={selectedStock.code} />
+                </PerfProfiler>
               </TabPanel>
 
               <TabPanel activeTab={activeTab} tabId="historical-data-analysis">
-                <HistoricalPerformanceCheck stockCode={selectedStock.code} />
+                <PerfProfiler id="HistoricalPerformanceCheck" cycleId={searchCycleId}>
+                  <HistoricalPerformanceCheck stockCode={selectedStock.code} />
+                </PerfProfiler>
               </TabPanel>
           </> // closes fragment for selectedStock
         )}
