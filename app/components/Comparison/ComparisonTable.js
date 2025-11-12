@@ -346,6 +346,7 @@ export function ComparisonTable({
             comparisonStocks={filteredComparisonStocks}
             comparisonRowSize={comparisonRowSize}
             relationshipTypeFilter={relationshipTypeFilter}
+            onStockCodeClick={onStockCodeClick}
           />
         </div>
       ) : null}

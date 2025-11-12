@@ -4,6 +4,47 @@ import React, { useMemo, useState } from 'react';
 import { analyzeLeadLag } from '@/app/utils/leadLagAnalysis';
 
 /**
+ * Get color for Beta value based on ranges
+ */
+const getBetaColor = (beta) => {
+  if (beta === 'N/A') return '#9ca3af'; // gray
+  const value = parseFloat(beta);
+
+  if (value > 1.5) return '#8b5cf6'; // purple - very high sensitivity
+  if (value > 1.2) return '#a78bfa'; // light purple
+  if (value > 0.8) return '#10b981'; // green - moderate positive
+  if (value > 0.5) return '#34d399'; // light green
+  if (value > 0) return '#6ee7b7'; // very light green
+  if (value > -0.5) return '#fbbf24'; // yellow - small negative
+  if (value > -1) return '#f59e0b'; // orange
+  return '#ef4444'; // red - strong inverse
+};
+
+/**
+ * Get color for Correlation value based on strength
+ */
+const getCorrelationColor = (correlation) => {
+  if (correlation === 'N/A') return '#9ca3af'; // gray
+  const value = parseFloat(correlation);
+  const absValue = Math.abs(value);
+
+  // Strong correlation
+  if (absValue >= 0.7) {
+    return value > 0 ? '#10b981' : '#ef4444'; // Strong green/red
+  }
+  // Moderate correlation
+  if (absValue >= 0.5) {
+    return value > 0 ? '#34d399' : '#f87171'; // Moderate green/red
+  }
+  // Weak correlation
+  if (absValue >= 0.3) {
+    return value > 0 ? '#6ee7b7' : '#fca5a5'; // Weak green/red
+  }
+  // Very weak
+  return '#9ca3af'; // gray
+};
+
+/**
  * LeadLagView Component
  * Displays lead/lag analysis with beta and correlation metrics
  */
@@ -11,7 +52,8 @@ export default function LeadLagView({
   selectedStock,
   comparisonStocks,
   comparisonRowSize,
-  relationshipTypeFilter
+  relationshipTypeFilter,
+  onStockCodeClick
 }) {
   const [sortBy, setSortBy] = useState('correlation'); // correlation, beta, lag, code
   const [sortDirection, setSortDirection] = useState('desc'); // asc, desc
@@ -227,19 +269,26 @@ export default function LeadLagView({
                     key={item.code}
                     className={`hover:bg-gray-50 ${isBenchmark ? 'bg-blue-50' : ''}`}
                   >
-                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">
-                      {item.code}
+                    <td className="px-6 py-4 whitespace-nowrap text-sm font-medium">
+                      <button
+                        onClick={() => onStockCodeClick && onStockCodeClick(item.code)}
+                        className="text-blue-600 hover:text-blue-800 hover:underline cursor-pointer font-semibold transition-colors"
+                        title={`Search for ${item.code}`}
+                      >
+                        {item.code}
+                      </button>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-600">
                       {item.name}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm">
-                      <span className={`font-medium ${
-                        item.beta === 'N/A' ? 'text-gray-400' :
-                        parseFloat(item.beta) > 1 ? 'text-purple-600' :
-                        parseFloat(item.beta) < 0 ? 'text-orange-600' :
-                        'text-gray-900'
-                      }`}>
+                      <span
+                        className="font-semibold px-2 py-1 rounded"
+                        style={{
+                          color: getBetaColor(item.beta),
+                          backgroundColor: getBetaColor(item.beta) + '20'
+                        }}
+                      >
                         {item.beta}
                       </span>
                     </td>
@@ -247,14 +296,15 @@ export default function LeadLagView({
                       <div className="flex items-center gap-2">
                         <div
                           className="w-3 h-3 rounded-full"
-                          style={{ backgroundColor: item.color }}
+                          style={{ backgroundColor: getCorrelationColor(item.correlation) }}
                         />
-                        <span className={`font-medium ${
-                          item.correlation === 'N/A' ? 'text-gray-400' :
-                          absCorr >= 0.7 ? 'font-bold' :
-                          absCorr >= 0.5 ? 'font-semibold' :
-                          ''
-                        }`}>
+                        <span
+                          className="font-semibold px-2 py-1 rounded"
+                          style={{
+                            color: getCorrelationColor(item.correlation),
+                            backgroundColor: getCorrelationColor(item.correlation) + '20'
+                          }}
+                        >
                           {item.correlation}
                         </span>
                       </div>
@@ -302,43 +352,52 @@ export default function LeadLagView({
                   isBenchmark ? 'border-blue-400' : 'border-gray-200'
                 }`}
                 style={{
-                  backgroundColor: item.color + '20', // Add transparency
-                  borderColor: item.color
+                  backgroundColor: getCorrelationColor(item.correlation) + '15',
+                  borderColor: getCorrelationColor(item.correlation)
                 }}
               >
                 <div className="flex justify-between items-start mb-2">
                   <div>
-                    <div className="text-lg font-bold text-gray-900">{item.code}</div>
+                    <button
+                      onClick={() => onStockCodeClick && onStockCodeClick(item.code)}
+                      className="text-lg font-bold text-blue-600 hover:text-blue-800 hover:underline cursor-pointer transition-colors"
+                      title={`Search for ${item.code}`}
+                    >
+                      {item.code}
+                    </button>
                     <div className="text-xs text-gray-600 truncate max-w-[150px]">
                       {item.name}
                     </div>
                   </div>
                   <div
                     className="w-4 h-4 rounded-full"
-                    style={{ backgroundColor: item.color }}
+                    style={{ backgroundColor: getCorrelationColor(item.correlation) }}
                   />
                 </div>
 
                 <div className="space-y-2 text-sm">
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="text-gray-600">Beta:</span>
-                    <span className={`font-semibold ${
-                      item.beta === 'N/A' ? 'text-gray-400' :
-                      betaValue > 1 ? 'text-purple-600' :
-                      betaValue < 0 ? 'text-orange-600' :
-                      'text-gray-900'
-                    }`}>
+                    <span
+                      className="font-semibold px-2 py-0.5 rounded text-xs"
+                      style={{
+                        color: getBetaColor(item.beta),
+                        backgroundColor: getBetaColor(item.beta) + '25'
+                      }}
+                    >
                       {item.beta}
                     </span>
                   </div>
 
-                  <div className="flex justify-between">
+                  <div className="flex justify-between items-center">
                     <span className="text-gray-600">Corr:</span>
-                    <span className={`font-semibold ${
-                      item.correlation === 'N/A' ? 'text-gray-400' :
-                      absCorr >= 0.7 ? 'font-bold' :
-                      ''
-                    }`}>
+                    <span
+                      className="font-semibold px-2 py-0.5 rounded text-xs"
+                      style={{
+                        color: getCorrelationColor(item.correlation),
+                        backgroundColor: getCorrelationColor(item.correlation) + '25'
+                      }}
+                    >
                       {item.correlation}
                     </span>
                   </div>
