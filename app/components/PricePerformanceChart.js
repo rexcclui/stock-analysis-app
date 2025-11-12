@@ -1060,11 +1060,62 @@ export function PricePerformanceChart({
     }
   };
 
+  // Calculate volume distribution across channel zones
+  // Returns an object mapping zone index to volume percentage
+  const calculateZoneVolumeDistribution = (data, channelType = 'channel') => {
+    if (!data || data.length === 0) return {};
+
+    const zoneVolumes = {}; // { zoneIndex: totalVolume }
+    let totalVolume = 0;
+
+    // For each data point, determine which zone(s) the price falls into and accumulate volume
+    data.forEach(pt => {
+      const price = pt.price || pt.close;
+      const volume = pt.volume || 0;
+
+      if (!price || !volume) return;
+
+      // Determine zone boundaries based on channel type
+      const lowerBound = channelType === 'trend' ? pt.trendLower : pt.lowerBound;
+      const upperBound = channelType === 'trend' ? pt.trendUpper : pt.upperBound;
+
+      if (lowerBound == null || upperBound == null) return;
+
+      // Calculate which zone this price falls into
+      const channelRange = upperBound - lowerBound;
+      if (channelRange <= 0) return;
+
+      const pricePosition = (price - lowerBound) / channelRange;
+
+      // Determine zone index (0 to CHANNEL_BANDS-1)
+      let zoneIndex = Math.floor(pricePosition * CHANNEL_BANDS);
+      zoneIndex = Math.max(0, Math.min(CHANNEL_BANDS - 1, zoneIndex));
+
+      // Accumulate volume for this zone
+      if (!zoneVolumes[zoneIndex]) {
+        zoneVolumes[zoneIndex] = 0;
+      }
+      zoneVolumes[zoneIndex] += volume;
+      totalVolume += volume;
+    });
+
+    // Convert to percentages
+    const zoneVolumePercentages = {};
+    Object.keys(zoneVolumes).forEach(zoneIndex => {
+      zoneVolumePercentages[zoneIndex] = totalVolume > 0
+        ? (zoneVolumes[zoneIndex] / totalVolume) * 100
+        : 0;
+    });
+
+    return zoneVolumePercentages;
+  };
+
   // Color ramp helper for channel & trend partition bands.
   // ratio: 0 (bottom/support) → 1 (top/resistance)
   // Gradient path: emerald (#10B981) → teal (#14B8A6) → blue (#3B82F6) → purple (#8B5CF6) → pink (#EC4899) → red (#EF4444)
   // We interpolate across 5 segments between 6 anchor colors.
-  const getChannelBandColor = (ratio, pt = null, next = null, zoneLower = null, zoneUpper = null, avgVolume = null) => {
+  // volumePercentage: percentage of total volume in this zone (0-100)
+  const getChannelBandColor = (ratio, volumePercentage = 0) => {
     if (isNaN(ratio)) return 'rgba(255,255,255,0.05)';
     const r = Math.max(0, Math.min(1, ratio));
     const anchors = [
@@ -1086,47 +1137,16 @@ export function PricePerformanceChart({
     const bb = Math.round(a.b + (b.b - a.b) * t);
 
     // Base transparency
-    let alpha = 0.18 + 0.05 * r; // a bit more opaque toward resistance
+    let alpha = 0.15;
 
     // Volume-based color enhancement
-    // If price is within the zone and volume data is available, adjust alpha based on volume
-    if (pt && next && zoneLower !== null && zoneUpper !== null && avgVolume) {
-      const ptPrice = pt.price || pt.close;
-      const nextPrice = next.price || next.close;
-
-      // Check if either current or next price is within this zone
-      const ptInZone = ptPrice >= zoneLower && ptPrice <= zoneUpper;
-      const nextInZone = nextPrice >= zoneLower && nextPrice <= zoneUpper;
-
-      if (ptInZone || nextInZone) {
-        // Calculate volume intensity
-        // Average the volumes if both points are in zone, otherwise use the one that's in zone
-        let zoneVolume = 0;
-        let count = 0;
-
-        if (ptInZone && pt.volume) {
-          zoneVolume += pt.volume;
-          count++;
-        }
-        if (nextInZone && next.volume) {
-          zoneVolume += next.volume;
-          count++;
-        }
-
-        if (count > 0) {
-          zoneVolume = zoneVolume / count;
-
-          // Calculate volume intensity relative to average (0.5 to 2.5 range)
-          // Higher volume = higher intensity = deeper color (higher alpha)
-          const volumeRatio = avgVolume > 0 ? zoneVolume / avgVolume : 1;
-          const volumeIntensity = Math.max(0.5, Math.min(2.5, volumeRatio));
-
-          // Apply volume intensity to alpha
-          // Base alpha: 0.18-0.23, with volume: 0.09-0.575
-          alpha = alpha * volumeIntensity;
-          alpha = Math.max(0.08, Math.min(0.65, alpha)); // Clamp to reasonable range
-        }
-      }
+    // Higher volume percentage = deeper/more opaque color
+    if (volumePercentage > 0) {
+      // Scale alpha based on volume percentage
+      // Typical zone might have 100/6 ≈ 16.67% if evenly distributed
+      // We'll map 0-30% volume to 0.05-0.65 alpha range
+      const normalizedVolume = Math.min(volumePercentage / 30, 1); // Normalize to 0-1
+      alpha = 0.05 + (normalizedVolume * 0.60); // Range: 0.05 to 0.65
     }
 
     return `rgba(${rr}, ${gg}, ${bb}, ${alpha.toFixed(3)})`;
@@ -2661,8 +2681,8 @@ export function PricePerformanceChart({
                     <>
                       {/* Channel Partition Bands */}
                       {multiData.length > 1 && (() => {
-                        // Calculate average volume for normalization
-                        const avgVolume = multiData.reduce((sum, d) => sum + (d.volume || 0), 0) / multiData.length;
+                        // Calculate volume distribution across all zones
+                        const zoneVolumeDistribution = calculateZoneVolumeDistribution(multiData, 'channel');
 
                         return multiData.map((pt, i) => {
                           const next = multiData[i + 1];
@@ -2681,6 +2701,7 @@ export function PricePerformanceChart({
                             const zoneLower = Math.min(ptLower, nextLower);
                             const zoneUpper = Math.max(ptUpper, nextUpper);
                             const ratioMid = (b + 0.5) / CHANNEL_BANDS; // mid-point for color
+                            const volumePercent = zoneVolumeDistribution[b] || 0;
                             zones.push(
                               <ReferenceArea
                                 key={`channel-band-${i}-${b}`}
@@ -2688,7 +2709,7 @@ export function PricePerformanceChart({
                                 x2={next.date}
                                 y1={zoneLower}
                                 y2={zoneUpper}
-                                fill={getChannelBandColor(ratioMid, pt, next, zoneLower, zoneUpper, avgVolume)}
+                                fill={getChannelBandColor(ratioMid, volumePercent)}
                                 strokeOpacity={0}
                                 ifOverflow="discard"
                               />
@@ -2745,8 +2766,8 @@ export function PricePerformanceChart({
                     <>
                       {/* Trend Channel Partition Bands */}
                       {multiData.length > 1 && (() => {
-                        // Calculate average volume for normalization
-                        const avgVolume = multiData.reduce((sum, d) => sum + (d.volume || 0), 0) / multiData.length;
+                        // Calculate volume distribution across all zones
+                        const zoneVolumeDistribution = calculateZoneVolumeDistribution(multiData, 'trend');
 
                         return multiData.map((pt, i) => {
                           const next = multiData[i + 1];
@@ -2764,6 +2785,7 @@ export function PricePerformanceChart({
                             const zoneLower = Math.min(ptLower, nextLower);
                             const zoneUpper = Math.max(ptUpper, nextUpper);
                             const ratioMid = (b + 0.5) / CHANNEL_BANDS;
+                            const volumePercent = zoneVolumeDistribution[b] || 0;
                             zones.push(
                               <ReferenceArea
                                 key={`trend-band-${i}-${b}`}
@@ -2771,7 +2793,7 @@ export function PricePerformanceChart({
                                 x2={next.date}
                                 y1={zoneLower}
                                 y2={zoneUpper}
-                                fill={getChannelBandColor(ratioMid, pt, next, zoneLower, zoneUpper, avgVolume)}
+                                fill={getChannelBandColor(ratioMid, volumePercent)}
                                 strokeOpacity={0}
                                 ifOverflow="discard"
                               />
