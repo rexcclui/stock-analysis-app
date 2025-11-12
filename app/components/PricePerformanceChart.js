@@ -1885,7 +1885,7 @@ export function PricePerformanceChart({
                     }}
                     title="Click to restore optimal settings (full range)"
                   >
-                    Optimal (Full): {channelSimulationResult.optimalLookback} / End:{channelSimulationResult.optimalEndAt} / Δ{channelSimulationResult.optimalDelta}
+                    Optimal (Full): {channelSimulationResult.optimalLookback} / End:{channelSimulationResult.optimalEndAt} / Δ{channelSimulationResult.optimalDelta.toFixed(1)}
                   </div>
                   {channelSimulationResult.recent && (
                     <div
@@ -1898,7 +1898,7 @@ export function PricePerformanceChart({
                       }}
                       title="Click to apply recent optimal settings"
                     >
-                      Optimal (Recent 25%): {channelSimulationResult.recent.optimalLookback} / End:{channelSimulationResult.recent.optimalEndAt} / Δ{channelSimulationResult.recent.optimalDelta}
+                      Optimal (Recent 25%): {channelSimulationResult.recent.optimalLookback} / End:{channelSimulationResult.recent.optimalEndAt} / Δ{channelSimulationResult.recent.optimalDelta.toFixed(1)}
                     </div>
                   )}
                 </div>
