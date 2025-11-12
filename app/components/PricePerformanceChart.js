@@ -1064,7 +1064,7 @@ export function PricePerformanceChart({
   // ratio: 0 (bottom/support) → 1 (top/resistance)
   // Gradient path: emerald (#10B981) → teal (#14B8A6) → blue (#3B82F6) → purple (#8B5CF6) → pink (#EC4899) → red (#EF4444)
   // We interpolate across 5 segments between 6 anchor colors.
-  const getChannelBandColor = (ratio) => {
+  const getChannelBandColor = (ratio, pt = null, next = null, zoneLower = null, zoneUpper = null, avgVolume = null) => {
     if (isNaN(ratio)) return 'rgba(255,255,255,0.05)';
     const r = Math.max(0, Math.min(1, ratio));
     const anchors = [
@@ -1084,8 +1084,51 @@ export function PricePerformanceChart({
     const rr = Math.round(a.r + (b.r - a.r) * t);
     const gg = Math.round(a.g + (b.g - a.g) * t);
     const bb = Math.round(a.b + (b.b - a.b) * t);
-    // Slight transparency so overlapping areas blend smoothly
-    const alpha = 0.18 + 0.05 * r; // a bit more opaque toward resistance
+
+    // Base transparency
+    let alpha = 0.18 + 0.05 * r; // a bit more opaque toward resistance
+
+    // Volume-based color enhancement
+    // If price is within the zone and volume data is available, adjust alpha based on volume
+    if (pt && next && zoneLower !== null && zoneUpper !== null && avgVolume) {
+      const ptPrice = pt.price || pt.close;
+      const nextPrice = next.price || next.close;
+
+      // Check if either current or next price is within this zone
+      const ptInZone = ptPrice >= zoneLower && ptPrice <= zoneUpper;
+      const nextInZone = nextPrice >= zoneLower && nextPrice <= zoneUpper;
+
+      if (ptInZone || nextInZone) {
+        // Calculate volume intensity
+        // Average the volumes if both points are in zone, otherwise use the one that's in zone
+        let zoneVolume = 0;
+        let count = 0;
+
+        if (ptInZone && pt.volume) {
+          zoneVolume += pt.volume;
+          count++;
+        }
+        if (nextInZone && next.volume) {
+          zoneVolume += next.volume;
+          count++;
+        }
+
+        if (count > 0) {
+          zoneVolume = zoneVolume / count;
+
+          // Calculate volume intensity relative to average (0.5 to 2.5 range)
+          // Higher volume = higher intensity = deeper color (higher alpha)
+          const volumeRatio = avgVolume > 0 ? zoneVolume / avgVolume : 1;
+          const volumeIntensity = Math.max(0.5, Math.min(2.5, volumeRatio));
+
+          // Apply volume intensity to alpha
+          // Base alpha: 0.18-0.23, with volume: 0.09-0.575
+          alpha = alpha * volumeIntensity;
+          alpha = Math.max(0.08, Math.min(0.65, alpha)); // Clamp to reasonable range
+        }
+      }
+    }
+
     return `rgba(${rr}, ${gg}, ${bb}, ${alpha.toFixed(3)})`;
   };
 
@@ -2617,38 +2660,43 @@ export function PricePerformanceChart({
                     // Channel Mode: Render price line + channel lines
                     <>
                       {/* Channel Partition Bands */}
-                      {multiData.length > 1 && multiData.map((pt, i) => {
-                        const next = multiData[i + 1];
-                        if (!next) return null;
-                        if (pt.lowerBound == null || pt.upperBound == null || next.lowerBound == null || next.upperBound == null) return null;
-                        // Render each band zone between consecutive band boundaries
-                        const zones = [];
-                        for (let b = 0; b < CHANNEL_BANDS; b++) {
-                          const lowerKey = b === 0 ? 'lowerBound' : `channelBand_${b}`;
-                          const upperKey = b === CHANNEL_BANDS - 1 ? 'upperBound' : `channelBand_${b + 1}`;
-                          const ptLower = pt[lowerKey];
-                          const ptUpper = pt[upperKey];
-                          const nextLower = next[lowerKey];
-                          const nextUpper = next[upperKey];
-                          if (ptLower == null || ptUpper == null || nextLower == null || nextUpper == null) continue;
-                          const zoneLower = Math.min(ptLower, nextLower);
-                          const zoneUpper = Math.max(ptUpper, nextUpper);
-                          const ratioMid = (b + 0.5) / CHANNEL_BANDS; // mid-point for color
-                          zones.push(
-                            <ReferenceArea
-                              key={`channel-band-${i}-${b}`}
-                              x1={pt.date}
-                              x2={next.date}
-                              y1={zoneLower}
-                              y2={zoneUpper}
-                              fill={getChannelBandColor(ratioMid)}
-                              strokeOpacity={0}
-                              ifOverflow="discard"
-                            />
-                          );
-                        }
-                        return zones;
-                      })}
+                      {multiData.length > 1 && (() => {
+                        // Calculate average volume for normalization
+                        const avgVolume = multiData.reduce((sum, d) => sum + (d.volume || 0), 0) / multiData.length;
+
+                        return multiData.map((pt, i) => {
+                          const next = multiData[i + 1];
+                          if (!next) return null;
+                          if (pt.lowerBound == null || pt.upperBound == null || next.lowerBound == null || next.upperBound == null) return null;
+                          // Render each band zone between consecutive band boundaries
+                          const zones = [];
+                          for (let b = 0; b < CHANNEL_BANDS; b++) {
+                            const lowerKey = b === 0 ? 'lowerBound' : `channelBand_${b}`;
+                            const upperKey = b === CHANNEL_BANDS - 1 ? 'upperBound' : `channelBand_${b + 1}`;
+                            const ptLower = pt[lowerKey];
+                            const ptUpper = pt[upperKey];
+                            const nextLower = next[lowerKey];
+                            const nextUpper = next[upperKey];
+                            if (ptLower == null || ptUpper == null || nextLower == null || nextUpper == null) continue;
+                            const zoneLower = Math.min(ptLower, nextLower);
+                            const zoneUpper = Math.max(ptUpper, nextUpper);
+                            const ratioMid = (b + 0.5) / CHANNEL_BANDS; // mid-point for color
+                            zones.push(
+                              <ReferenceArea
+                                key={`channel-band-${i}-${b}`}
+                                x1={pt.date}
+                                x2={next.date}
+                                y1={zoneLower}
+                                y2={zoneUpper}
+                                fill={getChannelBandColor(ratioMid, pt, next, zoneLower, zoneUpper, avgVolume)}
+                                strokeOpacity={0}
+                                ifOverflow="discard"
+                              />
+                            );
+                          }
+                          return zones;
+                        });
+                      })()}
                       <Line
                         type="monotone"
                         dataKey="price"
@@ -2696,37 +2744,42 @@ export function PricePerformanceChart({
                     // Trend Mode: Render price line + linear regression trend channel
                     <>
                       {/* Trend Channel Partition Bands */}
-                      {multiData.length > 1 && multiData.map((pt, i) => {
-                        const next = multiData[i + 1];
-                        if (!next) return null;
-                        if (pt.trendLower == null || pt.trendUpper == null || next.trendLower == null || next.trendUpper == null) return null;
-                        const zones = [];
-                        for (let b = 0; b < CHANNEL_BANDS; b++) {
-                          const lowerKey = b === 0 ? 'trendLower' : `trendBand_${b}`;
-                          const upperKey = b === CHANNEL_BANDS - 1 ? 'trendUpper' : `trendBand_${b + 1}`;
-                          const ptLower = pt[lowerKey];
-                          const ptUpper = pt[upperKey];
-                          const nextLower = next[lowerKey];
-                          const nextUpper = next[upperKey];
-                          if (ptLower == null || ptUpper == null || nextLower == null || nextUpper == null) continue;
-                          const zoneLower = Math.min(ptLower, nextLower);
-                          const zoneUpper = Math.max(ptUpper, nextUpper);
-                          const ratioMid = (b + 0.5) / CHANNEL_BANDS;
-                          zones.push(
-                            <ReferenceArea
-                              key={`trend-band-${i}-${b}`}
-                              x1={pt.date}
-                              x2={next.date}
-                              y1={zoneLower}
-                              y2={zoneUpper}
-                              fill={getChannelBandColor(ratioMid)}
-                              strokeOpacity={0}
-                              ifOverflow="discard"
-                            />
-                          );
-                        }
-                        return zones;
-                      })}
+                      {multiData.length > 1 && (() => {
+                        // Calculate average volume for normalization
+                        const avgVolume = multiData.reduce((sum, d) => sum + (d.volume || 0), 0) / multiData.length;
+
+                        return multiData.map((pt, i) => {
+                          const next = multiData[i + 1];
+                          if (!next) return null;
+                          if (pt.trendLower == null || pt.trendUpper == null || next.trendLower == null || next.trendUpper == null) return null;
+                          const zones = [];
+                          for (let b = 0; b < CHANNEL_BANDS; b++) {
+                            const lowerKey = b === 0 ? 'trendLower' : `trendBand_${b}`;
+                            const upperKey = b === CHANNEL_BANDS - 1 ? 'trendUpper' : `trendBand_${b + 1}`;
+                            const ptLower = pt[lowerKey];
+                            const ptUpper = pt[upperKey];
+                            const nextLower = next[lowerKey];
+                            const nextUpper = next[upperKey];
+                            if (ptLower == null || ptUpper == null || nextLower == null || nextUpper == null) continue;
+                            const zoneLower = Math.min(ptLower, nextLower);
+                            const zoneUpper = Math.max(ptUpper, nextUpper);
+                            const ratioMid = (b + 0.5) / CHANNEL_BANDS;
+                            zones.push(
+                              <ReferenceArea
+                                key={`trend-band-${i}-${b}`}
+                                x1={pt.date}
+                                x2={next.date}
+                                y1={zoneLower}
+                                y2={zoneUpper}
+                                fill={getChannelBandColor(ratioMid, pt, next, zoneLower, zoneUpper, avgVolume)}
+                                strokeOpacity={0}
+                                ifOverflow="discard"
+                              />
+                            );
+                          }
+                          return zones;
+                        });
+                      })()}
                       <Line
                         type="monotone"
                         dataKey="price"
