@@ -10,7 +10,8 @@
  * Number of colored zones/bands between channel bounds
  * @constant {number}
  */
-export const CHANNEL_BANDS = 6;
+// Updated to 10 bands (was 6) to support volume-quantile based channel zones
+export const CHANNEL_BANDS = 10;
 
 /**
  * Color mode options

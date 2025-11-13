@@ -327,7 +327,7 @@ export const buildConfigurableTrendChannel = (data, lookback, stdMult, options =
  * @param {number} channelBands - Number of channel bands
  * @returns {Array} Data with channel properties
  */
-export const calculateStdDevChannel = (data, period, stdDevMultiplier, priceSource = 'close', channelBands = 6) => {
+export const calculateStdDevChannel = (data, period, stdDevMultiplier, priceSource = 'close', channelBands = 10) => {
   if (!data || data.length < period) return data;
 
   return data.map((point, idx) => {
@@ -368,11 +368,61 @@ export const calculateStdDevChannel = (data, period, stdDevMultiplier, priceSour
     const upperBound = centerLine + (stdDev * stdDevMultiplier);
     const lowerBound = centerLine - (stdDev * stdDevMultiplier);
 
-    // Add partition band levels
+    // Add partition band levels using volume quantiles across windowData
+    // Goal: approximate equal volume per zone (deciles with channelBands=10).
     const extras = {};
-    for (let b = 1; b < channelBands; b++) {
-      const frac = b / channelBands;
-      extras[`channelBand_${b}`] = lowerBound + (upperBound - lowerBound) * frac;
+    try {
+      const volPoints = windowData
+        .map(p => ({ price: p.price ?? p.close ?? p.open, volume: p.volume || 0 }))
+        .filter(p => p.price != null && p.volume > 0);
+      if (volPoints.length >= channelBands) {
+        // Sort by price ascending
+        volPoints.sort((a,b)=> a.price - b.price);
+        const totalVol = volPoints.reduce((sum,v)=> sum + v.volume, 0);
+        if (totalVol > 0) {
+          const targets = Array.from({length: channelBands - 1}, (_,i)=> (i+1)/channelBands); // e.g. 0.1 .. 0.9
+          const quantilePrices = [];
+          let cum = 0;
+          let ti = 0;
+          for (let i=0;i<volPoints.length && ti < targets.length;i++) {
+            cum += volPoints[i].volume;
+            const ratio = cum / totalVol;
+            while (ti < targets.length && ratio >= targets[ti]) {
+              quantilePrices.push(volPoints[i].price);
+              ti++;
+            }
+          }
+          // Fallback if some quantiles missing
+          while (quantilePrices.length < channelBands - 1) {
+            const missingIndex = quantilePrices.length + 1;
+            const frac = missingIndex / channelBands;
+            quantilePrices.push(lowerBound + (upperBound - lowerBound) * frac);
+          }
+          // Assign band levels (ensure within channel bounds)
+            quantilePrices.forEach((qp, idx) => {
+              const clamped = Math.min(Math.max(qp, lowerBound), upperBound);
+              extras[`channelBand_${idx+1}`] = clamped;
+            });
+        } else {
+          // No volume -> fall back to even spacing
+          for (let b = 1; b < channelBands; b++) {
+            const frac = b / channelBands;
+            extras[`channelBand_${b}`] = lowerBound + (upperBound - lowerBound) * frac;
+          }
+        }
+      } else {
+        // Not enough points -> even spacing
+        for (let b = 1; b < channelBands; b++) {
+          const frac = b / channelBands;
+          extras[`channelBand_${b}`] = lowerBound + (upperBound - lowerBound) * frac;
+        }
+      }
+    } catch (e) {
+      // Safety fallback
+      for (let b = 1; b < channelBands; b++) {
+        const frac = b / channelBands;
+        extras[`channelBand_${b}`] = lowerBound + (upperBound - lowerBound) * frac;
+      }
     }
 
     return {
@@ -707,7 +757,7 @@ export const analyzeChannelConfluence = (channelData, volumeProfile, proximityTh
  * @param {number} channelBands - Number of channel bands
  * @returns {Object} Object mapping zone index to volume percentage
  */
-export const calculateZoneVolumeDistribution = (data, channelType = 'channel', channelBands = 6) => {
+export const calculateZoneVolumeDistribution = (data, channelType = 'channel', channelBands = 10) => {
   if (!data || data.length === 0) return {};
 
   const zoneVolumes = {};
@@ -724,12 +774,33 @@ export const calculateZoneVolumeDistribution = (data, channelType = 'channel', c
 
     if (lowerBound == null || upperBound == null) return;
 
-    const channelRange = upperBound - lowerBound;
-    if (channelRange <= 0) return;
-
-    const pricePosition = (price - lowerBound) / channelRange;
-    let zoneIndex = Math.floor(pricePosition * channelBands);
-    zoneIndex = Math.max(0, Math.min(channelBands - 1, zoneIndex));
+    // Build band boundary array for this point
+    const bandKeys = [];
+    for (let b=1;b<channelBands;b++) bandKeys.push(channelType === 'trend' ? `trendBand_${b}` : `channelBand_${b}`);
+    const boundaries = [lowerBound, ...bandKeys.map(k => pt[k]).filter(v => v!=null), upperBound];
+    if (boundaries.length !== channelBands + 1) {
+      // Fallback to uniform division if some boundaries missing
+      const channelRange = upperBound - lowerBound;
+      if (channelRange <= 0) return;
+      const pricePosition = (price - lowerBound) / channelRange;
+      let zoneIndex = Math.floor(pricePosition * channelBands);
+      zoneIndex = Math.max(0, Math.min(channelBands - 1, zoneIndex));
+      if (!zoneVolumes[zoneIndex]) zoneVolumes[zoneIndex] = 0;
+      zoneVolumes[zoneIndex] += volume;
+      totalVolume += volume;
+      return;
+    }
+    // Determine zone by boundary search
+    let zoneIndex = -1;
+    for (let z=0; z<channelBands; z++) {
+      const low = boundaries[z];
+      const high = boundaries[z+1];
+      if (price >= low && price <= high) { zoneIndex = z; break; }
+    }
+    if (zoneIndex === -1) return; // price outside
+    if (!zoneVolumes[zoneIndex]) zoneVolumes[zoneIndex] = 0;
+    zoneVolumes[zoneIndex] += volume;
+    totalVolume += volume;
 
     if (!zoneVolumes[zoneIndex]) {
       zoneVolumes[zoneIndex] = 0;
