@@ -31,7 +31,8 @@ import {
   analyzeChannelConfluence,
   calculateZoneVolumeDistribution,
   calculateVolumeBarData,
-  computeTrendChannelTouchAlignment
+  computeTrendChannelTouchAlignment,
+  findMultipleChannels
 } from '../utils/chartCalculations';
 
 // Import chart constants
@@ -95,7 +96,7 @@ export function PricePerformanceChart({
     [selectedStock]
   );
   const [dataOffset, setDataOffset] = useState(0); // Offset in days from most recent
-  const [colorMode, setColorMode] = useState('default'); // 'default', 'rvi', 'vspy', 'sma', 'volumeBar', 'channel', or 'trend'
+  const [colorMode, setColorMode] = useState('default'); // 'default', 'rvi', 'vspy', 'sma', 'volumeBar', 'channel', 'trend', or 'multi-channel'
   const [spyData, setSpyData] = useState([]); // SPY historical data for VSPY calculation
   const [spyLoading, setSpyLoading] = useState(false); // Loading state for SPY data
   const [smaPeriod, setSmaPeriod] = useState(20); // SMA period for peak/bottom mode
@@ -121,6 +122,13 @@ export function PricePerformanceChart({
   const [trendChannelStdMultiplier, setTrendChannelStdMultiplier] = useState(2); // sigma multiplier
   const [trendChannelInterceptShift, setTrendChannelInterceptShift] = useState(0); // vertical adjustment for optimal touch alignment
   const [trendChannelEndAt, setTrendChannelEndAt] = useState(0); // end point offset from last data point (0 = use all data)
+
+  // Multi-Channel configuration
+  const [multiChannelMinRatio, setMultiChannelMinRatio] = useState(0.05); // 1/20 of data points
+  const [multiChannelMaxRatio, setMultiChannelMaxRatio] = useState(0.5); // 1/2 of data points
+  const [multiChannelStdMultiplier, setMultiChannelStdMultiplier] = useState(2); // std dev multiplier for multi-channels
+  const [isMultiChannelSimulating, setIsMultiChannelSimulating] = useState(false);
+  const [multiChannelResults, setMultiChannelResults] = useState(null);
 
   // AI Analysis using custom hook
   const {
@@ -1958,6 +1966,22 @@ export function PricePerformanceChart({
             </button>
           )}
 
+          {/* Multi-Channel Mode Toggle */}
+          {chartCompareStocks.length === 0 && selectedStock && (
+            <button
+              onClick={() => setColorMode(colorMode === 'multi-channel' ? 'default' : 'multi-channel')}
+              className="px-3 py-2 rounded-lg text-xs font-medium transition"
+              style={{
+                backgroundColor: colorMode === 'multi-channel' ? '#FBBF24' : '#374151',
+                color: colorMode === 'multi-channel' ? '#000000' : '#D1D5DB',
+                fontWeight: 'bold'
+              }}
+              title={colorMode === 'multi-channel' ? 'Disable Multi-Channel mode' : 'Enable Multi-Channel mode (Multiple Regression Channels)'}
+            >
+              Multi-Channel
+            </button>
+          )}
+
           {/* Trend Channel Configuration (when in trend mode) */}
           {colorMode === 'trend' && chartCompareStocks.length === 0 && selectedStock && (
             <div className="flex items-center gap-2 ml-1">
@@ -2058,6 +2082,90 @@ export function PricePerformanceChart({
                       Optimal (Recent 25%): {channelSimulationResult.recent.optimalLookback} / End:{channelSimulationResult.recent.optimalEndAt} / Δ{channelSimulationResult.recent.optimalDelta.toFixed(1)}
                     </div>
                   )}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Multi-Channel Configuration (when in multi-channel mode) */}
+          {colorMode === 'multi-channel' && chartCompareStocks.length === 0 && selectedStock && (
+            <div className="flex items-center gap-2 ml-1">
+              <div className="flex items-center gap-1" title="Minimum ratio of data points per channel">
+                <label className="text-[11px] text-gray-300 font-medium">Min Ratio: {(multiChannelMinRatio * 100).toFixed(0)}%</label>
+                <input
+                  type="range"
+                  min="0.05"
+                  max="0.25"
+                  step="0.01"
+                  value={multiChannelMinRatio}
+                  onChange={(e) => setMultiChannelMinRatio(parseFloat(e.target.value))}
+                  className="w-16 h-1.5 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                  style={{ width: '60px' }}
+                />
+              </div>
+
+              <div className="flex items-center gap-1" title="Maximum ratio of data points per channel">
+                <label className="text-[11px] text-gray-300 font-medium">Max Ratio: {(multiChannelMaxRatio * 100).toFixed(0)}%</label>
+                <input
+                  type="range"
+                  min="0.25"
+                  max="0.75"
+                  step="0.05"
+                  value={multiChannelMaxRatio}
+                  onChange={(e) => setMultiChannelMaxRatio(parseFloat(e.target.value))}
+                  className="w-16 h-1.5 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                  style={{ width: '60px' }}
+                />
+              </div>
+
+              <div className="flex items-center gap-1" title="Standard deviation multiplier">
+                <label className="text-[11px] text-gray-300 font-medium">StdDev: {multiChannelStdMultiplier.toFixed(1)}</label>
+                <input
+                  type="range"
+                  min="0.5"
+                  max="4"
+                  step="0.1"
+                  value={multiChannelStdMultiplier}
+                  onChange={(e) => setMultiChannelStdMultiplier(parseFloat(e.target.value))}
+                  className="w-16 h-1.5 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-emerald-600"
+                  style={{ width: '60px' }}
+                />
+              </div>
+
+              <button
+                onClick={() => {
+                  const currentData = getCurrentDataSlice();
+                  if (!currentData || currentData.length === 0) return;
+
+                  setIsMultiChannelSimulating(true);
+                  setTimeout(() => {
+                    const channels = findMultipleChannels(
+                      currentData,
+                      multiChannelMinRatio,
+                      multiChannelMaxRatio,
+                      multiChannelStdMultiplier,
+                      chartPeriod
+                    );
+                    setMultiChannelResults(channels);
+                    setIsMultiChannelSimulating(false);
+                  }, 50);
+                }}
+                disabled={isMultiChannelSimulating}
+                className={`px-2 py-1 rounded text-[11px] font-medium transition ${
+                  isMultiChannelSimulating
+                    ? 'bg-gray-600 text-gray-400 cursor-not-allowed'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
+                }`}
+                title="Find optimal multi-channel configuration"
+              >
+                {isMultiChannelSimulating ? 'Finding...' : 'Find Channels'}
+              </button>
+
+              {multiChannelResults && multiChannelResults.length > 0 && (
+                <div className="flex flex-col gap-0.5">
+                  <div className="text-[10px] text-emerald-300 font-medium">
+                    Found {multiChannelResults.length} channel{multiChannelResults.length > 1 ? 's' : ''}
+                  </div>
                 </div>
               )}
             </div>
@@ -3063,6 +3171,89 @@ export function PricePerformanceChart({
                         strokeDasharray="5 5"
                         dot={false}
                         connectNulls={false}
+                      />
+                    </>
+                  ) : colorMode === 'multi-channel' ? (
+                    // Multi-Channel Mode: Render multiple channels
+                    <>
+                      {/* Render each channel */}
+                      {multiChannelResults && multiChannelResults.length > 0 && multiChannelResults.map((channel, channelIdx) => {
+                        // Generate unique colors for each channel
+                        const colors = [
+                          { upper: '#ef4444', center: '#8b5cf6', lower: '#10b981' }, // red, purple, green
+                          { upper: '#f59e0b', center: '#3b82f6', lower: '#06b6d4' }, // amber, blue, cyan
+                          { upper: '#ec4899', center: '#8b5cf6', lower: '#14b8a6' }, // pink, purple, teal
+                          { upper: '#dc2626', center: '#7c3aed', lower: '#059669' }, // red-600, violet-600, emerald-600
+                          { upper: '#ea580c', center: '#2563eb', lower: '#0891b2' }, // orange-600, blue-600, cyan-600
+                        ];
+                        const channelColor = colors[channelIdx % colors.length];
+
+                        // Create a data series that covers only this channel's range
+                        const channelData = multiData.map((pt, idx) => {
+                          if (idx >= channel.startIdx && idx <= channel.endIdx) {
+                            const localIdx = idx - channel.startIdx;
+                            return {
+                              date: pt.date,
+                              [`channel_${channelIdx}_upper`]: channel.data[localIdx]?.channelUpper,
+                              [`channel_${channelIdx}_center`]: channel.data[localIdx]?.channelCenter,
+                              [`channel_${channelIdx}_lower`]: channel.data[localIdx]?.channelLower,
+                            };
+                          }
+                          return { date: pt.date };
+                        });
+
+                        return (
+                          <React.Fragment key={`channel-${channelIdx}`}>
+                            {/* Upper bound */}
+                            <Line
+                              type="monotone"
+                              dataKey={`channel_${channelIdx}_upper`}
+                              name={`Ch${channelIdx + 1} Upper`}
+                              stroke={channelColor.upper}
+                              strokeWidth={1.5}
+                              strokeOpacity={0.7}
+                              strokeDasharray="3 3"
+                              dot={false}
+                              connectNulls={false}
+                              data={channelData}
+                            />
+                            {/* Center line */}
+                            <Line
+                              type="monotone"
+                              dataKey={`channel_${channelIdx}_center`}
+                              name={`Ch${channelIdx + 1} Center`}
+                              stroke={channelColor.center}
+                              strokeWidth={1.5}
+                              strokeOpacity={0.6}
+                              strokeDasharray="5 5"
+                              dot={false}
+                              connectNulls={false}
+                              data={channelData}
+                            />
+                            {/* Lower bound */}
+                            <Line
+                              type="monotone"
+                              dataKey={`channel_${channelIdx}_lower`}
+                              name={`Ch${channelIdx + 1} Lower`}
+                              stroke={channelColor.lower}
+                              strokeWidth={1.5}
+                              strokeOpacity={0.7}
+                              strokeDasharray="3 3"
+                              dot={false}
+                              connectNulls={false}
+                              data={channelData}
+                            />
+                          </React.Fragment>
+                        );
+                      })}
+                      {/* Price line on top */}
+                      <Line
+                        type="monotone"
+                        dataKey="price"
+                        name={`${selectedStock?.code || ''} Price`}
+                        stroke="#3B82F6"
+                        strokeWidth={2}
+                        dot={false}
                       />
                     </>
                   ) : (

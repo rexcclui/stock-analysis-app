@@ -1010,3 +1010,186 @@ export const computeTrendChannelTouchAlignment = (data, lookback, endAt = 0, cha
     extremeMagnitude
   };
 };
+
+/**
+ * Find multiple non-overlapping channels in the data series
+ * @param {Array} data - Price data with date and price properties
+ * @param {number} minRatio - Minimum ratio of data points per channel (e.g., 0.05 for 1/20)
+ * @param {number} maxRatio - Maximum ratio of data points per channel (e.g., 0.5 for 1/2)
+ * @param {number} stdMultiplier - Standard deviation multiplier for channel width
+ * @param {string} chartPeriod - Chart period for dynamic SMA period selection
+ * @returns {Array} Array of channel objects with start/end indices and channel parameters
+ */
+export const findMultipleChannels = (data, minRatio = 0.05, maxRatio = 0.5, stdMultiplier = 2, chartPeriod = '3M') => {
+  if (!data || data.length === 0) return [];
+
+  const totalPoints = data.length;
+  const minPoints = Math.max(10, Math.floor(totalPoints * minRatio));
+  const maxPoints = Math.floor(totalPoints * maxRatio);
+
+  const channels = [];
+  const usedIndices = new Set();
+
+  // Helper function to find best channel in a given range
+  const findBestChannelInRange = (startIdx, endIdx) => {
+    const rangeLength = endIdx - startIdx + 1;
+    if (rangeLength < minPoints) return null;
+
+    let bestChannel = null;
+    let bestScore = -Infinity;
+
+    // Try different lookback periods within the range
+    const minLookback = Math.min(minPoints, rangeLength);
+    const maxLookback = Math.min(maxPoints, rangeLength);
+    const lookbackStep = Math.max(1, Math.floor((maxLookback - minLookback) / 20));
+
+    for (let lookback = minLookback; lookback <= maxLookback; lookback += lookbackStep) {
+      // Try different positions within the range
+      const maxStartPos = Math.max(0, endIdx - lookback + 1);
+      const posStep = Math.max(1, Math.floor((maxStartPos - startIdx) / 10));
+
+      for (let pos = startIdx; pos <= maxStartPos; pos += posStep) {
+        const channelEnd = Math.min(pos + lookback, endIdx + 1);
+        const slice = data.slice(pos, channelEnd);
+
+        if (slice.length < minPoints) continue;
+
+        // Check if too many points are already used
+        const usedCount = slice.filter((_, idx) => usedIndices.has(pos + idx)).length;
+        if (usedCount > slice.length * 0.3) continue; // Skip if >30% already used
+
+        // Calculate linear regression
+        const n = slice.length;
+        let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+        slice.forEach((pt, i) => {
+          const x = i;
+          const y = pt.price || 0;
+          sumX += x;
+          sumY += y;
+          sumXY += x * y;
+          sumX2 += x * x;
+        });
+
+        const denom = (n * sumX2 - sumX * sumX);
+        if (denom === 0) continue;
+
+        const slope = (n * sumXY - sumX * sumY) / denom;
+        const intercept = (sumY - slope * sumX) / n;
+
+        // Calculate residuals and std dev
+        const residuals = slice.map((pt, i) => (pt.price || 0) - (slope * i + intercept));
+        const mean = residuals.reduce((sum, r) => sum + r, 0) / n;
+        const variance = residuals.reduce((sum, r) => sum + Math.pow(r - mean, 2), 0) / n;
+        const stdDev = Math.sqrt(variance);
+
+        if (stdDev === 0) continue;
+
+        // Calculate channel bounds
+        const upper = slice.map((_, i) => slope * i + intercept + stdMultiplier * stdDev);
+        const lower = slice.map((_, i) => slope * i + intercept - stdMultiplier * stdDev);
+
+        // Count points within channel
+        let pointsInChannel = 0;
+        let touchesUpper = false;
+        let touchesLower = false;
+        const tolerance = stdDev * 0.1;
+
+        slice.forEach((pt, i) => {
+          const price = pt.price || 0;
+          if (price >= lower[i] - tolerance && price <= upper[i] + tolerance) {
+            pointsInChannel++;
+          }
+          if (Math.abs(price - upper[i]) <= tolerance) touchesUpper = true;
+          if (Math.abs(price - lower[i]) <= tolerance) touchesLower = true;
+        });
+
+        const coverage = pointsInChannel / n;
+
+        // Score the channel based on:
+        // - Coverage (points within channel)
+        // - Length of channel
+        // - Whether it touches both bounds
+        // - How well it fits (inverse of relative std dev)
+        const touchBonus = (touchesUpper && touchesLower) ? 1.5 : (touchesUpper || touchesLower) ? 1.2 : 1.0;
+        const relativeFit = 1 / (1 + stdDev / (intercept || 1));
+        const lengthBonus = Math.log(n) / Math.log(totalPoints);
+        const score = coverage * touchBonus * relativeFit * lengthBonus;
+
+        if (score > bestScore) {
+          bestScore = score;
+          bestChannel = {
+            startIdx: pos,
+            endIdx: channelEnd - 1,
+            lookback: slice.length,
+            slope,
+            intercept,
+            stdDev,
+            stdMultiplier,
+            coverage,
+            touchesUpper,
+            touchesLower,
+            score,
+            data: slice.map((pt, i) => ({
+              ...pt,
+              channelUpper: upper[i],
+              channelLower: lower[i],
+              channelCenter: slope * i + intercept
+            }))
+          };
+        }
+      }
+    }
+
+    return bestChannel;
+  };
+
+  // Iteratively find channels until we can't find any more good ones
+  const maxChannels = 10; // Limit to prevent infinite loops
+  let remainingRanges = [{ start: 0, end: totalPoints - 1 }];
+
+  for (let iteration = 0; iteration < maxChannels && remainingRanges.length > 0; iteration++) {
+    let bestChannel = null;
+    let bestRangeIdx = -1;
+
+    // Find best channel across all remaining ranges
+    remainingRanges.forEach((range, idx) => {
+      const channel = findBestChannelInRange(range.start, range.end);
+      if (channel && (!bestChannel || channel.score > bestChannel.score)) {
+        bestChannel = channel;
+        bestRangeIdx = idx;
+      }
+    });
+
+    if (!bestChannel || bestChannel.score < 0.3) break; // Stop if no good channel found
+
+    // Add channel to results
+    channels.push(bestChannel);
+
+    // Mark indices as used
+    for (let i = bestChannel.startIdx; i <= bestChannel.endIdx; i++) {
+      usedIndices.add(i);
+    }
+
+    // Update remaining ranges by removing the used segment
+    const range = remainingRanges[bestRangeIdx];
+    const newRanges = [];
+
+    // Add range before channel if it's large enough
+    if (bestChannel.startIdx - range.start >= minPoints) {
+      newRanges.push({ start: range.start, end: bestChannel.startIdx - 1 });
+    }
+
+    // Add range after channel if it's large enough
+    if (range.end - bestChannel.endIdx >= minPoints) {
+      newRanges.push({ start: bestChannel.endIdx + 1, end: range.end });
+    }
+
+    // Replace the used range with new ranges
+    remainingRanges.splice(bestRangeIdx, 1, ...newRanges);
+  }
+
+  // Sort channels by start index
+  channels.sort((a, b) => a.startIdx - b.startIdx);
+
+  return channels;
+};
