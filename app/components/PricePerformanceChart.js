@@ -3282,6 +3282,13 @@ export function PricePerformanceChart({
                           const next = multiData[i + 1];
                           if (!next) return null;
 
+                          // Check if this is the last segment of this channel
+                          const fullDataIdx = startIndex + i;
+                          const nextFullDataIdx = startIndex + i + 1;
+                          const isLastSegmentOfChannel =
+                            pt[`channel_${channelIdx}_lower`] != null &&
+                            (next[`channel_${channelIdx}_lower`] == null || nextFullDataIdx > channel.endIdx);
+
                           const zones = [];
                           // Render each band zone between consecutive band boundaries
                           for (let b = 0; b < CHANNEL_BANDS; b++) {
@@ -3301,6 +3308,9 @@ export function PricePerformanceChart({
                             // Use actual volume percentage for this zone
                             const volumePercent = zoneVolumePercentages[b] || 0;
 
+                            // Show label on the last segment (rightmost) for each zone
+                            const showLabel = isLastSegmentOfChannel && volumePercent >= 1.0;
+
                             zones.push(
                               <ReferenceArea
                                 key={`multi-channel-${channelIdx}-band-${i}-${b}`}
@@ -3311,6 +3321,15 @@ export function PricePerformanceChart({
                                 fill={getChannelBandColor(ratioMid, volumePercent)}
                                 strokeOpacity={0}
                                 ifOverflow="discard"
+                                label={showLabel ? {
+                                  value: `${volumePercent.toFixed(1)}%`,
+                                  position: 'right',
+                                  fill: '#ffffff',
+                                  fontSize: 9,
+                                  fontWeight: 'bold',
+                                  stroke: '#000000',
+                                  strokeWidth: 0.5
+                                } : null}
                               />
                             );
                           }
