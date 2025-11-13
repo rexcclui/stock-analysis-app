@@ -3206,10 +3206,78 @@ export function PricePerformanceChart({
                       />
                     </>
                   ) : colorMode === 'multi-channel' ? (
-                    // Multi-Channel Mode: Render multiple channels with color zones
+                    // Multi-Channel Mode: Render multiple channels with volume-based color zones
                     <>
                       {/* Render color zones for each channel */}
                       {multiChannelResults && multiChannelResults.length > 0 && multiData.length > 1 && multiChannelResults.map((channel, channelIdx) => {
+                        // Calculate volume distribution for this specific channel
+                        const channelData = multiData.filter((pt, idx) => {
+                          const fullDataIdx = startIndex + idx;
+                          return fullDataIdx >= channel.startIdx && fullDataIdx <= channel.endIdx &&
+                                 pt[`channel_${channelIdx}_lower`] != null;
+                        });
+
+                        // Calculate zone volume distribution
+                        const zoneVolumes = {};
+                        let totalVolume = 0;
+
+                        channelData.forEach(pt => {
+                          const price = pt.price || pt.close;
+                          const volume = pt.volume || 0;
+
+                          if (!price || !volume) return;
+
+                          const lowerBound = pt[`channel_${channelIdx}_lower`];
+                          const upperBound = pt[`channel_${channelIdx}_upper`];
+
+                          if (lowerBound == null || upperBound == null) return;
+
+                          // Build band boundary array
+                          const boundaries = [lowerBound];
+                          for (let b = 1; b < CHANNEL_BANDS; b++) {
+                            const bandValue = pt[`channel_${channelIdx}_band_${b}`];
+                            if (bandValue != null) boundaries.push(bandValue);
+                          }
+                          boundaries.push(upperBound);
+
+                          if (boundaries.length !== CHANNEL_BANDS + 1) {
+                            // Fallback to uniform division
+                            const channelRange = upperBound - lowerBound;
+                            if (channelRange <= 0) return;
+                            const pricePosition = (price - lowerBound) / channelRange;
+                            let zoneIndex = Math.floor(pricePosition * CHANNEL_BANDS);
+                            zoneIndex = Math.max(0, Math.min(CHANNEL_BANDS - 1, zoneIndex));
+                            if (!zoneVolumes[zoneIndex]) zoneVolumes[zoneIndex] = 0;
+                            zoneVolumes[zoneIndex] += volume;
+                            totalVolume += volume;
+                            return;
+                          }
+
+                          // Determine zone by boundary search
+                          let zoneIndex = -1;
+                          for (let z = 0; z < CHANNEL_BANDS; z++) {
+                            const low = boundaries[z];
+                            const high = boundaries[z + 1];
+                            if (price >= low && price <= high) {
+                              zoneIndex = z;
+                              break;
+                            }
+                          }
+
+                          if (zoneIndex === -1) return; // price outside channel
+                          if (!zoneVolumes[zoneIndex]) zoneVolumes[zoneIndex] = 0;
+                          zoneVolumes[zoneIndex] += volume;
+                          totalVolume += volume;
+                        });
+
+                        // Calculate volume percentages
+                        const zoneVolumePercentages = {};
+                        Object.keys(zoneVolumes).forEach(zoneIndex => {
+                          zoneVolumePercentages[zoneIndex] = totalVolume > 0
+                            ? (zoneVolumes[zoneIndex] / totalVolume) * 100
+                            : 0;
+                        });
+
                         return multiData.map((pt, i) => {
                           const next = multiData[i + 1];
                           if (!next) return null;
@@ -3230,8 +3298,8 @@ export function PricePerformanceChart({
                             const zoneUpper = Math.max(ptUpper, nextUpper);
                             const ratioMid = (b + 0.5) / CHANNEL_BANDS; // mid-point for color
 
-                            // Use a fixed volume percent for now (could calculate per channel later)
-                            const volumePercent = 5; // Moderate opacity
+                            // Use actual volume percentage for this zone
+                            const volumePercent = zoneVolumePercentages[b] || 0;
 
                             zones.push(
                               <ReferenceArea
