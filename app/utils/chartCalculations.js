@@ -1084,60 +1084,89 @@ export const findMultipleChannels = (data, minRatio = 0.05, maxRatio = 0.5, stdM
 
         if (stdDev === 0) continue;
 
-        // Calculate channel bounds
-        const upper = slice.map((_, i) => slope * i + intercept + stdMultiplier * stdDev);
-        const lower = slice.map((_, i) => slope * i + intercept - stdMultiplier * stdDev);
+        // Optimize stdMultiplier for this channel
+        // Test different multiplier values to find the best fit
+        let bestMultiplier = stdMultiplier; // Start with default
+        let bestMultiplierScore = -Infinity;
+        let bestMultiplierData = null;
 
-        // Count points within channel
-        let pointsInChannel = 0;
-        let touchesUpper = false;
-        let touchesLower = false;
-        const tolerance = stdDev * 0.1;
+        // Test multipliers from 1.0 to 4.0 in steps of 0.5
+        for (let testMultiplier = 1.0; testMultiplier <= 4.0; testMultiplier += 0.5) {
+          // Calculate channel bounds with this multiplier
+          const upper = slice.map((_, i) => slope * i + intercept + testMultiplier * stdDev);
+          const lower = slice.map((_, i) => slope * i + intercept - testMultiplier * stdDev);
 
-        // Count points within ±20% of center line (mid slope)
-        let pointsNearCenter = 0;
+          // Count points within channel
+          let pointsInChannel = 0;
+          let touchesUpper = false;
+          let touchesLower = false;
+          const tolerance = stdDev * 0.1;
 
-        slice.forEach((pt, i) => {
-          const price = pt.price || 0;
-          const center = slope * i + intercept;
+          // Count points within ±20% of center line
+          let pointsNearCenter = 0;
 
-          if (price >= lower[i] - tolerance && price <= upper[i] + tolerance) {
-            pointsInChannel++;
+          slice.forEach((pt, i) => {
+            const price = pt.price || 0;
+            const center = slope * i + intercept;
+
+            if (price >= lower[i] - tolerance && price <= upper[i] + tolerance) {
+              pointsInChannel++;
+            }
+            if (Math.abs(price - upper[i]) <= tolerance) touchesUpper = true;
+            if (Math.abs(price - lower[i]) <= tolerance) touchesLower = true;
+
+            // Check if price is within ±20% of center line
+            const centerTolerance = Math.abs(center) * 0.20;
+            if (Math.abs(price - center) <= centerTolerance) {
+              pointsNearCenter++;
+            }
+          });
+
+          const coverage = pointsInChannel / n;
+          const centerProximity = pointsNearCenter / n;
+
+          // Reject if center proximity is too low
+          if (centerProximity < 0.70) continue;
+
+          // Score this multiplier configuration
+          // Prefer configurations that:
+          // 1. Have high coverage (most points within bounds)
+          // 2. Touch both bounds (confirming price action tests the limits)
+          // 3. Are not too wide (penalize excessively large multipliers)
+          const touchBonus = (touchesUpper && touchesLower) ? 1.5 : (touchesUpper || touchesLower) ? 1.2 : 1.0;
+          const relativeFit = 1 / (1 + stdDev / (intercept || 1));
+          const lengthBonus = Math.log(n) / Math.log(totalPoints);
+          const centerBonus = centerProximity;
+          // Penalize very large multipliers (prefer tighter channels)
+          const widthPenalty = 1 / (1 + testMultiplier / 4.0);
+          const multiplierScore = coverage * touchBonus * relativeFit * lengthBonus * centerBonus * widthPenalty;
+
+          if (multiplierScore > bestMultiplierScore) {
+            bestMultiplierScore = multiplierScore;
+            bestMultiplier = testMultiplier;
+            bestMultiplierData = {
+              coverage,
+              centerProximity,
+              touchesUpper,
+              touchesLower,
+              upper,
+              lower
+            };
           }
-          if (Math.abs(price - upper[i]) <= tolerance) touchesUpper = true;
-          if (Math.abs(price - lower[i]) <= tolerance) touchesLower = true;
+        }
 
-          // Check if price is within ±20% of center line
-          const centerTolerance = Math.abs(center) * 0.20; // 20% of center value
-          if (Math.abs(price - center) <= centerTolerance) {
-            pointsNearCenter++;
-          }
-        });
+        // Skip if no valid multiplier was found
+        if (!bestMultiplierData) continue;
 
-        const coverage = pointsInChannel / n;
-        const centerProximity = pointsNearCenter / n;
-
-        // Reject channel if less than 70% of points are within ±20% of center
-        if (centerProximity < 0.70) continue;
-
-        // Score the channel based on:
-        // - Coverage (points within channel)
-        // - Length of channel
-        // - Whether it touches both bounds
-        // - How well it fits (inverse of relative std dev)
-        // - Center proximity (bonus for tight clustering around center)
-        const touchBonus = (touchesUpper && touchesLower) ? 1.5 : (touchesUpper || touchesLower) ? 1.2 : 1.0;
-        const relativeFit = 1 / (1 + stdDev / (intercept || 1));
-        const lengthBonus = Math.log(n) / Math.log(totalPoints);
-        const centerBonus = centerProximity; // 0.7 to 1.0, rewards tighter channels
-        const score = coverage * touchBonus * relativeFit * lengthBonus * centerBonus;
+        // Use the best multiplier score as the channel score
+        const score = bestMultiplierScore;
 
         if (score > bestScore) {
           bestScore = score;
 
           // Create intermediate bands (10 bands total, like standard channel mode)
           const BANDS = 10;
-          const channelRange = stdMultiplier * stdDev * 2; // Total range from lower to upper
+          const channelRange = bestMultiplier * stdDev * 2; // Total range from lower to upper
 
           bestChannel = {
             startIdx: pos,
@@ -1146,16 +1175,16 @@ export const findMultipleChannels = (data, minRatio = 0.05, maxRatio = 0.5, stdM
             slope,
             intercept,
             stdDev,
-            stdMultiplier,
-            coverage,
-            centerProximity,
-            touchesUpper,
-            touchesLower,
+            stdMultiplier: bestMultiplier, // Store the optimized multiplier
+            coverage: bestMultiplierData.coverage,
+            centerProximity: bestMultiplierData.centerProximity,
+            touchesUpper: bestMultiplierData.touchesUpper,
+            touchesLower: bestMultiplierData.touchesLower,
             score,
             data: slice.map((pt, i) => {
               const center = slope * i + intercept;
-              const upper = center + stdMultiplier * stdDev;
-              const lower = center - stdMultiplier * stdDev;
+              const upper = center + bestMultiplier * stdDev;
+              const lower = center - bestMultiplier * stdDev;
 
               // Create intermediate bands
               const bands = {};
