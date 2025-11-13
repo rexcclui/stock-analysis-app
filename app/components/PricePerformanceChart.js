@@ -2683,6 +2683,30 @@ export function PricePerformanceChart({
                   { interceptShift: trendChannelInterceptShift, endAt: trendChannelEndAt }
                 );
               }
+              // Apply multi-channel data when in multi-channel mode
+              if (colorMode === 'multi-channel' && multiChannelResults && multiChannelResults.length > 0) {
+                // Add channel data to each point in multiData
+                // Note: startIndex is the zoom offset, so we need to adjust channel indices
+                multiData = multiData.map((pt, idx) => {
+                  const channelData = {};
+                  // The actual index in the full data is startIndex + idx
+                  const fullDataIdx = startIndex + idx;
+
+                  // For each channel, add its upper/center/lower values if this point is in range
+                  multiChannelResults.forEach((channel, channelIdx) => {
+                    if (fullDataIdx >= channel.startIdx && fullDataIdx <= channel.endIdx) {
+                      const localIdx = fullDataIdx - channel.startIdx;
+                      if (channel.data[localIdx]) {
+                        channelData[`channel_${channelIdx}_upper`] = channel.data[localIdx].channelUpper;
+                        channelData[`channel_${channelIdx}_center`] = channel.data[localIdx].channelCenter;
+                        channelData[`channel_${channelIdx}_lower`] = channel.data[localIdx].channelLower;
+                      }
+                    }
+                  });
+
+                  return { ...pt, ...channelData };
+                });
+              }
               if (colorMode === 'sma' && chartCompareStocks.length === 0) {
                 const smaAnalysis = detectTurningPoints(multiData);
                 smaSegments = addSmaDataKeys(multiData, smaAnalysis.turningPoints);
@@ -3188,20 +3212,6 @@ export function PricePerformanceChart({
                         ];
                         const channelColor = colors[channelIdx % colors.length];
 
-                        // Create a data series that covers only this channel's range
-                        const channelData = multiData.map((pt, idx) => {
-                          if (idx >= channel.startIdx && idx <= channel.endIdx) {
-                            const localIdx = idx - channel.startIdx;
-                            return {
-                              date: pt.date,
-                              [`channel_${channelIdx}_upper`]: channel.data[localIdx]?.channelUpper,
-                              [`channel_${channelIdx}_center`]: channel.data[localIdx]?.channelCenter,
-                              [`channel_${channelIdx}_lower`]: channel.data[localIdx]?.channelLower,
-                            };
-                          }
-                          return { date: pt.date };
-                        });
-
                         return (
                           <React.Fragment key={`channel-${channelIdx}`}>
                             {/* Upper bound */}
@@ -3215,7 +3225,6 @@ export function PricePerformanceChart({
                               strokeDasharray="3 3"
                               dot={false}
                               connectNulls={false}
-                              data={channelData}
                             />
                             {/* Center line */}
                             <Line
@@ -3228,7 +3237,6 @@ export function PricePerformanceChart({
                               strokeDasharray="5 5"
                               dot={false}
                               connectNulls={false}
-                              data={channelData}
                             />
                             {/* Lower bound */}
                             <Line
@@ -3241,7 +3249,6 @@ export function PricePerformanceChart({
                               strokeDasharray="3 3"
                               dot={false}
                               connectNulls={false}
-                              data={channelData}
                             />
                           </React.Fragment>
                         );
