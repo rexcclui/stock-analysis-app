@@ -3507,12 +3507,11 @@ export function PricePerformanceChart({
                                  (nextIdx > channel.endIdx || !multiData[idx + 1] || multiData[idx + 1][`channel_${channelIdx}_center`] == null);
                         });
 
-                        // Calculate channel width (total range from lower to upper)
-                        const channelWidth = (channel.stdMultiplier || 2) * channel.stdDev * 2;
-                        const deltaLabel = `Δ$${channelWidth.toFixed(2)} (±${channel.stdMultiplier || 2}σ)`;
+                        // Display only the stdDev multiplier (sigma value)
+                        const sigmaLabel = `±${channel.stdMultiplier || 2}σ`;
 
                         // Debug: Log channel info to verify different stdDev values
-                        console.log(`Channel ${channelIdx}: stdDev=$${channel.stdDev?.toFixed(2)}, width=$${channelWidth.toFixed(2)}`);
+                        console.log(`Channel ${channelIdx}: stdMultiplier=${channel.stdMultiplier || 2}σ, stdDev=$${channel.stdDev?.toFixed(2)}`);
 
                         return (
                           <React.Fragment key={`channel-${channelIdx}`}>
@@ -3552,7 +3551,7 @@ export function PricePerformanceChart({
                               dot={false}
                               connectNulls={false}
                             />
-                            {/* Delta label at channel end */}
+                            {/* StdDev label at channel end */}
                             {channelEndData && (
                               <ReferenceLine
                                 segment={[
@@ -3563,10 +3562,10 @@ export function PricePerformanceChart({
                                 strokeWidth={2}
                                 strokeOpacity={0.5}
                                 label={{
-                                  value: deltaLabel,
+                                  value: sigmaLabel,
                                   position: 'right',
                                   fill: channelColor.center,
-                                  fontSize: 10,
+                                  fontSize: 11,
                                   fontWeight: 'bold',
                                   offset: 5
                                 }}
