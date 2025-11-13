@@ -3497,6 +3497,20 @@ export function PricePerformanceChart({
                         ];
                         const channelColor = colors[channelIdx % colors.length];
 
+                        // Find the last data point for this channel to place the delta label
+                        const channelEndData = multiData.find((pt, idx) => {
+                          const fullDataIdx = startIndex + idx;
+                          const nextIdx = startIndex + idx + 1;
+                          return fullDataIdx >= channel.startIdx &&
+                                 fullDataIdx <= channel.endIdx &&
+                                 pt[`channel_${channelIdx}_center`] != null &&
+                                 (nextIdx > channel.endIdx || !multiData[idx + 1] || multiData[idx + 1][`channel_${channelIdx}_center`] == null);
+                        });
+
+                        // Calculate channel width (total range from lower to upper)
+                        const channelWidth = (channel.stdMultiplier || 2) * channel.stdDev * 2;
+                        const deltaLabel = `Δ$${channelWidth.toFixed(2)} (±${channel.stdMultiplier || 2}σ)`;
+
                         return (
                           <React.Fragment key={`channel-${channelIdx}`}>
                             {/* Upper bound */}
@@ -3535,6 +3549,26 @@ export function PricePerformanceChart({
                               dot={false}
                               connectNulls={false}
                             />
+                            {/* Delta label at channel end */}
+                            {channelEndData && (
+                              <ReferenceLine
+                                segment={[
+                                  { x: channelEndData.date, y: channelEndData[`channel_${channelIdx}_upper`] },
+                                  { x: channelEndData.date, y: channelEndData[`channel_${channelIdx}_lower`] }
+                                ]}
+                                stroke={channelColor.center}
+                                strokeWidth={2}
+                                strokeOpacity={0.5}
+                                label={{
+                                  value: deltaLabel,
+                                  position: 'right',
+                                  fill: channelColor.center,
+                                  fontSize: 10,
+                                  fontWeight: 'bold',
+                                  offset: 5
+                                }}
+                              />
+                            )}
                           </React.Fragment>
                         );
                       })}
