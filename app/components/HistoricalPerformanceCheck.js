@@ -934,16 +934,32 @@ export function HistoricalPerformanceCheck({ stockCode }) {
                     <label className="text-sm font-medium text-gray-300">Short MA</label>
                     <span className="text-base font-bold" style={{ color: '#22c55e' }}>{maShort}D</span>
                   </div>
-                  <input
-                    type="range"
-                    min="5"
-                    max="100"
-                    step="5"
-                    value={maShort}
-                    onChange={(e) => setMaShort(parseInt(e.target.value))}
-                    className="w-full h-2 rounded-lg appearance-none cursor-pointer ma-range"
-                    style={{ backgroundColor: '#facc15', accentColor: '#facc15' }}
-                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setMaShort(Math.max(5, maShort - 5))}
+                      className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                      title="Decrement Short MA"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="range"
+                      min="5"
+                      max="100"
+                      step="5"
+                      value={maShort}
+                      onChange={(e) => setMaShort(parseInt(e.target.value))}
+                      className="flex-1 h-2 rounded-lg appearance-none cursor-pointer ma-range"
+                      style={{ backgroundColor: '#facc15', accentColor: '#facc15' }}
+                    />
+                    <button
+                      onClick={() => setMaShort(Math.min(100, maShort + 5))}
+                      className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                      title="Increment Short MA"
+                    >
+                      +
+                    </button>
+                  </div>
                   <div className="flex justify-between text-xs text-gray-400 mt-1">
                     <span>5</span>
                     <span>100</span>
@@ -954,16 +970,32 @@ export function HistoricalPerformanceCheck({ stockCode }) {
                     <label className="text-sm font-medium text-gray-300">Long MA</label>
                     <span className="text-base font-bold" style={{ color: '#22c55e' }}>{maLong}D</span>
                   </div>
-                  <input
-                    type="range"
-                    min="50"
-                    max="300"
-                    step="10"
-                    value={maLong}
-                    onChange={(e) => setMaLong(parseInt(e.target.value))}
-                    className="w-full h-2 rounded-lg appearance-none cursor-pointer ma-range"
-                    style={{ backgroundColor: '#facc15', accentColor: '#facc15' }}
-                  />
+                  <div className="flex items-center gap-2">
+                    <button
+                      onClick={() => setMaLong(Math.max(50, maLong - 10))}
+                      className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                      title="Decrement Long MA"
+                    >
+                      -
+                    </button>
+                    <input
+                      type="range"
+                      min="50"
+                      max="300"
+                      step="10"
+                      value={maLong}
+                      onChange={(e) => setMaLong(parseInt(e.target.value))}
+                      className="flex-1 h-2 rounded-lg appearance-none cursor-pointer ma-range"
+                      style={{ backgroundColor: '#facc15', accentColor: '#facc15' }}
+                    />
+                    <button
+                      onClick={() => setMaLong(Math.min(300, maLong + 10))}
+                      className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                      title="Increment Long MA"
+                    >
+                      +
+                    </button>
+                  </div>
                   <div className="flex justify-between text-xs text-gray-400 mt-1">
                     <span>50</span>
                     <span>300</span>

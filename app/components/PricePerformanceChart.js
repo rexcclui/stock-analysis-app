@@ -1987,6 +1987,17 @@ export function PricePerformanceChart({
             <div className="flex items-center gap-2 ml-1">
               <div className="flex items-center gap-1" title="Regression lookback bars">
                 <label className="text-[11px] text-gray-300 font-medium">Lookback: {trendChannelLookback}</label>
+                <button
+                  onClick={() => {
+                    const step = Math.max(1, Math.round(getCurrentDataSlice().length / 100));
+                    setTrendChannelLookback(Math.max(20, trendChannelLookback - step));
+                    setTrendChannelInterceptShift(0);
+                  }}
+                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  title="Decrement lookback"
+                >
+                  -
+                </button>
                 <input
                   type="range"
                   min="20"
@@ -2001,12 +2012,34 @@ export function PricePerformanceChart({
                   }}
                   className="w-32 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-yellow-500"
                 />
+                <button
+                  onClick={() => {
+                    const step = Math.max(1, Math.round(getCurrentDataSlice().length / 100));
+                    setTrendChannelLookback(Math.min(getCurrentDataSlice().length, trendChannelLookback + step));
+                    setTrendChannelInterceptShift(0);
+                  }}
+                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  title="Increment lookback"
+                >
+                  +
+                </button>
                 {trendChannelLookback > getCurrentDataSlice().length && (
                   <span className="text-[10px] text-red-400 font-semibold ml-1">(clamped to {getCurrentDataSlice().length})</span>
                 )}
               </div>
               <div className="flex items-center gap-1" title="End offset from last data point">
                 <label className="text-[11px] text-gray-300 font-medium">EndAt: {trendChannelEndAt}</label>
+                <button
+                  onClick={() => {
+                    const step = Math.max(1, Math.round(getCurrentDataSlice().length / 1000));
+                    setTrendChannelEndAt(Math.max(0, trendChannelEndAt - step));
+                    setTrendChannelInterceptShift(0);
+                  }}
+                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  title="Decrement end offset"
+                >
+                  -
+                </button>
                 <input
                   type="range"
                   min="0"
@@ -2020,9 +2053,30 @@ export function PricePerformanceChart({
                   }}
                   className="w-32 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-500"
                 />
+                <button
+                  onClick={() => {
+                    const step = Math.max(1, Math.round(getCurrentDataSlice().length / 1000));
+                    setTrendChannelEndAt(Math.min(Math.floor(getCurrentDataSlice().length / 5), trendChannelEndAt + step));
+                    setTrendChannelInterceptShift(0);
+                  }}
+                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  title="Increment end offset"
+                >
+                  +
+                </button>
               </div>
               <div className="flex items-center gap-1" title="Std Dev Multiplier (Delta)">
                 <label className="text-xs text-gray-300 font-medium">Δσ: {trendChannelStdMultiplier.toFixed(1)}</label>
+                <button
+                  onClick={() => {
+                    setTrendChannelStdMultiplier(Math.max(0.5, trendChannelStdMultiplier - 0.5));
+                    setTrendChannelInterceptShift(0);
+                  }}
+                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  title="Decrement std dev multiplier"
+                >
+                  -
+                </button>
                 <input
                   type="range"
                   min="0.5"
@@ -2035,6 +2089,16 @@ export function PricePerformanceChart({
                   }}
                   className="w-24 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-amber-500"
                 />
+                <button
+                  onClick={() => {
+                    setTrendChannelStdMultiplier(Math.min(4, trendChannelStdMultiplier + 0.5));
+                    setTrendChannelInterceptShift(0);
+                  }}
+                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  title="Increment std dev multiplier"
+                >
+                  +
+                </button>
               </div>
 
               {/* Simulation Button */}
@@ -2092,6 +2156,13 @@ export function PricePerformanceChart({
             <div className="flex items-center gap-2 ml-1">
               <div className="flex items-center gap-1" title="Minimum ratio of data points per channel">
                 <label className="text-[11px] text-gray-300 font-medium">Min Ratio: {(multiChannelMinRatio * 100).toFixed(0)}%</label>
+                <button
+                  onClick={() => setMultiChannelMinRatio(Math.max(0.05, multiChannelMinRatio - 0.01))}
+                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  title="Decrement min ratio"
+                >
+                  -
+                </button>
                 <input
                   type="range"
                   min="0.05"
@@ -2102,10 +2173,24 @@ export function PricePerformanceChart({
                   className="w-16 h-1.5 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-emerald-600"
                   style={{ width: '60px' }}
                 />
+                <button
+                  onClick={() => setMultiChannelMinRatio(Math.min(0.25, multiChannelMinRatio + 0.01))}
+                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  title="Increment min ratio"
+                >
+                  +
+                </button>
               </div>
 
               <div className="flex items-center gap-1" title="Maximum ratio of data points per channel">
                 <label className="text-[11px] text-gray-300 font-medium">Max Ratio: {(multiChannelMaxRatio * 100).toFixed(0)}%</label>
+                <button
+                  onClick={() => setMultiChannelMaxRatio(Math.max(0.25, multiChannelMaxRatio - 0.05))}
+                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  title="Decrement max ratio"
+                >
+                  -
+                </button>
                 <input
                   type="range"
                   min="0.25"
@@ -2116,10 +2201,24 @@ export function PricePerformanceChart({
                   className="w-16 h-1.5 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-emerald-600"
                   style={{ width: '60px' }}
                 />
+                <button
+                  onClick={() => setMultiChannelMaxRatio(Math.min(0.75, multiChannelMaxRatio + 0.05))}
+                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  title="Increment max ratio"
+                >
+                  +
+                </button>
               </div>
 
               <div className="flex items-center gap-1" title="Standard deviation multiplier">
                 <label className="text-[11px] text-gray-300 font-medium">StdDev: {multiChannelStdMultiplier.toFixed(1)}</label>
+                <button
+                  onClick={() => setMultiChannelStdMultiplier(Math.max(0.5, multiChannelStdMultiplier - 0.1))}
+                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  title="Decrement std dev multiplier"
+                >
+                  -
+                </button>
                 <input
                   type="range"
                   min="0.5"
@@ -2130,6 +2229,13 @@ export function PricePerformanceChart({
                   className="w-16 h-1.5 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-emerald-600"
                   style={{ width: '60px' }}
                 />
+                <button
+                  onClick={() => setMultiChannelStdMultiplier(Math.min(4, multiChannelStdMultiplier + 0.1))}
+                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  title="Increment std dev multiplier"
+                >
+                  +
+                </button>
               </div>
 
               <button
@@ -2219,6 +2325,13 @@ export function PricePerformanceChart({
               {/* Lookback Period */}
               <div className="flex items-center gap-1">
                 <label className="text-xs text-gray-300 font-medium">Period: {channelLookback}</label>
+                <button
+                  onClick={() => setChannelLookback(Math.max(20, channelLookback - 1))}
+                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  title="Decrement lookback period"
+                >
+                  -
+                </button>
                 <input
                   type="range"
                   min="20"
@@ -2228,11 +2341,25 @@ export function PricePerformanceChart({
                   className="w-20 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-blue-600"
                   title={`Lookback Period: ${channelLookback} days`}
                 />
+                <button
+                  onClick={() => setChannelLookback(Math.min(200, channelLookback + 1))}
+                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  title="Increment lookback period"
+                >
+                  +
+                </button>
               </div>
 
               {/* Std Dev Multiplier */}
               <div className="flex items-center gap-1">
                 <label className="text-xs text-gray-300 font-medium">StdDev: {channelStdDevMultiplier.toFixed(1)}</label>
+                <button
+                  onClick={() => setChannelStdDevMultiplier(Math.max(1, parseFloat((channelStdDevMultiplier - 0.1).toFixed(1))))}
+                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  title="Decrement std dev multiplier"
+                >
+                  -
+                </button>
                 <input
                   type="range"
                   min="1"
@@ -2243,11 +2370,25 @@ export function PricePerformanceChart({
                   className="w-20 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-red-600"
                   title={`Standard Deviation Multiplier: ${channelStdDevMultiplier.toFixed(1)}`}
                 />
+                <button
+                  onClick={() => setChannelStdDevMultiplier(Math.min(3, parseFloat((channelStdDevMultiplier + 0.1).toFixed(1))))}
+                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  title="Increment std dev multiplier"
+                >
+                  +
+                </button>
               </div>
 
               {/* Volume Bins */}
               <div className="flex items-center gap-1">
                 <label className="text-xs text-gray-300 font-medium">Bins: {channelVolumeBins}</label>
+                <button
+                  onClick={() => setChannelVolumeBins(Math.max(20, channelVolumeBins - 1))}
+                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  title="Decrement volume bins"
+                >
+                  -
+                </button>
                 <input
                   type="range"
                   min="20"
@@ -2257,6 +2398,13 @@ export function PricePerformanceChart({
                   className="w-20 h-2 bg-gray-600 rounded-lg appearance-none cursor-pointer accent-purple-600"
                   title={`Volume Profile Bins: ${channelVolumeBins}`}
                 />
+                <button
+                  onClick={() => setChannelVolumeBins(Math.min(100, channelVolumeBins + 1))}
+                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  title="Increment volume bins"
+                >
+                  +
+                </button>
               </div>
 
               {/* Price Source Selector */}
