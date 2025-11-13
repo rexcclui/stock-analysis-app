@@ -1054,9 +1054,9 @@ export const findMultipleChannels = (data, minRatio = 0.05, maxRatio = 0.5, stdM
 
         if (slice.length < minPoints) continue;
 
-        // Check if too many points are already used
+        // Check if too many points are already used (allow up to 50% overlap)
         const usedCount = slice.filter((_, idx) => usedIndices.has(pos + idx)).length;
-        if (usedCount > slice.length * 0.3) continue; // Skip if >30% already used
+        if (usedCount > slice.length * 0.5) continue; // Skip if >50% already used
 
         // Calculate linear regression
         const n = slice.length;
@@ -1160,27 +1160,33 @@ export const findMultipleChannels = (data, minRatio = 0.05, maxRatio = 0.5, stdM
       }
     });
 
-    if (!bestChannel || bestChannel.score < 0.3) break; // Stop if no good channel found
+    // Lower threshold for more channels - be more permissive
+    if (!bestChannel || bestChannel.score < 0.15) break; // Stop if no good channel found
 
     // Add channel to results
     channels.push(bestChannel);
 
-    // Mark indices as used
-    for (let i = bestChannel.startIdx; i <= bestChannel.endIdx; i++) {
-      usedIndices.add(i);
+    // Mark indices as used (but allow 20% overlap for flexibility)
+    const overlapBuffer = Math.floor(bestChannel.lookback * 0.2);
+    for (let i = bestChannel.startIdx + overlapBuffer; i <= bestChannel.endIdx - overlapBuffer; i++) {
+      if (i >= 0 && i < totalPoints) {
+        usedIndices.add(i);
+      }
     }
 
     // Update remaining ranges by removing the used segment
     const range = remainingRanges[bestRangeIdx];
     const newRanges = [];
 
-    // Add range before channel if it's large enough
-    if (bestChannel.startIdx - range.start >= minPoints) {
+    // Add range before channel if it's large enough (relaxed requirement)
+    const beforeSize = bestChannel.startIdx - range.start;
+    if (beforeSize >= minPoints * 0.8) { // Allow slightly smaller ranges
       newRanges.push({ start: range.start, end: bestChannel.startIdx - 1 });
     }
 
-    // Add range after channel if it's large enough
-    if (range.end - bestChannel.endIdx >= minPoints) {
+    // Add range after channel if it's large enough (relaxed requirement)
+    const afterSize = range.end - bestChannel.endIdx;
+    if (afterSize >= minPoints * 0.8) { // Allow slightly smaller ranges
       newRanges.push({ start: bestChannel.endIdx + 1, end: range.end });
     }
 
