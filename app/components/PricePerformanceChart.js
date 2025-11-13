@@ -3510,9 +3510,6 @@ export function PricePerformanceChart({
                         // Display only the stdDev multiplier (sigma value)
                         const sigmaLabel = `±${channel.stdMultiplier || 2}σ`;
 
-                        // Debug: Log channel info to verify different stdDev values
-                        console.log(`Channel ${channelIdx}: stdMultiplier=${channel.stdMultiplier || 2}σ, stdDev=$${channel.stdDev?.toFixed(2)}`);
-
                         return (
                           <React.Fragment key={`channel-${channelIdx}`}>
                             {/* Upper bound */}
