@@ -1094,26 +1094,43 @@ export const findMultipleChannels = (data, minRatio = 0.05, maxRatio = 0.5, stdM
         let touchesLower = false;
         const tolerance = stdDev * 0.1;
 
+        // Count points within ±20% of center line (mid slope)
+        let pointsNearCenter = 0;
+
         slice.forEach((pt, i) => {
           const price = pt.price || 0;
+          const center = slope * i + intercept;
+
           if (price >= lower[i] - tolerance && price <= upper[i] + tolerance) {
             pointsInChannel++;
           }
           if (Math.abs(price - upper[i]) <= tolerance) touchesUpper = true;
           if (Math.abs(price - lower[i]) <= tolerance) touchesLower = true;
+
+          // Check if price is within ±20% of center line
+          const centerTolerance = Math.abs(center) * 0.20; // 20% of center value
+          if (Math.abs(price - center) <= centerTolerance) {
+            pointsNearCenter++;
+          }
         });
 
         const coverage = pointsInChannel / n;
+        const centerProximity = pointsNearCenter / n;
+
+        // Reject channel if less than 70% of points are within ±20% of center
+        if (centerProximity < 0.70) continue;
 
         // Score the channel based on:
         // - Coverage (points within channel)
         // - Length of channel
         // - Whether it touches both bounds
         // - How well it fits (inverse of relative std dev)
+        // - Center proximity (bonus for tight clustering around center)
         const touchBonus = (touchesUpper && touchesLower) ? 1.5 : (touchesUpper || touchesLower) ? 1.2 : 1.0;
         const relativeFit = 1 / (1 + stdDev / (intercept || 1));
         const lengthBonus = Math.log(n) / Math.log(totalPoints);
-        const score = coverage * touchBonus * relativeFit * lengthBonus;
+        const centerBonus = centerProximity; // 0.7 to 1.0, rewards tighter channels
+        const score = coverage * touchBonus * relativeFit * lengthBonus * centerBonus;
 
         if (score > bestScore) {
           bestScore = score;
@@ -1131,6 +1148,7 @@ export const findMultipleChannels = (data, minRatio = 0.05, maxRatio = 0.5, stdM
             stdDev,
             stdMultiplier,
             coverage,
+            centerProximity,
             touchesUpper,
             touchesLower,
             score,
