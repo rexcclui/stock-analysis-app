@@ -13,6 +13,17 @@ import { HistoricalPerformanceCheck } from './components/HistoricalPerformanceCh
 import { LoadingState } from './components/LoadingState';
 import { Tabs, TabPanel } from './components/Tabs';
 import { AINewsSummary } from './components/AINewsSummary';
+import dynamic from 'next/dynamic';
+
+// Lazy load heavy visualization components to reduce initial bundle & render cost
+const LazyPricePerformanceChart = dynamic(() => import('./components/PricePerformanceChart').then(m => m.PricePerformanceChart), { ssr: false });
+const LazySentimentTimeSeriesChart = dynamic(() => import('./components/SentimentTimeSeriesChart').then(m => m.SentimentTimeSeriesChart), { ssr: false });
+const LazyComparisonSection = dynamic(() => import('./components/Comparison/ComparisonSection').then(m => m.ComparisonSection), { ssr: false });
+const LazySentimentSection = dynamic(() => import('./components/SentimentSection').then(m => m.SentimentSection), { ssr: false });
+const LazyAINewsSummary = dynamic(() => import('./components/AINewsSummary').then(m => m.AINewsSummary), { ssr: false });
+const LazyNewsSection = dynamic(() => import('./components/NewsSection').then(m => m.NewsSection), { ssr: false });
+const LazyHistoricalPerformanceCheck = dynamic(() => import('./components/HistoricalPerformanceCheck').then(m => m.HistoricalPerformanceCheck), { ssr: false });
+const LazyStockResultCard = dynamic(() => import('./components/StockResultCard').then(m => m.StockResultCard), { ssr: false });
 import { fetchWithCache, fetchPostWithCache, CACHE_DURATIONS, clearAllClientCache } from '../lib/clientCache';
 import { mark, measureMarks, startMeasure, configurePerformanceLogger, LOG_LEVEL } from './utils/performanceLogger';
 import PerfProfiler from './components/PerfProfiler';
@@ -935,7 +946,7 @@ export default function StockAnalysisDashboard() {
                 <LoadingState message="Fetching latest stock data..." className="mb-6" />
               )}
               <PerfProfiler id="StockResultCard" cycleId={searchCycleId}>
-                <StockResultCard stock={selectedStock} loading={loading} />
+                <LazyStockResultCard stock={selectedStock} loading={loading} />
               </PerfProfiler>
 
               <Tabs
@@ -971,7 +982,7 @@ export default function StockAnalysisDashboard() {
                   >
                     {showPriceChart && (
                       <PerfProfiler id="PricePerformanceChart" cycleId={searchCycleId}>
-                        <PricePerformanceChart
+                        <LazyPricePerformanceChart
                           selectedStock={selectedStock}
                           chartPeriod={chartPeriod}
                           setChartPeriod={setChartPeriod}
@@ -990,13 +1001,13 @@ export default function StockAnalysisDashboard() {
                   </div>
                 </div>
                 <PerfProfiler id="SentimentTimeSeriesChart" cycleId={searchCycleId}>
-                  <SentimentTimeSeriesChart
+                  <LazySentimentTimeSeriesChart
                     sentimentTimeSeries={selectedStock.sentimentTimeSeries}
                     loading={loading}
                   />
                 </PerfProfiler>
                 <PerfProfiler id="ComparisonSection" cycleId={searchCycleId}>
-                  <ComparisonSection
+                  <LazyComparisonSection
                     selectedStock={selectedStock}
                     comparisonStocks={comparisonStocks}
                     comparisonType={comparisonType}
@@ -1026,10 +1037,10 @@ export default function StockAnalysisDashboard() {
                   />
                 </PerfProfiler>
                 <PerfProfiler id="SentimentSection" cycleId={searchCycleId}>
-                  <SentimentSection sentiment={selectedStock.sentiment} loading={loading} />
+                  <LazySentimentSection sentiment={selectedStock.sentiment} loading={loading} />
                 </PerfProfiler>
                 <PerfProfiler id="AINewsSummary" cycleId={searchCycleId}>
-                  <AINewsSummary
+                  <LazyAINewsSummary
                     analysis={aiNewsAnalysis}
                     loading={aiAnalysisLoading}
                     error={aiAnalysisError}
@@ -1039,13 +1050,13 @@ export default function StockAnalysisDashboard() {
                   />
                 </PerfProfiler>
                 <PerfProfiler id="NewsSection" cycleId={searchCycleId}>
-                  <NewsSection newsApiNews={news} googleNews={googleNews} yahooNews={yahooNews} bloombergNews={bloombergNews} loading={loading} symbol={selectedStock.code} />
+                  <LazyNewsSection newsApiNews={news} googleNews={googleNews} yahooNews={yahooNews} bloombergNews={bloombergNews} loading={loading} symbol={selectedStock.code} />
                 </PerfProfiler>
               </TabPanel>
 
               <TabPanel activeTab={activeTab} tabId="historical-data-analysis">
                 <PerfProfiler id="HistoricalPerformanceCheck" cycleId={searchCycleId}>
-                  <HistoricalPerformanceCheck stockCode={selectedStock.code} />
+                  <LazyHistoricalPerformanceCheck stockCode={selectedStock.code} />
                 </PerfProfiler>
               </TabPanel>
           </> // closes fragment for selectedStock
