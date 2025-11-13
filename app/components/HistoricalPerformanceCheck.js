@@ -937,7 +937,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setMaShort(Math.max(5, maShort - 5))}
-                      className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                      className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-base font-bold transition"
                       title="Decrement Short MA"
                     >
                       -
@@ -954,7 +954,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
                     />
                     <button
                       onClick={() => setMaShort(Math.min(100, maShort + 5))}
-                      className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                      className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-base font-bold transition"
                       title="Increment Short MA"
                     >
                       +
@@ -973,7 +973,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => setMaLong(Math.max(50, maLong - 10))}
-                      className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                      className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-base font-bold transition"
                       title="Decrement Long MA"
                     >
                       -
@@ -990,7 +990,7 @@ export function HistoricalPerformanceCheck({ stockCode }) {
                     />
                     <button
                       onClick={() => setMaLong(Math.min(300, maLong + 10))}
-                      className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                      className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-base font-bold transition"
                       title="Increment Long MA"
                     >
                       +

@@ -1993,7 +1993,7 @@ export function PricePerformanceChart({
                     setTrendChannelLookback(Math.max(20, trendChannelLookback - step));
                     setTrendChannelInterceptShift(0);
                   }}
-                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-base font-bold transition"
                   title="Decrement lookback"
                 >
                   -
@@ -2018,7 +2018,7 @@ export function PricePerformanceChart({
                     setTrendChannelLookback(Math.min(getCurrentDataSlice().length, trendChannelLookback + step));
                     setTrendChannelInterceptShift(0);
                   }}
-                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-base font-bold transition"
                   title="Increment lookback"
                 >
                   +
@@ -2035,7 +2035,7 @@ export function PricePerformanceChart({
                     setTrendChannelEndAt(Math.max(0, trendChannelEndAt - step));
                     setTrendChannelInterceptShift(0);
                   }}
-                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-base font-bold transition"
                   title="Decrement end offset"
                 >
                   -
@@ -2059,7 +2059,7 @@ export function PricePerformanceChart({
                     setTrendChannelEndAt(Math.min(Math.floor(getCurrentDataSlice().length / 5), trendChannelEndAt + step));
                     setTrendChannelInterceptShift(0);
                   }}
-                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-base font-bold transition"
                   title="Increment end offset"
                 >
                   +
@@ -2072,7 +2072,7 @@ export function PricePerformanceChart({
                     setTrendChannelStdMultiplier(Math.max(0.5, trendChannelStdMultiplier - 0.5));
                     setTrendChannelInterceptShift(0);
                   }}
-                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-base font-bold transition"
                   title="Decrement std dev multiplier"
                 >
                   -
@@ -2094,7 +2094,7 @@ export function PricePerformanceChart({
                     setTrendChannelStdMultiplier(Math.min(4, trendChannelStdMultiplier + 0.5));
                     setTrendChannelInterceptShift(0);
                   }}
-                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-base font-bold transition"
                   title="Increment std dev multiplier"
                 >
                   +
@@ -2158,7 +2158,7 @@ export function PricePerformanceChart({
                 <label className="text-[11px] text-gray-300 font-medium">Min Ratio: {(multiChannelMinRatio * 100).toFixed(0)}%</label>
                 <button
                   onClick={() => setMultiChannelMinRatio(Math.max(0.05, multiChannelMinRatio - 0.01))}
-                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-base font-bold transition"
                   title="Decrement min ratio"
                 >
                   -
@@ -2175,7 +2175,7 @@ export function PricePerformanceChart({
                 />
                 <button
                   onClick={() => setMultiChannelMinRatio(Math.min(0.25, multiChannelMinRatio + 0.01))}
-                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-base font-bold transition"
                   title="Increment min ratio"
                 >
                   +
@@ -2186,7 +2186,7 @@ export function PricePerformanceChart({
                 <label className="text-[11px] text-gray-300 font-medium">Max Ratio: {(multiChannelMaxRatio * 100).toFixed(0)}%</label>
                 <button
                   onClick={() => setMultiChannelMaxRatio(Math.max(0.25, multiChannelMaxRatio - 0.05))}
-                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-base font-bold transition"
                   title="Decrement max ratio"
                 >
                   -
@@ -2203,7 +2203,7 @@ export function PricePerformanceChart({
                 />
                 <button
                   onClick={() => setMultiChannelMaxRatio(Math.min(0.75, multiChannelMaxRatio + 0.05))}
-                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-base font-bold transition"
                   title="Increment max ratio"
                 >
                   +
@@ -2214,7 +2214,7 @@ export function PricePerformanceChart({
                 <label className="text-[11px] text-gray-300 font-medium">StdDev: {multiChannelStdMultiplier.toFixed(1)}</label>
                 <button
                   onClick={() => setMultiChannelStdMultiplier(Math.max(0.5, multiChannelStdMultiplier - 0.1))}
-                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-base font-bold transition"
                   title="Decrement std dev multiplier"
                 >
                   -
@@ -2231,7 +2231,7 @@ export function PricePerformanceChart({
                 />
                 <button
                   onClick={() => setMultiChannelStdMultiplier(Math.min(4, multiChannelStdMultiplier + 0.1))}
-                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-base font-bold transition"
                   title="Increment std dev multiplier"
                 >
                   +
@@ -2327,7 +2327,7 @@ export function PricePerformanceChart({
                 <label className="text-xs text-gray-300 font-medium">Period: {channelLookback}</label>
                 <button
                   onClick={() => setChannelLookback(Math.max(20, channelLookback - 1))}
-                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-base font-bold transition"
                   title="Decrement lookback period"
                 >
                   -
@@ -2343,7 +2343,7 @@ export function PricePerformanceChart({
                 />
                 <button
                   onClick={() => setChannelLookback(Math.min(200, channelLookback + 1))}
-                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-base font-bold transition"
                   title="Increment lookback period"
                 >
                   +
@@ -2355,7 +2355,7 @@ export function PricePerformanceChart({
                 <label className="text-xs text-gray-300 font-medium">StdDev: {channelStdDevMultiplier.toFixed(1)}</label>
                 <button
                   onClick={() => setChannelStdDevMultiplier(Math.max(1, parseFloat((channelStdDevMultiplier - 0.1).toFixed(1))))}
-                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-base font-bold transition"
                   title="Decrement std dev multiplier"
                 >
                   -
@@ -2372,7 +2372,7 @@ export function PricePerformanceChart({
                 />
                 <button
                   onClick={() => setChannelStdDevMultiplier(Math.min(3, parseFloat((channelStdDevMultiplier + 0.1).toFixed(1))))}
-                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-base font-bold transition"
                   title="Increment std dev multiplier"
                 >
                   +
@@ -2384,7 +2384,7 @@ export function PricePerformanceChart({
                 <label className="text-xs text-gray-300 font-medium">Bins: {channelVolumeBins}</label>
                 <button
                   onClick={() => setChannelVolumeBins(Math.max(20, channelVolumeBins - 1))}
-                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-base font-bold transition"
                   title="Decrement volume bins"
                 >
                   -
@@ -2400,7 +2400,7 @@ export function PricePerformanceChart({
                 />
                 <button
                   onClick={() => setChannelVolumeBins(Math.min(100, channelVolumeBins + 1))}
-                  className="px-2 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-xs font-bold transition"
+                  className="px-3 py-1 bg-gray-700 hover:bg-gray-600 text-white rounded text-base font-bold transition"
                   title="Increment volume bins"
                 >
                   +
