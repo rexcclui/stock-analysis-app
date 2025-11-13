@@ -1117,6 +1117,11 @@ export const findMultipleChannels = (data, minRatio = 0.05, maxRatio = 0.5, stdM
 
         if (score > bestScore) {
           bestScore = score;
+
+          // Create intermediate bands (10 bands total, like standard channel mode)
+          const BANDS = 10;
+          const channelRange = stdMultiplier * stdDev * 2; // Total range from lower to upper
+
           bestChannel = {
             startIdx: pos,
             endIdx: channelEnd - 1,
@@ -1129,12 +1134,26 @@ export const findMultipleChannels = (data, minRatio = 0.05, maxRatio = 0.5, stdM
             touchesUpper,
             touchesLower,
             score,
-            data: slice.map((pt, i) => ({
-              ...pt,
-              channelUpper: upper[i],
-              channelLower: lower[i],
-              channelCenter: slope * i + intercept
-            }))
+            data: slice.map((pt, i) => {
+              const center = slope * i + intercept;
+              const upper = center + stdMultiplier * stdDev;
+              const lower = center - stdMultiplier * stdDev;
+
+              // Create intermediate bands
+              const bands = {};
+              for (let b = 1; b < BANDS; b++) {
+                const ratio = b / BANDS;
+                bands[`channelBand_${b}`] = lower + ratio * channelRange;
+              }
+
+              return {
+                ...pt,
+                channelUpper: upper,
+                channelLower: lower,
+                channelCenter: center,
+                ...bands
+              };
+            })
           };
         }
       }

@@ -2692,14 +2692,22 @@ export function PricePerformanceChart({
                   // The actual index in the full data is startIndex + idx
                   const fullDataIdx = startIndex + idx;
 
-                  // For each channel, add its upper/center/lower values if this point is in range
+                  // For each channel, add its upper/center/lower values and bands if this point is in range
                   multiChannelResults.forEach((channel, channelIdx) => {
                     if (fullDataIdx >= channel.startIdx && fullDataIdx <= channel.endIdx) {
                       const localIdx = fullDataIdx - channel.startIdx;
-                      if (channel.data[localIdx]) {
-                        channelData[`channel_${channelIdx}_upper`] = channel.data[localIdx].channelUpper;
-                        channelData[`channel_${channelIdx}_center`] = channel.data[localIdx].channelCenter;
-                        channelData[`channel_${channelIdx}_lower`] = channel.data[localIdx].channelLower;
+                      const localData = channel.data[localIdx];
+                      if (localData) {
+                        channelData[`channel_${channelIdx}_upper`] = localData.channelUpper;
+                        channelData[`channel_${channelIdx}_center`] = localData.channelCenter;
+                        channelData[`channel_${channelIdx}_lower`] = localData.channelLower;
+
+                        // Add intermediate bands for color zones
+                        for (let b = 1; b < CHANNEL_BANDS; b++) {
+                          if (localData[`channelBand_${b}`] != null) {
+                            channelData[`channel_${channelIdx}_band_${b}`] = localData[`channelBand_${b}`];
+                          }
+                        }
                       }
                     }
                   });
@@ -3198,9 +3206,51 @@ export function PricePerformanceChart({
                       />
                     </>
                   ) : colorMode === 'multi-channel' ? (
-                    // Multi-Channel Mode: Render multiple channels
+                    // Multi-Channel Mode: Render multiple channels with color zones
                     <>
-                      {/* Render each channel */}
+                      {/* Render color zones for each channel */}
+                      {multiChannelResults && multiChannelResults.length > 0 && multiData.length > 1 && multiChannelResults.map((channel, channelIdx) => {
+                        return multiData.map((pt, i) => {
+                          const next = multiData[i + 1];
+                          if (!next) return null;
+
+                          const zones = [];
+                          // Render each band zone between consecutive band boundaries
+                          for (let b = 0; b < CHANNEL_BANDS; b++) {
+                            const lowerKey = b === 0 ? `channel_${channelIdx}_lower` : `channel_${channelIdx}_band_${b}`;
+                            const upperKey = b === CHANNEL_BANDS - 1 ? `channel_${channelIdx}_upper` : `channel_${channelIdx}_band_${b + 1}`;
+                            const ptLower = pt[lowerKey];
+                            const ptUpper = pt[upperKey];
+                            const nextLower = next[lowerKey];
+                            const nextUpper = next[upperKey];
+
+                            if (ptLower == null || ptUpper == null || nextLower == null || nextUpper == null) continue;
+
+                            const zoneLower = Math.min(ptLower, nextLower);
+                            const zoneUpper = Math.max(ptUpper, nextUpper);
+                            const ratioMid = (b + 0.5) / CHANNEL_BANDS; // mid-point for color
+
+                            // Use a fixed volume percent for now (could calculate per channel later)
+                            const volumePercent = 5; // Moderate opacity
+
+                            zones.push(
+                              <ReferenceArea
+                                key={`multi-channel-${channelIdx}-band-${i}-${b}`}
+                                x1={pt.date}
+                                x2={next.date}
+                                y1={zoneLower}
+                                y2={zoneUpper}
+                                fill={getChannelBandColor(ratioMid, volumePercent)}
+                                strokeOpacity={0}
+                                ifOverflow="discard"
+                              />
+                            );
+                          }
+                          return zones;
+                        });
+                      })}
+
+                      {/* Render channel lines */}
                       {multiChannelResults && multiChannelResults.length > 0 && multiChannelResults.map((channel, channelIdx) => {
                         // Generate unique colors for each channel
                         const colors = [
