@@ -10,39 +10,38 @@ const getSentimentColor = (score) => {
   return 'text-red-400';
 };
 
-// Format timestamp to relative time (e.g., "2 hours ago") or absolute time
+// Format market timestamp to show actual date and time
 const formatLastUpdated = (timestamp) => {
   if (!timestamp) return null;
 
   try {
     const date = new Date(timestamp);
     const now = new Date();
-    const diffMs = now - date;
-    const diffMins = Math.floor(diffMs / 60000);
-    const diffHours = Math.floor(diffMs / 3600000);
-    const diffDays = Math.floor(diffMs / 86400000);
 
-    // If less than 1 minute ago
-    if (diffMins < 1) return 'Just now';
+    // Check if it's today
+    const isToday = date.toDateString() === now.toDateString();
 
-    // If less than 60 minutes ago
-    if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
-
-    // If less than 24 hours ago
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-
-    // If less than 7 days ago
-    if (diffDays < 7) return `${diffDays} day${diffDays > 1 ? 's' : ''} ago`;
-
-    // Otherwise show absolute date and time
-    const options = {
-      month: 'short',
-      day: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit',
-      hour12: true
-    };
-    return date.toLocaleString('en-US', options);
+    if (isToday) {
+      // Show time only for today's data
+      const options = {
+        hour: '2-digit',
+        minute: '2-digit',
+        second: '2-digit',
+        hour12: true
+      };
+      return date.toLocaleString('en-US', options);
+    } else {
+      // Show full date and time for past dates
+      const options = {
+        month: 'short',
+        day: 'numeric',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hour12: true
+      };
+      return date.toLocaleString('en-US', options);
+    }
   } catch (e) {
     return null;
   }
@@ -95,7 +94,7 @@ export function StockResultCard({ stock, loading = false }) {
           )}
           {stock.lastUpdated && formatLastUpdated(stock.lastUpdated) && (
             <div className="text-xs text-gray-400 mt-1">
-              Updated {formatLastUpdated(stock.lastUpdated)}
+              As of {formatLastUpdated(stock.lastUpdated)}
             </div>
           )}
         </div>
