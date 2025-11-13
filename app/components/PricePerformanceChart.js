@@ -3511,6 +3511,9 @@ export function PricePerformanceChart({
                         const channelWidth = (channel.stdMultiplier || 2) * channel.stdDev * 2;
                         const deltaLabel = `Δ$${channelWidth.toFixed(2)} (±${channel.stdMultiplier || 2}σ)`;
 
+                        // Debug: Log channel info to verify different stdDev values
+                        console.log(`Channel ${channelIdx}: stdDev=$${channel.stdDev?.toFixed(2)}, width=$${channelWidth.toFixed(2)}`);
+
                         return (
                           <React.Fragment key={`channel-${channelIdx}`}>
                             {/* Upper bound */}

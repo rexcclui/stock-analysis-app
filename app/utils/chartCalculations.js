@@ -1201,6 +1201,7 @@ export const findMultipleChannels = (data, minRatio = 0.05, maxRatio = 0.5, stdM
     if (!bestChannel || bestChannel.score < 0.15) break; // Stop if no good channel found
 
     // Add channel to results
+    console.log(`Multi-Channel ${channels.length}: startIdx=${bestChannel.startIdx}, endIdx=${bestChannel.endIdx}, stdDev=${bestChannel.stdDev?.toFixed(4)}, stdMultiplier=${bestChannel.stdMultiplier}, width=${((bestChannel.stdMultiplier || 2) * bestChannel.stdDev * 2).toFixed(4)}`);
     channels.push(bestChannel);
 
     // Mark indices as used (but allow 20% overlap for flexibility)
