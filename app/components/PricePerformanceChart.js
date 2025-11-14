@@ -3479,7 +3479,7 @@ export function PricePerformanceChart({
 
                             // Show label on the last segment (rightmost) for each zone
                             const isLastSegment = i === multiData.length - 2;
-                            const showLabel = isLastSegment && volumePercent >= 1.0; // Show if >= 1% volume
+                            const showLabel = isLastSegment && volumePercent >= 0.1; // Show if >= 0.1% volume
 
                             zones.push(
                               <ReferenceArea
@@ -3577,7 +3577,7 @@ export function PricePerformanceChart({
 
                             // Show label on the last segment (rightmost) for each zone
                             const isLastSegment = i === multiData.length - 2;
-                            const showLabel = isLastSegment && volumePercent >= 1.0; // Show if >= 1% volume
+                            const showLabel = isLastSegment && volumePercent >= 0.1; // Show if >= 0.1% volume
 
                             zones.push(
                               <ReferenceArea
@@ -3750,7 +3750,7 @@ export function PricePerformanceChart({
                             const volumePercent = zoneVolumePercentages[b] || 0;
 
                             // Show label on the last segment (rightmost) for each zone
-                            const showLabel = isLastSegmentOfChannel && volumePercent >= 1.0;
+                            const showLabel = isLastSegmentOfChannel && volumePercent >= 0.1; // Show if >= 0.1% volume
 
                             zones.push(
                               <ReferenceArea
@@ -3980,7 +3980,7 @@ export function PricePerformanceChart({
                       // Show label on the last segment (rightmost) for each zone
                       const fullDataIdx = startIndex + i;
                       const isLastSegment = fullDataIdx === channel.endIdx - 1;
-                      const showLabel = isLastSegment && volumePercent >= 1.0;
+                      const showLabel = isLastSegment && volumePercent >= 0.1; // Show if >= 0.1% volume
 
                       zones.push(
                         <ReferenceArea
