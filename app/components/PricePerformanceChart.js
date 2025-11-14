@@ -187,11 +187,22 @@ export function PricePerformanceChart({
     }
     setCrosshair({ x: chartX, y: chartY, dataX: activeLabel || null, dataY: value });
 
+    // Update manual channel selection if we're dragging
+    if (isManualChannelMode && manualChannelSelection?.isDragging && activeLabel) {
+      if (activeLabel !== manualChannelSelection.endDate) {
+        console.log('Updating selection endDate to:', activeLabel);
+        setManualChannelSelection(prev => ({
+          ...prev,
+          endDate: activeLabel
+        }));
+      }
+    }
+
     // Debug logging for manual channel mode
     if (isManualChannelMode) {
       console.log('handleChartHover - activeLabel:', activeLabel);
     }
-  }, [chartCompareStocks.length, isManualChannelMode]);
+  }, [chartCompareStocks.length, isManualChannelMode, manualChannelSelection]);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, startOffset: 0 });
 
