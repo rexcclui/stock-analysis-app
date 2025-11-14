@@ -2184,37 +2184,45 @@ export function PricePerformanceChart({
 
           {/* Individual Manual Channel Controls */}
           {isManualChannelMode && chartCompareStocks.length === 0 && selectedStock && manualChannels.length > 0 && (
-            <div className="flex items-center gap-2 ml-1">
+            <div className="flex flex-col gap-1 ml-1">
               {manualChannels.map((channel, idx) => {
                 const channelColors = ['#A855F7', '#10B981', '#F59E0B', '#EF4444', '#3B82F6'];
                 const color = channelColors[idx % channelColors.length];
 
                 return (
-                  <div key={channel.id} className="flex items-center gap-1">
-                    {/* Channel toggle button */}
-                    <button
-                      onClick={() => {
+                  <div key={channel.id} className="flex items-center gap-2 px-2 py-1 rounded" style={{ backgroundColor: '#1F2937', border: `1px solid ${color}` }}>
+                    {/* Checkbox for visibility toggle */}
+                    <input
+                      type="checkbox"
+                      checked={channel.visible}
+                      onChange={() => {
                         setManualChannels(prev => prev.map((ch, i) =>
                           i === idx ? { ...ch, visible: !ch.visible } : ch
                         ));
                       }}
-                      className="px-2 py-1 rounded text-xs font-medium transition"
-                      style={{
-                        backgroundColor: channel.visible ? color : '#374151',
-                        color: channel.visible ? '#FFFFFF' : '#9CA3AF',
-                        opacity: channel.visible ? 1 : 0.6
-                      }}
-                      title={`Channel ${idx + 1}: ${channel.startDate} to ${channel.endDate}\n${channel.visible ? 'Click to hide' : 'Click to show'}`}
-                    >
-                      Ch{idx + 1}
-                    </button>
-                    {/* Remove channel button */}
+                      className="w-4 h-4 cursor-pointer"
+                      style={{ accentColor: color }}
+                      title={channel.visible ? 'Hide channel' : 'Show channel'}
+                    />
+                    {/* Channel info label */}
+                    <div className="flex items-center gap-1 flex-1">
+                      <span className="text-xs font-bold" style={{ color: color }}>
+                        Ch{idx + 1}
+                      </span>
+                      <span className="text-[10px] text-gray-400">
+                        {channel.startDate} - {channel.endDate}
+                      </span>
+                      <span className="text-[10px] font-semibold" style={{ color: color }}>
+                        ±{channel.stdMultiplier.toFixed(2)}σ
+                      </span>
+                    </div>
+                    {/* Delete button */}
                     <button
                       onClick={() => {
                         setManualChannels(prev => prev.filter((_, i) => i !== idx));
                       }}
-                      className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-bold transition"
-                      title={`Remove channel ${idx + 1}`}
+                      className="px-1.5 py-0.5 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-bold transition"
+                      title={`Delete channel ${idx + 1} permanently`}
                     >
                       ×
                     </button>
@@ -4017,6 +4025,10 @@ export function PricePerformanceChart({
                   ];
                   const channelColor = channelColors[channelIdx % channelColors.length];
 
+                  // Find the last data point in this channel for the stdev label
+                  const channelEndData = multiData.find(pt => pt.date === channel.endDate);
+                  const sigmaLabel = `±${channel.stdMultiplier.toFixed(2)}σ`;
+
                   return (
                     <React.Fragment key={`manual-channel-${channelIdx}`}>
                       {/* Render color zones */}
@@ -4057,6 +4069,26 @@ export function PricePerformanceChart({
                         dot={false}
                         connectNulls={false}
                       />
+                      {/* StdDev label at channel end */}
+                      {channelEndData && channelEndData[`manual_${channelIdx}_upper`] && channelEndData[`manual_${channelIdx}_lower`] && (
+                        <ReferenceLine
+                          segment={[
+                            { x: channelEndData.date, y: channelEndData[`manual_${channelIdx}_upper`] },
+                            { x: channelEndData.date, y: channelEndData[`manual_${channelIdx}_lower`] }
+                          ]}
+                          stroke={channelColor.center}
+                          strokeWidth={2}
+                          strokeOpacity={0.7}
+                          label={{
+                            value: sigmaLabel,
+                            position: 'right',
+                            fill: channelColor.center,
+                            fontSize: 11,
+                            fontWeight: 'bold',
+                            offset: 5
+                          }}
+                        />
+                      )}
                     </React.Fragment>
                   );
                 })}
