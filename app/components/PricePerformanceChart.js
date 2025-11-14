@@ -3357,13 +3357,13 @@ export function PricePerformanceChart({
                     // Multi-Channel Mode: Render multiple channels with volume-based color zones
                     <>
                       {/* Render color zones for each channel */}
-                      {React.useMemo(() => {
+                      {(() => {
                         if (!multiChannelResults || multiChannelResults.length === 0 || multiData.length <= 1) {
                           return null;
                         }
 
-                        return multiChannelResults.map((channel, channelIdx) => {
-                          // Calculate volume distribution for this specific channel (MEMOIZED)
+                        // Pre-calculate zone volume percentages for all channels once per render
+                        const allChannelZoneData = multiChannelResults.map((channel, channelIdx) => {
                           const channelData = multiData.filter((pt, idx) => {
                             const fullDataIdx = startIndex + idx;
                             return fullDataIdx >= channel.startIdx && fullDataIdx <= channel.endIdx &&
@@ -3431,7 +3431,12 @@ export function PricePerformanceChart({
                               : 0;
                           });
 
-                        return multiData.map((pt, i) => {
+                          return { channel, channelIdx, zoneVolumePercentages };
+                        });
+
+                        // Now render zones for all channels
+                        return allChannelZoneData.map(({ channel, channelIdx, zoneVolumePercentages }) =>
+                          multiData.map((pt, i) => {
                           const next = multiData[i + 1];
                           if (!next) return null;
 
@@ -3487,9 +3492,9 @@ export function PricePerformanceChart({
                             );
                           }
                           return zones;
-                        });
-                        });
-                      }, [multiChannelResults, multiData, startIndex])}
+                        })
+                        );
+                      })()}
 
                       {/* Render channel lines */}
                       {multiChannelResults && multiChannelResults.length > 0 && multiChannelResults.map((channel, channelIdx) => {
