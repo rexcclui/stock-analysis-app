@@ -1769,6 +1769,73 @@ export function PricePerformanceChart({
     setZoomDomain({ start: 0, end: 100 });
   };
 
+  // Colorsets for channels (primary and secondary for overlapping channels)
+  const PRIMARY_COLORSET = [
+    { simple: '#A855F7', upper: '#A855F7', center: '#9333EA', lower: '#A855F7' }, // Purple
+    { simple: '#10B981', upper: '#10B981', center: '#059669', lower: '#10B981' }, // Green
+    { simple: '#F59E0B', upper: '#F59E0B', center: '#D97706', lower: '#F59E0B' }, // Orange
+    { simple: '#EF4444', upper: '#EF4444', center: '#DC2626', lower: '#EF4444' }, // Red
+    { simple: '#3B82F6', upper: '#3B82F6', center: '#2563EB', lower: '#3B82F6' }, // Blue
+  ];
+
+  const SECONDARY_COLORSET = [
+    { simple: '#EC4899', upper: '#EC4899', center: '#DB2777', lower: '#EC4899' }, // Pink
+    { simple: '#14B8A6', upper: '#14B8A6', center: '#0D9488', lower: '#14B8A6' }, // Teal
+    { simple: '#F97316', upper: '#F97316', center: '#EA580C', lower: '#F97316' }, // Deep Orange
+    { simple: '#8B5CF6', upper: '#8B5CF6', center: '#7C3AED', lower: '#8B5CF6' }, // Violet
+    { simple: '#06B6D4', upper: '#06B6D4', center: '#0891B2', lower: '#06B6D4' }, // Cyan
+  ];
+
+  // Helper function to check if two channels overlap in time and price space
+  const checkChannelOverlap = useCallback((newChannel, existingChannel) => {
+    // Check time overlap first
+    const newStart = new Date(newChannel.startDate).getTime();
+    const newEnd = new Date(newChannel.endDate).getTime();
+    const existStart = new Date(existingChannel.startDate).getTime();
+    const existEnd = new Date(existingChannel.endDate).getTime();
+
+    // No time overlap if one channel ends before the other starts
+    if (newEnd < existStart || newStart > existEnd) {
+      return false;
+    }
+
+    // Find overlapping time range
+    const overlapStart = Math.max(newStart, existStart);
+    const overlapEnd = Math.min(newEnd, existEnd);
+
+    // Check if channels overlap in price space during the overlapping time
+    // Compare the channel bounds (upper and lower) during the overlap period
+    const newData = newChannel.data.filter(pt => {
+      const ptTime = new Date(pt.date).getTime();
+      return ptTime >= overlapStart && ptTime <= overlapEnd;
+    });
+
+    const existData = existingChannel.data.filter(pt => {
+      const ptTime = new Date(pt.date).getTime();
+      return ptTime >= overlapStart && ptTime <= overlapEnd;
+    });
+
+    // Check if any points in the overlapping time period have overlapping price ranges
+    for (const newPt of newData) {
+      for (const existPt of existData) {
+        if (newPt.date === existPt.date) {
+          // Check if the channels overlap in price at this date
+          const newUpper = newPt.trendUpper;
+          const newLower = newPt.trendLower;
+          const existUpper = existPt.trendUpper;
+          const existLower = existPt.trendLower;
+
+          // Channels overlap if one channel's range intersects the other's range
+          if (!(newUpper < existLower || newLower > existUpper)) {
+            return true; // Found overlap
+          }
+        }
+      }
+    }
+
+    return false; // No overlap found
+  }, []);
+
   // Compute optimal channel for the selected date range
   const computeManualChannel = useCallback(async (startDate, endDate) => {
     const currentData = getCurrentDataSlice();
@@ -1828,7 +1895,7 @@ export function PricePerformanceChart({
 
       console.log('Channel data built, length:', channelData.length);
 
-      // Create manual channel object
+      // Create manual channel object (without colorset assignment yet)
       const manualChannel = {
         id: Date.now(), // Unique ID for this channel
         startIdx: actualStartIdx,
@@ -1859,10 +1926,44 @@ export function PricePerformanceChart({
         })
       };
 
-      // Add the channel to our manual channels array
-      setManualChannels(prev => [...prev, manualChannel]);
-      console.log('Manual channel added:', manualChannel);
-      console.log('Total manual channels:', manualChannels.length + 1);
+      // Detect overlaps and assign appropriate colorset
+      setManualChannels(prev => {
+        let hasOverlap = false;
+        let colorsetType = 'primary';
+        let colorIndex = prev.length % PRIMARY_COLORSET.length;
+
+        // Check if new channel overlaps with any existing channel
+        for (const existingChannel of prev) {
+          if (checkChannelOverlap(manualChannel, existingChannel)) {
+            hasOverlap = true;
+            colorsetType = 'secondary';
+            // Count secondary channels to get the right color index
+            const secondaryChannelCount = prev.filter(ch => ch.colorsetType === 'secondary').length;
+            colorIndex = secondaryChannelCount % SECONDARY_COLORSET.length;
+            console.log(`New channel overlaps with channel ${existingChannel.id}, using secondary colorset`);
+            break;
+          }
+        }
+
+        // If no overlap, count primary channels for color index
+        if (!hasOverlap) {
+          const primaryChannelCount = prev.filter(ch => ch.colorsetType === 'primary').length;
+          colorIndex = primaryChannelCount % PRIMARY_COLORSET.length;
+        }
+
+        // Add colorset information to the channel
+        const channelWithColor = {
+          ...manualChannel,
+          colorsetType,
+          colorIndex
+        };
+
+        console.log('Manual channel added:', channelWithColor);
+        console.log('Total manual channels:', prev.length + 1);
+        console.log('Colorset:', colorsetType, 'Index:', colorIndex);
+
+        return [...prev, channelWithColor];
+      });
 
     } catch (error) {
       console.error('Error computing manual channel:', error);
@@ -2228,8 +2329,10 @@ export function PricePerformanceChart({
           {isManualChannelMode && chartCompareStocks.length === 0 && selectedStock && manualChannels.length > 0 && (
             <div className="flex flex-col gap-1 ml-1">
               {manualChannels.map((channel, idx) => {
-                const channelColors = ['#A855F7', '#10B981', '#F59E0B', '#EF4444', '#3B82F6'];
-                const color = channelColors[idx % channelColors.length];
+                // Use the assigned colorset from the channel
+                const colorset = channel.colorsetType === 'secondary' ? SECONDARY_COLORSET : PRIMARY_COLORSET;
+                const colorIndex = channel.colorIndex || 0;
+                const color = colorset[colorIndex].simple;
 
                 return (
                   <div key={channel.id} className="flex items-center gap-2 px-2 py-1 rounded" style={{ backgroundColor: '#1F2937', border: `1px solid ${color}` }}>
@@ -4083,15 +4186,10 @@ export function PricePerformanceChart({
                     return zones;
                   });
 
-                  // Channel color (different colors for different manual channels)
-                  const channelColors = [
-                    { upper: '#A855F7', center: '#9333EA', lower: '#A855F7' }, // Purple
-                    { upper: '#10B981', center: '#059669', lower: '#10B981' }, // Green
-                    { upper: '#F59E0B', center: '#D97706', lower: '#F59E0B' }, // Orange
-                    { upper: '#EF4444', center: '#DC2626', lower: '#EF4444' }, // Red
-                    { upper: '#3B82F6', center: '#2563EB', lower: '#3B82F6' }, // Blue
-                  ];
-                  const channelColor = channelColors[channelIdx % channelColors.length];
+                  // Channel color (use assigned colorset from channel)
+                  const colorset = channel.colorsetType === 'secondary' ? SECONDARY_COLORSET : PRIMARY_COLORSET;
+                  const colorIndex = channel.colorIndex || 0;
+                  const channelColor = colorset[colorIndex];
 
                   // Find the midpoint of the channel for the stdev label
                   const channelStartIdx = multiData.findIndex(pt => pt.date === channel.startDate);
