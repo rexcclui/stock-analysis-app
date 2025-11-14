@@ -3930,9 +3930,9 @@ export function PricePerformanceChart({
 
                     if (lowerBound == null || upperBound == null) return;
 
-                    // Build band boundary array (using 6 bands like trend mode)
+                    // Build band boundary array (using CHANNEL_BANDS-1 intermediate bands)
                     const boundaries = [lowerBound];
-                    for (let b = 1; b <= 6; b++) {
+                    for (let b = 1; b < CHANNEL_BANDS; b++) {
                       const bandValue = pt[`manual_${channelIdx}_band_${b}`];
                       if (bandValue != null) boundaries.push(bandValue);
                     }
@@ -3955,13 +3955,15 @@ export function PricePerformanceChart({
                     totalVolume += volume;
                   });
 
-                  // Calculate volume percentages
+                  // Calculate volume percentages - ensure all zones are initialized
                   const zoneVolumePercentages = {};
-                  Object.keys(zoneVolumes).forEach(zoneIndex => {
-                    zoneVolumePercentages[zoneIndex] = totalVolume > 0
-                      ? (zoneVolumes[zoneIndex] / totalVolume) * 100
+                  for (let z = 0; z < CHANNEL_BANDS; z++) {
+                    zoneVolumePercentages[z] = totalVolume > 0 && zoneVolumes[z]
+                      ? (zoneVolumes[z] / totalVolume) * 100
                       : 0;
-                  });
+                  }
+
+                  console.log(`Channel ${channelIdx + 1} volume distribution:`, zoneVolumePercentages);
 
                   // Render color zones for this manual channel
                   const colorZones = multiData.map((pt, i) => {
@@ -3988,7 +3990,7 @@ export function PricePerformanceChart({
                       // Show label on the last segment (rightmost) for each zone
                       const fullDataIdx = startIndex + i;
                       const isLastSegment = fullDataIdx === channel.endIdx - 1;
-                      const showLabel = isLastSegment && volumePercent >= 0.1; // Show if >= 0.1% volume
+                      const showLabel = isLastSegment; // Show all zones including 0%
 
                       zones.push(
                         <ReferenceArea
