@@ -1822,7 +1822,8 @@ export function PricePerformanceChart({
         selectedSlice,
         selectedSlice.length,
         alignment.optimalDelta,
-        { interceptShift: alignment.optimalInterceptShift, endAt: 0 }
+        { interceptShift: alignment.optimalInterceptShift, endAt: 0 },
+        CHANNEL_BANDS // Use 10 bands to match rendering expectation
       );
 
       console.log('Channel data built, length:', channelData.length);
@@ -1839,19 +1840,23 @@ export function PricePerformanceChart({
         interceptShift: alignment.optimalInterceptShift,
         touchesUpper: alignment.touchesUpper,
         touchesLower: alignment.touchesLower,
+        visible: true, // Channel visibility toggle
         // channelData is already the selected slice, don't slice it again
-        data: channelData.map(pt => ({
-          date: pt.date,
-          trendLine: pt.trendLine,
-          trendUpper: pt.trendUpper,
-          trendLower: pt.trendLower,
-          trendBand_1: pt.trendBand_1,
-          trendBand_2: pt.trendBand_2,
-          trendBand_3: pt.trendBand_3,
-          trendBand_4: pt.trendBand_4,
-          trendBand_5: pt.trendBand_5,
-          trendBand_6: pt.trendBand_6
-        }))
+        data: channelData.map(pt => {
+          const channelPoint = {
+            date: pt.date,
+            trendLine: pt.trendLine,
+            trendUpper: pt.trendUpper,
+            trendLower: pt.trendLower
+          };
+          // Include all intermediate bands (1 through CHANNEL_BANDS-1)
+          for (let b = 1; b < CHANNEL_BANDS; b++) {
+            if (pt[`trendBand_${b}`] != null) {
+              channelPoint[`trendBand_${b}`] = pt[`trendBand_${b}`];
+            }
+          }
+          return channelPoint;
+        })
       };
 
       // Add the channel to our manual channels array
@@ -2177,15 +2182,46 @@ export function PricePerformanceChart({
             </button>
           )}
 
-          {/* Manual Channel Controls */}
+          {/* Individual Manual Channel Controls */}
           {isManualChannelMode && chartCompareStocks.length === 0 && selectedStock && manualChannels.length > 0 && (
-            <button
-              onClick={() => setManualChannels([])}
-              className="px-3 py-2 rounded-lg text-xs font-medium transition bg-red-600 hover:bg-red-700 text-white"
-              title="Clear all manual channels"
-            >
-              Clear Channels ({manualChannels.length})
-            </button>
+            <div className="flex items-center gap-2 ml-1">
+              {manualChannels.map((channel, idx) => {
+                const channelColors = ['#A855F7', '#10B981', '#F59E0B', '#EF4444', '#3B82F6'];
+                const color = channelColors[idx % channelColors.length];
+
+                return (
+                  <div key={channel.id} className="flex items-center gap-1">
+                    {/* Channel toggle button */}
+                    <button
+                      onClick={() => {
+                        setManualChannels(prev => prev.map((ch, i) =>
+                          i === idx ? { ...ch, visible: !ch.visible } : ch
+                        ));
+                      }}
+                      className="px-2 py-1 rounded text-xs font-medium transition"
+                      style={{
+                        backgroundColor: channel.visible ? color : '#374151',
+                        color: channel.visible ? '#FFFFFF' : '#9CA3AF',
+                        opacity: channel.visible ? 1 : 0.6
+                      }}
+                      title={`Channel ${idx + 1}: ${channel.startDate} to ${channel.endDate}\n${channel.visible ? 'Click to hide' : 'Click to show'}`}
+                    >
+                      Ch{idx + 1}
+                    </button>
+                    {/* Remove channel button */}
+                    <button
+                      onClick={() => {
+                        setManualChannels(prev => prev.filter((_, i) => i !== idx));
+                      }}
+                      className="px-2 py-1 bg-red-600 hover:bg-red-700 text-white rounded text-xs font-bold transition"
+                      title={`Remove channel ${idx + 1}`}
+                    >
+                      ×
+                    </button>
+                  </div>
+                );
+              })}
+            </div>
           )}
 
           {/* Manual Channel Status Message */}
@@ -3095,6 +3131,9 @@ export function PricePerformanceChart({
 
                   // For each manual channel, add its upper/center/lower values and bands if this point is in range
                   manualChannels.forEach((channel, channelIdx) => {
+                    // Only apply data if channel is visible
+                    if (!channel.visible) return;
+
                     // Match by date instead of index for more reliability
                     const channelDataPoint = channel.data.find(d => d.date === pt.date);
 
@@ -3103,8 +3142,8 @@ export function PricePerformanceChart({
                       channelData[`manual_${channelIdx}_center`] = channelDataPoint.trendLine;
                       channelData[`manual_${channelIdx}_lower`] = channelDataPoint.trendLower;
 
-                      // Add intermediate bands for color zones
-                      for (let b = 1; b <= 6; b++) {
+                      // Add intermediate bands for color zones (1 through CHANNEL_BANDS-1)
+                      for (let b = 1; b < CHANNEL_BANDS; b++) {
                         if (channelDataPoint[`trendBand_${b}`] != null) {
                           channelData[`manual_${channelIdx}_band_${b}`] = channelDataPoint[`trendBand_${b}`];
                         }
@@ -3858,6 +3897,9 @@ export function PricePerformanceChart({
 
                 {/* Manual Channels - Render on top of everything when in manual channel mode */}
                 {isManualChannelMode && manualChannels.length > 0 && manualChannels.map((channel, channelIdx) => {
+                  // Skip if channel is not visible
+                  if (!channel.visible) return null;
+
                   // Calculate volume distribution for this manual channel
                   const channelData = multiData.filter((pt, idx) => {
                     const fullDataIdx = startIndex + idx;
