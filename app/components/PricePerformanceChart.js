@@ -1844,31 +1844,24 @@ export function PricePerformanceChart({
   const handleMouseDown = useCallback((e) => {
     // Only start drag on left mouse button
     if (e.button !== 0) return;
-    e.preventDefault();
 
     // If in manual channel mode, start rectangle selection instead of panning
     if (isManualChannelMode) {
-      const chartElement = chartContainerRef.current;
-      if (!chartElement) return;
-
-      const rect = chartElement.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
+      e.preventDefault();
+      e.stopPropagation();
 
       // Get the active data point from crosshair
       if (crosshair.dataX) {
         setManualChannelSelection({
-          startX: x,
-          startY: y,
-          endX: x,
-          endY: y,
           startDate: crosshair.dataX,
-          endDate: crosshair.dataX
+          endDate: crosshair.dataX,
+          isDragging: true
         });
       }
       return;
     }
 
+    e.preventDefault();
     dragStartRef.current = {
       x: e.clientX,
       startOffset: dataOffset,
@@ -1880,19 +1873,10 @@ export function PricePerformanceChart({
 
   const handleMouseMove = useCallback((e) => {
     // If in manual channel mode and we have an active selection, update the rectangle
-    if (isManualChannelMode && manualChannelSelection) {
-      const chartElement = chartContainerRef.current;
-      if (!chartElement) return;
-
-      const rect = chartElement.getBoundingClientRect();
-      const x = e.clientX - rect.left;
-      const y = e.clientY - rect.top;
-
-      if (crosshair.dataX) {
+    if (isManualChannelMode && manualChannelSelection?.isDragging) {
+      if (crosshair.dataX && crosshair.dataX !== manualChannelSelection.endDate) {
         setManualChannelSelection(prev => ({
           ...prev,
-          endX: x,
-          endY: y,
           endDate: crosshair.dataX
         }));
       }
@@ -1937,9 +1921,12 @@ export function PricePerformanceChart({
 
   const handleMouseUp = useCallback(() => {
     // If in manual channel mode and we have a selection, compute the channel
-    if (isManualChannelMode && manualChannelSelection) {
+    if (isManualChannelMode && manualChannelSelection?.isDragging) {
       const { startDate, endDate } = manualChannelSelection;
       if (startDate && endDate && startDate !== endDate) {
+        // Update selection to mark dragging as finished
+        setManualChannelSelection(prev => ({ ...prev, isDragging: false }));
+        // Compute the channel
         computeManualChannel(startDate, endDate);
       } else {
         // If selection is too small, just clear it
@@ -2952,7 +2939,15 @@ export function PricePerformanceChart({
             </div>
           )}
           {/* Increased chart height by 25%: 400 -> 500 */}
-          <ResponsiveContainer width="100%" height={500} style={{ margin: 0, padding: 0 }}>
+          <ResponsiveContainer
+            width="100%"
+            height={500}
+            style={{
+              margin: 0,
+              padding: 0,
+              cursor: isManualChannelMode ? 'crosshair' : 'default'
+            }}
+          >
             {(() => {
               // Get current data slice based on offset
               const currentData = getCurrentDataSlice();
@@ -3992,7 +3987,7 @@ export function PricePerformanceChart({
                 })}
 
                 {/* Selection rectangle for manual channel mode */}
-                {isManualChannelMode && manualChannelSelection && manualChannelSelection.startDate !== manualChannelSelection.endDate && (
+                {isManualChannelMode && manualChannelSelection && (
                   <ReferenceArea
                     x1={manualChannelSelection.startDate}
                     x2={manualChannelSelection.endDate}
