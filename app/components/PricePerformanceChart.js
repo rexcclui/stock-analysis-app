@@ -222,7 +222,7 @@ export function PricePerformanceChart({
   // Calculate VSPY (Relative Performance vs SPY on 3-day MA) for each data point
   const calculateVSPY = (data, period, spyHistoricalData) => {
     if (!data || data.length === 0 || !spyHistoricalData || spyHistoricalData.length === 0) {
-      console.log('VSPY: No data or SPY data', { dataLen: data?.length, spyLen: spyHistoricalData?.length });
+      // console.log('VSPY: No data or SPY data', { dataLen: data?.length, spyLen: spyHistoricalData?.length });
       return data.map(point => ({ ...point, vspy: 1 }));
     }
 
@@ -239,9 +239,9 @@ export function PricePerformanceChart({
       spyMap.set(dateKey, point);
     });
 
-    console.log('VSPY: SPY map size:', spyMap.size, 'Stock data length:', stockWithMA.length, 'N:', N);
-    console.log('VSPY: Sample stock dates:', stockWithMA.slice(0, 3).map(p => p.date));
-    console.log('VSPY: Sample SPY dates:', Array.from(spyMap.keys()).slice(0, 3));
+    // console.log('VSPY: SPY map size:', spyMap.size, 'Stock data length:', stockWithMA.length, 'N:', N);
+    // console.log('VSPY: Sample stock dates:', stockWithMA.slice(0, 3).map(p => p.date));
+    // console.log('VSPY: Sample SPY dates:', Array.from(spyMap.keys()).slice(0, 3));
 
     let matchedCount = 0;
     let unmatchedCount = 0;
@@ -303,9 +303,9 @@ export function PricePerformanceChart({
       return { ...point, vspy };
     });
 
-    console.log('VSPY: Matched:', matchedCount, 'Unmatched:', unmatchedCount);
-    console.log('VSPY: Values range:', Math.min(...vspyValues), 'to', Math.max(...vspyValues));
-    console.log('VSPY: Sample values:', vspyValues.slice(0, 10));
+    // console.log('VSPY: Matched:', matchedCount, 'Unmatched:', unmatchedCount);
+    // console.log('VSPY: Values range:', Math.min(...vspyValues), 'to', Math.max(...vspyValues));
+    // console.log('VSPY: Sample values:', vspyValues.slice(0, 10));
 
     return result;
   };
@@ -834,8 +834,8 @@ export function PricePerformanceChart({
       return;
     }
 
-    console.log('🚀 Starting Channel Find Optimal - 2D Optimization');
-    console.log(`📊 Data length: ${currentData.length} points`);
+    // console.log('🚀 Starting Channel Find Optimal - 2D Optimization');
+    // console.log(`📊 Data length: ${currentData.length} points`);
 
     const fixedStdMult = 0.5; // Fixed delta value for lookback simulation
     const minLookback = 20;
@@ -859,9 +859,9 @@ export function PricePerformanceChart({
       const endAtSamples = Math.ceil(maxEndAt / endAtIncrement) + 1;
       const totalIterations = lookbackSamples * endAtSamples;
 
-      console.log(`\n🔍 [${label}] Lookback Simulation Starting`);
-      console.log(`   Range: lookback [${minLookback}-${maxLookback}] (increment: ${lookbackIncrement}), endAt [0-${maxEndAt}] (increment: ${endAtIncrement})`);
-      console.log(`   Grid: ${lookbackSamples}x${endAtSamples} = ${totalIterations} simulations (optimized from full grid)`);
+      // console.log(`\n🔍 [${label}] Lookback Simulation Starting`);
+      // console.log(`   Range: lookback [${minLookback}-${maxLookback}] (increment: ${lookbackIncrement}), endAt [0-${maxEndAt}] (increment: ${endAtIncrement})`);
+      // console.log(`   Grid: ${lookbackSamples}x${endAtSamples} = ${totalIterations} simulations (optimized from full grid)`);
 
       // Allow UI to update before heavy work begins
       await new Promise(resolve => setTimeout(resolve, 50));
@@ -908,7 +908,7 @@ export function PricePerformanceChart({
             if (currentTime - lastLogTime >= 500) {
               const progress = ((lookbackResults.length / totalIterations) * 100).toFixed(1);
               const elapsed = ((currentTime - startTime) / 1000).toFixed(1);
-              console.log(`   Progress: ${progress}% (${lookbackResults.length}/${totalIterations}) | Best: lookback=${optimalLookback}, endAt=${optimalEndAt}, crosses=${maxCrosses} | ${elapsed}s`);
+              // console.log(`   Progress: ${progress}% (${lookbackResults.length}/${totalIterations}) | Best: lookback=${optimalLookback}, endAt=${optimalEndAt}, crosses=${maxCrosses} | ${elapsed}s`);
               lastLogTime = currentTime;
             }
             await new Promise(resolve => setTimeout(resolve, 0));
@@ -957,9 +957,9 @@ export function PricePerformanceChart({
       await testMaximumValues();
 
       const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
-      console.log(`✅ [${label}] Lookback Simulation Complete in ${totalTime}s`);
-      console.log(`   Result: lookback=${optimalLookback}, endAt=${optimalEndAt}, maxCrosses=${maxCrosses}`);
-      console.log(`   Tested ${lookbackResults.length} parameter combinations`);
+      // console.log(`✅ [${label}] Lookback Simulation Complete in ${totalTime}s`);
+      // console.log(`   Result: lookback=${optimalLookback}, endAt=${optimalEndAt}, maxCrosses=${maxCrosses}`);
+      // console.log(`   Tested ${lookbackResults.length} parameter combinations`);
 
       return { optimalLookback, optimalEndAt, maxCrosses, lookbackResults };
     };
@@ -967,14 +967,14 @@ export function PricePerformanceChart({
     // Find the std dev multiplier (delta) that keeps the most points inside the channel
     // while ensuring both the upper and lower bounds are touched at least once when possible.
     const runDeltaSimulation = async (data, lookback, endAt = 0, label = 'Full') => {
-      console.log(`\n🎯 [${label}] Delta Simulation Starting`);
-      console.log(`   Using: lookback=${lookback}, endAt=${endAt}`);
+      // console.log(`\n🎯 [${label}] Delta Simulation Starting`);
+      // console.log(`   Using: lookback=${lookback}, endAt=${endAt}`);
 
       const startTime = Date.now();
       const alignment = computeTrendChannelTouchAlignment(data, lookback, endAt, chartPeriod);
 
       if (!alignment) {
-        console.log(`⚠️  [${label}] Delta Simulation: No alignment found`);
+        // console.log(`⚠️  [${label}] Delta Simulation: No alignment found`);
         return {
           optimalDelta: 0,
           maxCoverageCount: 0,
@@ -989,9 +989,9 @@ export function PricePerformanceChart({
 
       const totalTime = ((Date.now() - startTime) / 1000).toFixed(2);
       const smaPeriod = getSmaPeriodForTouchDetection(chartPeriod);
-      console.log(`✅ [${label}] Delta Simulation Complete in ${totalTime}s`);
-      console.log(`   Result: delta=${alignment.optimalDelta.toFixed(3)}, coverage=${alignment.coverageCount}/${alignment.totalPoints}, touchesBoth=${alignment.touchesUpper && alignment.touchesLower}`);
-      console.log(`   Touch validation: Upper=${alignment.touchesUpper}, Lower=${alignment.touchesLower} (using SMA${smaPeriod} + turning point detection)`);
+      // console.log(`✅ [${label}] Delta Simulation Complete in ${totalTime}s`);
+      // console.log(`   Result: delta=${alignment.optimalDelta.toFixed(3)}, coverage=${alignment.coverageCount}/${alignment.totalPoints}, touchesBoth=${alignment.touchesUpper && alignment.touchesLower}`);
+      // console.log(`   Touch validation: Upper=${alignment.touchesUpper}, Lower=${alignment.touchesLower} (using SMA${smaPeriod} + turning point detection)`);
 
       return {
         optimalDelta: alignment.optimalDelta,
@@ -1011,7 +1011,7 @@ export function PricePerformanceChart({
     const recentDataLength = Math.max(minLookback, Math.floor(currentData.length * 0.25));
     const recentData = currentData.slice(-recentDataLength);
 
-    console.log(`\n📈 Starting Recent (25%) Simulation with ${recentData.length} points`);
+    // console.log(`\n📈 Starting Recent (25%) Simulation with ${recentData.length} points`);
     const recentLookbackResult = await runLookbackSimulation(recentData, 'Recent');
     const recentDeltaResult = await runDeltaSimulation(recentData, recentLookbackResult.optimalLookback, recentLookbackResult.optimalEndAt, 'Recent');
 
@@ -1049,13 +1049,13 @@ export function PricePerformanceChart({
     });
 
     // Apply optimal lookback, endAt, and delta (full data set)
-    console.log('\n🎉 Channel Optimization Complete!');
-    console.log('📊 Applying Full Dataset Results:');
-    console.log(`   Lookback: ${fullLookbackResult.optimalLookback}`);
-    console.log(`   EndAt: ${fullLookbackResult.optimalEndAt}`);
-    console.log(`   Delta: ${fullDeltaResult.optimalDelta.toFixed(3)}`);
-    console.log(`   Intercept Shift: ${(fullDeltaResult.interceptShift || 0).toFixed(3)}`);
-    console.log(`   Coverage: ${((fullDeltaResult.maxCoverageCount / currentData.length) * 100).toFixed(2)}%`);
+    // console.log('\n🎉 Channel Optimization Complete!');
+    // console.log('📊 Applying Full Dataset Results:');
+    // console.log(`   Lookback: ${fullLookbackResult.optimalLookback}`);
+    // console.log(`   EndAt: ${fullLookbackResult.optimalEndAt}`);
+    // console.log(`   Delta: ${fullDeltaResult.optimalDelta.toFixed(3)}`);
+    // console.log(`   Intercept Shift: ${(fullDeltaResult.interceptShift || 0).toFixed(3)}`);
+    // console.log(`   Coverage: ${((fullDeltaResult.maxCoverageCount / currentData.length) * 100).toFixed(2)}%`);
 
     setTrendChannelLookback(fullLookbackResult.optimalLookback);
     setTrendChannelEndAt(fullLookbackResult.optimalEndAt);
@@ -2869,16 +2869,16 @@ export function PricePerformanceChart({
                 multiData = smaSegments.data;
               }
 
-              if (showCycleAnalysis) {
-                console.log('=== CYCLE ANALYSIS STATE ===');
-                console.log('showCycleAnalysis:', showCycleAnalysis);
-                console.log('cycleAnalysis exists:', !!cycleAnalysis);
-                console.log('cycleAnalysis.cycles exists:', !!cycleAnalysis?.cycles);
-                console.log('cycleAnalysis.cycles length:', cycleAnalysis?.cycles?.length);
-                console.log('multiData.length:', multiData.length);
-                console.log('chartCompareStocks.length:', chartCompareStocks.length);
-                console.log('chartPeriod:', chartPeriod);
-              }
+              // if (showCycleAnalysis) {
+              //   console.log('=== CYCLE ANALYSIS STATE ===');
+              //   console.log('showCycleAnalysis:', showCycleAnalysis);
+              //   console.log('cycleAnalysis exists:', !!cycleAnalysis);
+              //   console.log('cycleAnalysis.cycles exists:', !!cycleAnalysis?.cycles);
+              //   console.log('cycleAnalysis.cycles length:', cycleAnalysis?.cycles?.length);
+              //   console.log('multiData.length:', multiData.length);
+              //   console.log('chartCompareStocks.length:', chartCompareStocks.length);
+              //   console.log('chartPeriod:', chartPeriod);
+              // }
 
               return (
                 <LineChart
@@ -3357,74 +3357,79 @@ export function PricePerformanceChart({
                     // Multi-Channel Mode: Render multiple channels with volume-based color zones
                     <>
                       {/* Render color zones for each channel */}
-                      {multiChannelResults && multiChannelResults.length > 0 && multiData.length > 1 && multiChannelResults.map((channel, channelIdx) => {
-                        // Calculate volume distribution for this specific channel
-                        const channelData = multiData.filter((pt, idx) => {
-                          const fullDataIdx = startIndex + idx;
-                          return fullDataIdx >= channel.startIdx && fullDataIdx <= channel.endIdx &&
-                                 pt[`channel_${channelIdx}_lower`] != null;
-                        });
+                      {React.useMemo(() => {
+                        if (!multiChannelResults || multiChannelResults.length === 0 || multiData.length <= 1) {
+                          return null;
+                        }
 
-                        // Calculate zone volume distribution
-                        const zoneVolumes = {};
-                        let totalVolume = 0;
+                        return multiChannelResults.map((channel, channelIdx) => {
+                          // Calculate volume distribution for this specific channel (MEMOIZED)
+                          const channelData = multiData.filter((pt, idx) => {
+                            const fullDataIdx = startIndex + idx;
+                            return fullDataIdx >= channel.startIdx && fullDataIdx <= channel.endIdx &&
+                                   pt[`channel_${channelIdx}_lower`] != null;
+                          });
 
-                        channelData.forEach(pt => {
-                          const price = pt.price || pt.close;
-                          const volume = pt.volume || 0;
+                          // Calculate zone volume distribution
+                          const zoneVolumes = {};
+                          let totalVolume = 0;
 
-                          if (!price || !volume) return;
+                          channelData.forEach(pt => {
+                            const price = pt.price || pt.close;
+                            const volume = pt.volume || 0;
 
-                          const lowerBound = pt[`channel_${channelIdx}_lower`];
-                          const upperBound = pt[`channel_${channelIdx}_upper`];
+                            if (!price || !volume) return;
 
-                          if (lowerBound == null || upperBound == null) return;
+                            const lowerBound = pt[`channel_${channelIdx}_lower`];
+                            const upperBound = pt[`channel_${channelIdx}_upper`];
 
-                          // Build band boundary array
-                          const boundaries = [lowerBound];
-                          for (let b = 1; b < CHANNEL_BANDS; b++) {
-                            const bandValue = pt[`channel_${channelIdx}_band_${b}`];
-                            if (bandValue != null) boundaries.push(bandValue);
-                          }
-                          boundaries.push(upperBound);
+                            if (lowerBound == null || upperBound == null) return;
 
-                          if (boundaries.length !== CHANNEL_BANDS + 1) {
-                            // Fallback to uniform division
-                            const channelRange = upperBound - lowerBound;
-                            if (channelRange <= 0) return;
-                            const pricePosition = (price - lowerBound) / channelRange;
-                            let zoneIndex = Math.floor(pricePosition * CHANNEL_BANDS);
-                            zoneIndex = Math.max(0, Math.min(CHANNEL_BANDS - 1, zoneIndex));
+                            // Build band boundary array
+                            const boundaries = [lowerBound];
+                            for (let b = 1; b < CHANNEL_BANDS; b++) {
+                              const bandValue = pt[`channel_${channelIdx}_band_${b}`];
+                              if (bandValue != null) boundaries.push(bandValue);
+                            }
+                            boundaries.push(upperBound);
+
+                            if (boundaries.length !== CHANNEL_BANDS + 1) {
+                              // Fallback to uniform division
+                              const channelRange = upperBound - lowerBound;
+                              if (channelRange <= 0) return;
+                              const pricePosition = (price - lowerBound) / channelRange;
+                              let zoneIndex = Math.floor(pricePosition * CHANNEL_BANDS);
+                              zoneIndex = Math.max(0, Math.min(CHANNEL_BANDS - 1, zoneIndex));
+                              if (!zoneVolumes[zoneIndex]) zoneVolumes[zoneIndex] = 0;
+                              zoneVolumes[zoneIndex] += volume;
+                              totalVolume += volume;
+                              return;
+                            }
+
+                            // Determine zone by boundary search
+                            let zoneIndex = -1;
+                            for (let z = 0; z < CHANNEL_BANDS; z++) {
+                              const low = boundaries[z];
+                              const high = boundaries[z + 1];
+                              if (price >= low && price <= high) {
+                                zoneIndex = z;
+                                break;
+                              }
+                            }
+
+                            if (zoneIndex === -1) return; // price outside channel
                             if (!zoneVolumes[zoneIndex]) zoneVolumes[zoneIndex] = 0;
                             zoneVolumes[zoneIndex] += volume;
                             totalVolume += volume;
-                            return;
-                          }
+                          });
 
-                          // Determine zone by boundary search
-                          let zoneIndex = -1;
-                          for (let z = 0; z < CHANNEL_BANDS; z++) {
-                            const low = boundaries[z];
-                            const high = boundaries[z + 1];
-                            if (price >= low && price <= high) {
-                              zoneIndex = z;
-                              break;
-                            }
-                          }
-
-                          if (zoneIndex === -1) return; // price outside channel
-                          if (!zoneVolumes[zoneIndex]) zoneVolumes[zoneIndex] = 0;
-                          zoneVolumes[zoneIndex] += volume;
-                          totalVolume += volume;
-                        });
-
-                        // Calculate volume percentages
-                        const zoneVolumePercentages = {};
-                        Object.keys(zoneVolumes).forEach(zoneIndex => {
-                          zoneVolumePercentages[zoneIndex] = totalVolume > 0
-                            ? (zoneVolumes[zoneIndex] / totalVolume) * 100
-                            : 0;
-                        });
+                          // Calculate volume percentages
+                          const zoneVolumePercentages = {};
+                          Object.keys(zoneVolumes).forEach(zoneIndex => {
+                            zoneVolumePercentages[zoneIndex] = totalVolume > 0
+                              ? (zoneVolumes[zoneIndex] / totalVolume) * 100
+                              : 0;
+                          });
 
                         return multiData.map((pt, i) => {
                           const next = multiData[i + 1];
@@ -3483,7 +3488,8 @@ export function PricePerformanceChart({
                           }
                           return zones;
                         });
-                      })}
+                        });
+                      }, [multiChannelResults, multiData, startIndex])}
 
                       {/* Render channel lines */}
                       {multiChannelResults && multiChannelResults.length > 0 && multiChannelResults.map((channel, channelIdx) => {
