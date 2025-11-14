@@ -1233,7 +1233,8 @@ export const findMultipleChannels = (data, minRatio = 0.05, maxRatio = 0.5, stdM
   };
 
   // Iteratively find channels until we can't find any more good ones
-  const maxChannels = 10; // Limit to prevent infinite loops
+  // Reduced from 10 to 3 for performance - most meaningful trends fit in 2-3 channels
+  const maxChannels = 3; // Limit to prevent infinite loops and reduce DOM elements
   let remainingRanges = [{ start: 0, end: totalPoints - 1 }];
 
   for (let iteration = 0; iteration < maxChannels && remainingRanges.length > 0; iteration++) {

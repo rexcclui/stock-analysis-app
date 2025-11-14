@@ -3443,8 +3443,14 @@ export function PricePerformanceChart({
                         });
 
                         // Now render zones for all channels
+                        // PERFORMANCE: Sample data points to reduce component count
+                        // Render zones every 3rd point instead of every point
+                        const samplingRate = 3;
                         return allChannelZoneData.map(({ channel, channelIdx, zoneVolumePercentages }) =>
                           multiData.map((pt, i) => {
+                          // Skip points based on sampling rate to reduce renders
+                          if (i % samplingRate !== 0) return null;
+
                           const next = multiData[i + 1];
                           if (!next) return null;
 
@@ -3475,8 +3481,9 @@ export function PricePerformanceChart({
                             const volumePercent = zoneVolumePercentages[b] || 0;
 
                             // Skip rendering zones with very low volume to reduce DOM elements
-                            // This can cut down thousands of unnecessary ReferenceArea components
-                            if (volumePercent < 0.5) continue;
+                            // Increased threshold from 0.5% to 3% to dramatically reduce component count
+                            // Only render zones with significant trading activity
+                            if (volumePercent < 3.0) continue;
 
                             // Show label on the last segment (rightmost) for each zone
                             const showLabel = isLastSegmentOfChannel && volumePercent >= 1.0;
