@@ -93,6 +93,308 @@ Lower Bound (trendLower)
 
 ---
 
+## Find Optimal (Single Channel Optimization)
+
+### Overview
+The "Find Optimal" feature automatically determines the best parameters for a single trend channel by running a 2D optimization across lookback periods and endAt offsets, then finding the optimal standard deviation multiplier (σ).
+
+### Optimization Algorithm
+
+The optimization consists of two sequential phases:
+
+#### Phase 1: Lookback & EndAt Optimization
+
+**Objective:** Find the lookback period and endAt offset that maximize "crosses" (price touches to center line).
+
+**Search Space:**
+```javascript
+lookback: [20, data.length]       // Minimum 20 points to full dataset
+endAt:    [0, data.length / 5]    // From most recent to 20% offset
+fixedStdMult: 0.5                 // Fixed σ for this phase
+```
+
+**Grid Search:**
+- Samples ~50 values for each dimension (50×50 = 2,500 simulations)
+- Uses adaptive increment calculation to balance coverage and performance
+
+**Algorithm:**
+```javascript
+const runLookbackSimulation = async (data, label = 'Full') => {
+  const minLookback = 20;
+  const maxLookback = data.length;
+  const maxEndAt = Math.floor(data.length / 5);
+
+  // Calculate increments for ~50 samples per dimension
+  const lookbackIncrement = Math.max(1, Math.floor((maxLookback - minLookback) / 49));
+  const endAtIncrement = Math.max(1, Math.floor(maxEndAt / 49));
+
+  let optimalLookback = minLookback;
+  let optimalEndAt = 0;
+  let maxCrosses = 0;
+
+  // 2D grid search
+  for (let endAt = 0; endAt <= maxEndAt; endAt += endAtIncrement) {
+    for (let lookback = minLookback; lookback <= maxLookback - endAt; lookback += lookbackIncrement) {
+
+      // Build channel with fixed σ = 0.5
+      const dataWithChannel = buildConfigurableTrendChannel(
+        data,
+        lookback,
+        0.5,  // Fixed stdMultiplier for lookback optimization
+        { endAt }
+      );
+
+      // Count how many points are within ±1% of center line
+      let crossCount = 0;
+      const tolerance = 0.01;  // 1% tolerance
+
+      dataWithChannel.forEach(point => {
+        if (point.trendLine !== null && point.price) {
+          const pricePercent = Math.abs(point.price - point.trendLine) / point.trendLine;
+          if (pricePercent <= tolerance) {
+            crossCount++;
+          }
+        }
+      });
+
+      // Track best configuration
+      if (crossCount > maxCrosses) {
+        maxCrosses = crossCount;
+        optimalLookback = lookback;
+        optimalEndAt = endAt;
+      }
+    }
+  }
+
+  return { optimalLookback, optimalEndAt, maxCrosses };
+};
+```
+
+**Key Metrics:**
+- **Crosses:** Number of price points within ±1% of center line
+- **Goal:** Maximize center line touches (indicates price follows the trend)
+
+**Example Output:**
+```javascript
+{
+  optimalLookback: 87,      // Best lookback period
+  optimalEndAt: 5,          // Best end offset
+  maxCrosses: 23,           // Maximum crosses found
+  crossPercentage: 26.4     // Percentage of data points
+}
+```
+
+#### Phase 2: Delta (σ Multiplier) Optimization
+
+**Objective:** Find the optimal standard deviation multiplier that ensures both upper and lower bounds are touched while maximizing coverage.
+
+**Algorithm:**
+Uses `computeTrendChannelTouchAlignment()` function which:
+
+1. **Calculates Residuals:**
+   - Computes price deviations from regression line
+   - Identifies maximum and minimum residuals
+
+2. **Determines Intercept Shift:**
+   - Centers the channel so upper and lower bounds are equidistant from extremes
+   - `interceptShift = (maxResidual + minResidual) / 2`
+
+3. **Computes Optimal Delta:**
+   - Finds the σ multiplier that exactly captures price extremes
+   - `optimalDelta = extremeMagnitude / stdDev`
+
+4. **Touch Validation (with SMA smoothing):**
+   - Applies dynamic SMA based on chart period (1-30 periods)
+   - Detects turning points in smoothed residuals
+   - Validates touches occur at channel boundaries (first/last 8% of data)
+   - Ensures both upper AND lower bounds are touched
+
+**SMA Period Selection:**
+```javascript
+chartPeriod → SMA Period
+'7D'  → 1   (no smoothing)
+'1M'  → 3
+'3M'  → 5
+'6M'  → 10
+'1Y'  → 14
+'3Y'  → 20
+'5Y'  → 30
+```
+
+**Touch Detection Logic:**
+```javascript
+const computeTrendChannelTouchAlignment = (data, lookback, endAt, chartPeriod) => {
+  // 1. Calculate regression
+  const { slope, intercept, stdDev } = calculateRegression(data, lookback);
+
+  // 2. Find residual extremes
+  const residuals = data.map((pt, i) => pt.price - (slope * i + intercept));
+  const maxResidual = Math.max(...residuals);
+  const minResidual = Math.min(...residuals);
+
+  // 3. Center the channel
+  const interceptShift = (maxResidual + minResidual) / 2;
+  const adjustedResiduals = residuals.map(r => r - interceptShift);
+
+  // 4. Calculate optimal delta
+  const extremeMagnitude = Math.max(...adjustedResiduals.map(Math.abs));
+  const optimalDelta = extremeMagnitude / stdDev;
+
+  // 5. Apply SMA smoothing for touch detection
+  const smaPeriod = getSmaPeriodForTouchDetection(chartPeriod);
+  const smoothedResiduals = applySMA(adjustedResiduals, smaPeriod);
+
+  // 6. Detect turning points (price reversals)
+  const turningPoints = [];
+  for (let i = 1; i < smoothedResiduals.length; i++) {
+    const prev = smoothedResiduals[i - 1];
+    const curr = smoothedResiduals[i];
+
+    // Detect zero crossings or direction changes
+    if ((prev < 0 && curr >= 0) || (prev > 0 && curr <= 0)) {
+      turningPoints.push({ index: i, residual: adjustedResiduals[i] });
+    }
+  }
+
+  // 7. Validate boundary touches
+  const boundaryWindow = Math.floor(data.length * 0.08); // First/last 8%
+  const tolerance = stdDev * 1e-6;
+
+  let touchesUpper = false;
+  let touchesLower = false;
+
+  turningPoints.forEach(tp => {
+    const isBoundary = tp.index < boundaryWindow ||
+                      tp.index >= data.length - boundaryWindow;
+
+    if (Math.abs(tp.residual - extremeMagnitude) <= tolerance && isBoundary) {
+      touchesUpper = true;
+    }
+    if (Math.abs(tp.residual + extremeMagnitude) <= tolerance && isBoundary) {
+      touchesLower = true;
+    }
+  });
+
+  return {
+    interceptShift,
+    optimalDelta,
+    touchesUpper,
+    touchesLower,
+    coverageCount,    // Points within bounds
+    totalPoints: data.length
+  };
+};
+```
+
+**Example Output:**
+```javascript
+{
+  optimalDelta: 2.347,          // Optimal σ multiplier
+  interceptShift: 1.245,        // Vertical adjustment
+  coverageCount: 85,            // Points within channel
+  touchesUpper: true,           // Upper bound touched
+  touchesLower: true,           // Lower bound touched
+  coveragePercentage: 97.7      // Coverage %
+}
+```
+
+#### Dual Dataset Analysis
+
+The optimization runs on **two datasets** to provide both historical and recent context:
+
+**Full Dataset:**
+- Entire available data range
+- Provides long-term trend perspective
+- Results applied to channel parameters
+
+**Recent Dataset (25%):**
+- Last 25% of data points (minimum 20)
+- Captures recent market behavior
+- Displayed for comparison but not applied
+
+**Output Structure:**
+```javascript
+{
+  // Full dataset results (applied)
+  optimalLookback: 87,
+  optimalEndAt: 5,
+  optimalDelta: 2.347,
+  optimalInterceptShift: 1.245,
+  maxCrosses: 23,
+  maxCoverageCount: 85,
+  touchesUpper: true,
+  touchesLower: true,
+  crossPercentage: 26.4,
+  coveragePercentage: 97.7,
+
+  // Recent dataset results (reference only)
+  recent: {
+    optimalLookback: 43,
+    optimalEndAt: 2,
+    optimalDelta: 1.892,
+    optimalInterceptShift: 0.567,
+    maxCrosses: 8,
+    maxCoverageCount: 21,
+    touchesUpper: true,
+    touchesLower: false,
+    crossPercentage: 36.4,
+    coveragePercentage: 95.5
+  }
+}
+```
+
+### Performance Characteristics
+
+**Time Complexity:**
+```
+Phase 1: O(L × E × N)
+where:
+  L = lookback samples (~50)
+  E = endAt samples (~50)
+  N = data points per channel
+
+Phase 2: O(N × S)
+where:
+  N = data points
+  S = SMA period (1-30)
+
+Total: O(2,500 × N + N × S) ≈ O(2,500 × N)
+For 252 data points: ~630,000 operations
+```
+
+**Execution Time:**
+- Typically 1-3 seconds for 250 data points
+- Progress logged every 20 iterations and 500ms
+- Non-blocking (uses setTimeout for UI updates)
+
+**Grid Optimization:**
+- Adaptive sampling reduces from full grid (20,000+ combinations)
+- Target: ~2,500 simulations (50×50 grid)
+- Includes edge case testing for exact max values
+
+### Use Cases
+
+1. **Initial Setup:** Find optimal parameters when first analyzing a stock
+2. **Period Changes:** Recalibrate when switching chart periods (1M → 6M)
+3. **Market Regime Shifts:** Re-optimize after significant market changes
+4. **Comparison Analysis:** Compare full vs recent trends for divergence detection
+
+### UI Integration
+
+**Button:** "Find Optimal" (single channel mode only)
+
+**During Optimization:**
+- Shows loading state with progress updates
+- Logs intermediate results to console
+- UI remains responsive (non-blocking execution)
+
+**After Completion:**
+- Automatically applies optimal parameters to channel
+- Updates sliders to show optimized values
+- Displays simulation results panel with metrics
+
+---
+
 ## Multi-Channel Mode
 
 ### Overview
@@ -703,20 +1005,25 @@ Channel 5: Orange-600 upper, Blue-600 center, Cyan-600 lower
 
 ## Comparison Table
 
-| Feature | Single Channel | Multi-Channel |
-|---------|---------------|---------------|
-| **Number of Channels** | 1 (manual) | 1-10 (automatic) |
-| **stdMultiplier** | Fixed (user-selected) | Optimized per channel |
-| **Lookback Period** | Fixed (user-selected) | Optimized per channel |
-| **Channel Width** | Same σ throughout | Different σ per channel |
-| **Detection** | Manual configuration | Automatic detection |
-| **Coverage** | Entire visible range | Specific time periods |
-| **Overlap** | N/A | 20% allowed between channels |
-| **Quality Metrics** | No scoring | Scored and ranked |
-| **Optimization Goal** | User preference | Max coverage + tight fit |
-| **Best For** | Recent trend analysis | Multi-phase market analysis |
-| **Computational Cost** | Low | Medium-High |
-| **User Interaction** | Adjust parameters manually | Click "Find Channels" |
+| Feature | Single Channel | Find Optimal | Multi-Channel |
+|---------|---------------|--------------|---------------|
+| **Number of Channels** | 1 (manual) | 1 (optimized) | 1-10 (automatic) |
+| **stdMultiplier** | Fixed (user-selected) | Optimized (2D search) | Optimized per channel |
+| **Lookback Period** | Fixed (user-selected) | Optimized (2D search) | Optimized per channel |
+| **EndAt Offset** | Fixed (user-selected) | Optimized (2D search) | N/A |
+| **Intercept Shift** | Manual adjustment | Auto-calculated | N/A |
+| **Channel Width** | Same σ throughout | Optimized σ | Different σ per channel |
+| **Detection** | Manual configuration | 2D grid search + touch alignment | Iterative best-fit search |
+| **Coverage** | Entire visible range | Entire visible range | Specific time periods |
+| **Overlap** | N/A | N/A | 20% allowed between channels |
+| **Quality Metrics** | No scoring | Crosses + coverage | Scored and ranked |
+| **Optimization Goal** | User preference | Max crosses + boundary touches | Max coverage + tight fit |
+| **Touch Validation** | Visual only | SMA-smoothed turning points | Tolerance-based detection |
+| **Dataset Analysis** | Current view | Full + Recent (25%) | Full dataset only |
+| **Best For** | Quick manual analysis | Single optimal trend | Multi-phase market analysis |
+| **Computational Cost** | Very Low | Medium (~2,500 sims) | Medium-High (~16,000 × N ops) |
+| **Execution Time** | Instant | 1-3 seconds | 2-5 seconds |
+| **User Interaction** | Adjust sliders manually | Click "Find Optimal" | Click "Find Channels" |
 
 ---
 
@@ -726,11 +1033,15 @@ Channel 5: Orange-600 upper, Blue-600 center, Cyan-600 lower
 
 **Core Calculation:**
 - `/app/utils/chartCalculations.js`
-  - `buildConfigurableTrendChannel()` - Single channel
+  - `buildConfigurableTrendChannel()` - Single channel calculation
+  - `computeTrendChannelTouchAlignment()` - Find Optimal delta/touch detection
+  - `getSmaPeriodForTouchDetection()` - SMA period selection
   - `findMultipleChannels()` - Multi-channel detection
 
 **UI Component:**
 - `/app/components/PricePerformanceChart.js`
+  - `runLookbackSimulation()` - Find Optimal Phase 1 (lines 843-965)
+  - `runDeltaSimulation()` - Find Optimal Phase 2 (lines 969-1006)
   - Trend channel rendering (lines 2826-2833)
   - Multi-channel rendering (lines 2835-2864, 3357-3576)
   - Volume zone coloring
@@ -738,7 +1049,7 @@ Channel 5: Orange-600 upper, Blue-600 center, Cyan-600 lower
 
 ### Data Flow
 
-#### Single Channel
+#### Single Channel (Manual)
 ```
 User adjusts parameters
   ↓
@@ -749,6 +1060,33 @@ Calculate regression (slope, intercept, stdDev)
 Apply to data points
   ↓
 Render on chart with bands
+```
+
+#### Find Optimal (Single Channel Optimization)
+```
+User clicks "Find Optimal"
+  ↓
+Phase 1: Lookback & EndAt Optimization
+  ├─ Grid search: 50×50 = 2,500 simulations
+  ├─ For each (lookback, endAt) combination:
+  │   ├─ Build channel with fixed σ = 0.5
+  │   └─ Count crosses (price within ±1% of center)
+  └─ Select (lookback, endAt) with max crosses
+  ↓
+Phase 2: Delta (σ) Optimization
+  ├─ computeTrendChannelTouchAlignment()
+  ├─ Calculate residuals and extremes
+  ├─ Determine intercept shift (center channel)
+  ├─ Compute optimal delta (σ multiplier)
+  ├─ Apply SMA smoothing (period based on chart range)
+  ├─ Detect turning points in residuals
+  └─ Validate boundary touches (first/last 8%)
+  ↓
+Run on both Full and Recent (25%) datasets
+  ↓
+Apply optimal parameters to sliders
+  ↓
+Render optimized channel on chart
 ```
 
 #### Multi-Channel
