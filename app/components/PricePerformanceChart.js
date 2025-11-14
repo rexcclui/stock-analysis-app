@@ -1841,6 +1841,122 @@ export function PricePerformanceChart({
     }
   }, [isDragging, handleMouseMove, handleMouseUp]);
 
+  // Memoize the full data preparation to prevent recalculation on every render
+  const preparedFullData = useMeasuredMemo(
+    'preparedFullData',
+    () => {
+      const currentData = getCurrentDataSlice();
+
+      if (chartCompareStocks.length === 0) {
+        return currentData;
+      }
+
+      // Multiple stocks: build normalized series
+      if (fullHistoricalData.length > 0) {
+        const periodDays = getPeriodDays(chartPeriod);
+        const totalDays = fullHistoricalData.length;
+        const endIndex = totalDays - dataOffset;
+        const startIndex = Math.max(0, endIndex - periodDays);
+        const slicedData = fullHistoricalData.slice(startIndex, endIndex);
+
+        const base = slicedData.length > 0 ? slicedData[0].price : 1;
+        const primarySeries = slicedData.map(d => ({
+          date: formatChartDate(d.date, chartPeriod),
+          pct: base ? parseFloat((((d.price - base) / base) * 100).toFixed(2)) : 0
+        }));
+
+        const offsetCompareStocks = chartCompareStocks.map(s => {
+          const stockFullData = s.__stockRef?.chartData?.fullHistorical || [];
+          if (stockFullData.length === 0) {
+            return { code: s.code, series: s.series };
+          }
+          const stockTotalDays = stockFullData.length;
+          const stockEndIndex = stockTotalDays - dataOffset;
+          const stockStartIndex = Math.max(0, stockEndIndex - periodDays);
+          const stockSlicedData = stockFullData.slice(stockStartIndex, stockEndIndex);
+          const stockBase = stockSlicedData.length > 0 ? stockSlicedData[0].price : 1;
+          const series = stockSlicedData.map(d => ({
+            date: formatChartDate(d.date, chartPeriod),
+            pct: stockBase ? parseFloat((((d.price - stockBase) / stockBase) * 100).toFixed(2)) : 0
+          }));
+          return { code: s.code, series };
+        });
+
+        return buildMultiStockDataset(primarySeries, offsetCompareStocks);
+      } else {
+        const primarySeries = buildNormalizedSeries(selectedStock, chartPeriod);
+        return buildMultiStockDataset(primarySeries, chartCompareStocks);
+      }
+    },
+    [chartCompareStocks, fullHistoricalData, dataOffset, chartPeriod, selectedStock, colorMode]
+  );
+
+  // Memoize the zoomed and enriched data
+  const enrichedChartData = useMeasuredMemo(
+    'enrichedChartData',
+    () => {
+      const startIndex = Math.floor((zoomDomain.start / 100) * preparedFullData.length);
+      const endIndex = Math.ceil((zoomDomain.end / 100) * preparedFullData.length);
+      let multiData = preparedFullData.slice(startIndex, endIndex);
+
+      // Apply RVI/VSPY segments
+      if ((colorMode === 'rvi' || colorMode === 'vspy') && chartCompareStocks.length === 0) {
+        const rviSegments = addRviDataKeys(multiData, colorMode);
+        multiData = rviSegments.data;
+      }
+
+      // Apply trend channel
+      if (colorMode === 'trend') {
+        multiData = buildConfigurableTrendChannel(
+          multiData,
+          trendChannelLookback,
+          trendChannelStdMultiplier,
+          { interceptShift: trendChannelInterceptShift, endAt: trendChannelEndAt }
+        );
+      }
+
+      // Apply multi-channel data
+      if (colorMode === 'multi-channel' && multiChannelResults && multiChannelResults.length > 0) {
+        multiData = multiData.map((pt, idx) => {
+          const channelData = {};
+          const fullDataIdx = startIndex + idx;
+
+          multiChannelResults.forEach((channel, channelIdx) => {
+            if (fullDataIdx >= channel.startIdx && fullDataIdx <= channel.endIdx) {
+              const localIdx = fullDataIdx - channel.startIdx;
+              const localData = channel.data[localIdx];
+              if (localData) {
+                channelData[`channel_${channelIdx}_upper`] = localData.channelUpper;
+                channelData[`channel_${channelIdx}_center`] = localData.channelCenter;
+                channelData[`channel_${channelIdx}_lower`] = localData.channelLower;
+
+                for (let b = 1; b < CHANNEL_BANDS; b++) {
+                  if (localData[`channelBand_${b}`] != null) {
+                    channelData[`channel_${channelIdx}_band_${b}`] = localData[`channelBand_${b}`];
+                  }
+                }
+              }
+            }
+          });
+
+          return { ...pt, ...channelData };
+        });
+      }
+
+      // Apply SMA segments
+      if (colorMode === 'sma' && chartCompareStocks.length === 0) {
+        const smaAnalysis = detectTurningPoints(multiData);
+        const smaSegments = addSmaDataKeys(multiData, smaAnalysis.turningPoints);
+        multiData = smaSegments.data;
+      }
+
+      return { multiData, startIndex };
+    },
+    [preparedFullData, zoomDomain, colorMode, chartCompareStocks, trendChannelLookback,
+     trendChannelStdMultiplier, trendChannelInterceptShift, trendChannelEndAt,
+     multiChannelResults]
+  );
+
   if (shouldShowLoading) {
     return <LoadingState message="Loading price performance chart..." className="mb-0" style={{ marginTop: 0, marginBottom: 0 }} />;
   }
@@ -2769,127 +2885,8 @@ export function PricePerformanceChart({
           {/* Increased chart height by 25%: 400 -> 500 */}
           <ResponsiveContainer width="100%" height={500} style={{ margin: 0, padding: 0 }}>
             {(() => {
-              // Get current data slice based on offset
-              const currentData = getCurrentDataSlice();
-
-              let fullData;
-              if (chartCompareStocks.length === 0) {
-                // Single stock: use the sliced data that respects offset
-                fullData = currentData;
-              } else {
-                // Multiple stocks: build normalized series from sliced full historical data
-                if (fullHistoricalData.length > 0) {
-                  // Build sliced and normalized data for the primary stock
-                  const periodDays = getPeriodDays(chartPeriod);
-                  const totalDays = fullHistoricalData.length;
-                  const endIndex = totalDays - dataOffset;
-                  const startIndex = Math.max(0, endIndex - periodDays);
-                  const slicedData = fullHistoricalData.slice(startIndex, endIndex);
-
-                  // Normalize the primary stock
-                  const base = slicedData.length > 0 ? slicedData[0].price : 1;
-                  const primarySeries = slicedData.map(d => ({
-                    date: formatChartDate(d.date, chartPeriod),
-                    pct: base ? parseFloat((((d.price - base) / base) * 100).toFixed(2)) : 0
-                  }));
-
-                  // Build normalized series for comparison stocks with the same offset
-                  const offsetCompareStocks = chartCompareStocks.map(s => {
-                    const stockFullData = s.__stockRef?.chartData?.fullHistorical || [];
-                    if (stockFullData.length === 0) {
-                      return { code: s.code, series: s.series }; // Fallback to original series
-                    }
-                    const stockTotalDays = stockFullData.length;
-                    const stockEndIndex = stockTotalDays - dataOffset;
-                    const stockStartIndex = Math.max(0, stockEndIndex - periodDays);
-                    const stockSlicedData = stockFullData.slice(stockStartIndex, stockEndIndex);
-                    const stockBase = stockSlicedData.length > 0 ? stockSlicedData[0].price : 1;
-                    const series = stockSlicedData.map(d => ({
-                      date: formatChartDate(d.date, chartPeriod),
-                      pct: stockBase ? parseFloat((((d.price - stockBase) / stockBase) * 100).toFixed(2)) : 0
-                    }));
-                    return { code: s.code, series };
-                  });
-
-                  fullData = buildMultiStockDataset(primarySeries, offsetCompareStocks);
-                } else {
-                  // Fallback: use original method without offset support
-                  const primarySeries = buildNormalizedSeries(selectedStock, chartPeriod);
-                  fullData = buildMultiStockDataset(primarySeries, chartCompareStocks);
-                }
-              }
-
-              // Apply zoom by slicing data based on domain
-              const startIndex = Math.floor((zoomDomain.start / 100) * fullData.length);
-              const endIndex = Math.ceil((zoomDomain.end / 100) * fullData.length);
-              let multiData = fullData.slice(startIndex, endIndex);
-
-              // For RVI or VSPY mode, add segment dataKeys
-              let rviSegments = null;
-              if ((colorMode === 'rvi' || colorMode === 'vspy') && chartCompareStocks.length === 0) {
-                rviSegments = addRviDataKeys(multiData, colorMode);
-                multiData = rviSegments.data;
-              }
-
-              // For SMA mode, add segment dataKeys based on turning points
-              let smaSegments = null;
-              // Apply configurable trend channel (overwrites default trend calc) when in trend mode
-              if (colorMode === 'trend') {
-                multiData = buildConfigurableTrendChannel(
-                  multiData,
-                  trendChannelLookback,
-                  trendChannelStdMultiplier,
-                  { interceptShift: trendChannelInterceptShift, endAt: trendChannelEndAt }
-                );
-              }
-              // Apply multi-channel data when in multi-channel mode
-              if (colorMode === 'multi-channel' && multiChannelResults && multiChannelResults.length > 0) {
-                // Add channel data to each point in multiData
-                // Note: startIndex is the zoom offset, so we need to adjust channel indices
-                multiData = multiData.map((pt, idx) => {
-                  const channelData = {};
-                  // The actual index in the full data is startIndex + idx
-                  const fullDataIdx = startIndex + idx;
-
-                  // For each channel, add its upper/center/lower values and bands if this point is in range
-                  multiChannelResults.forEach((channel, channelIdx) => {
-                    if (fullDataIdx >= channel.startIdx && fullDataIdx <= channel.endIdx) {
-                      const localIdx = fullDataIdx - channel.startIdx;
-                      const localData = channel.data[localIdx];
-                      if (localData) {
-                        channelData[`channel_${channelIdx}_upper`] = localData.channelUpper;
-                        channelData[`channel_${channelIdx}_center`] = localData.channelCenter;
-                        channelData[`channel_${channelIdx}_lower`] = localData.channelLower;
-
-                        // Add intermediate bands for color zones
-                        for (let b = 1; b < CHANNEL_BANDS; b++) {
-                          if (localData[`channelBand_${b}`] != null) {
-                            channelData[`channel_${channelIdx}_band_${b}`] = localData[`channelBand_${b}`];
-                          }
-                        }
-                      }
-                    }
-                  });
-
-                  return { ...pt, ...channelData };
-                });
-              }
-              if (colorMode === 'sma' && chartCompareStocks.length === 0) {
-                const smaAnalysis = detectTurningPoints(multiData);
-                smaSegments = addSmaDataKeys(multiData, smaAnalysis.turningPoints);
-                multiData = smaSegments.data;
-              }
-
-              // if (showCycleAnalysis) {
-              //   console.log('=== CYCLE ANALYSIS STATE ===');
-              //   console.log('showCycleAnalysis:', showCycleAnalysis);
-              //   console.log('cycleAnalysis exists:', !!cycleAnalysis);
-              //   console.log('cycleAnalysis.cycles exists:', !!cycleAnalysis?.cycles);
-              //   console.log('cycleAnalysis.cycles length:', cycleAnalysis?.cycles?.length);
-              //   console.log('multiData.length:', multiData.length);
-              //   console.log('chartCompareStocks.length:', chartCompareStocks.length);
-              //   console.log('chartPeriod:', chartPeriod);
-              // }
+              // Use memoized data instead of recalculating on every render
+              const { multiData, startIndex } = enrichedChartData;
 
               return (
                 <LineChart
