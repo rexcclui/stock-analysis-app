@@ -10,8 +10,9 @@
  * Number of colored zones/bands between channel bounds
  * @constant {number}
  */
-// Updated to 10 bands (was 6) to support volume-quantile based channel zones
-export const CHANNEL_BANDS = 10;
+// Reduced to 5 bands for better performance in Multi Channel mode
+// This reduces render components from 6000 to 3000 while maintaining smooth visuals
+export const CHANNEL_BANDS = 5;
 
 /**
  * Color mode options

@@ -3441,26 +3441,22 @@ export function PricePerformanceChart({
                         // Use pre-computed zone volume data (calculated once above, not on every render)
                         const zoneVolumePercentages = multiChannelZoneData[channelIdx]?.zoneVolumePercentages || {};
 
-                        // Performance optimization: Sample data points for rendering when dataset is large
-                        // This dramatically reduces the number of ReferenceArea components created
-                        const maxRenderPoints = 50; // Maximum segments to render per channel
-                        const step = multiData.length > maxRenderPoints ? Math.ceil(multiData.length / maxRenderPoints) : 1;
+                        return multiData.map((pt, i) => {
+                          const next = multiData[i + 1];
+                          if (!next) return null;
 
-                        // Check if this is the last segment of this channel for label positioning
-                        const fullDataIdx = startIndex + multiData.length - 1;
-                        const isInChannel = fullDataIdx >= channel.startIdx && fullDataIdx <= channel.endIdx;
+                          // Check if this is the last segment of this channel
+                          const fullDataIdx = startIndex + i;
+                          const nextFullDataIdx = startIndex + i + 1;
+                          const isLastSegmentOfChannel =
+                            pt[`channel_${channelIdx}_lower`] != null &&
+                            (next[`channel_${channelIdx}_lower`] == null || nextFullDataIdx > channel.endIdx);
 
-                        const zones = [];
-                        // Render each band zone with sampled data points
-                        for (let b = 0; b < CHANNEL_BANDS; b++) {
-                          const lowerKey = b === 0 ? `channel_${channelIdx}_lower` : `channel_${channelIdx}_band_${b}`;
-                          const upperKey = b === CHANNEL_BANDS - 1 ? `channel_${channelIdx}_upper` : `channel_${channelIdx}_band_${b + 1}`;
-
-                          // Collect all segments for this band, then render as fewer, larger ReferenceAreas
-                          for (let i = 0; i < multiData.length - 1; i += step) {
-                            const pt = multiData[i];
-                            const next = multiData[Math.min(i + step, multiData.length - 1)];
-
+                          const zones = [];
+                          // Render each band zone between consecutive band boundaries
+                          for (let b = 0; b < CHANNEL_BANDS; b++) {
+                            const lowerKey = b === 0 ? `channel_${channelIdx}_lower` : `channel_${channelIdx}_band_${b}`;
+                            const upperKey = b === CHANNEL_BANDS - 1 ? `channel_${channelIdx}_upper` : `channel_${channelIdx}_band_${b + 1}`;
                             const ptLower = pt[lowerKey];
                             const ptUpper = pt[upperKey];
                             const nextLower = next[lowerKey];
@@ -3470,14 +3466,13 @@ export function PricePerformanceChart({
 
                             const zoneLower = Math.min(ptLower, nextLower);
                             const zoneUpper = Math.max(ptUpper, nextUpper);
-                            const ratioMid = (b + 0.5) / CHANNEL_BANDS;
+                            const ratioMid = (b + 0.5) / CHANNEL_BANDS; // mid-point for color
 
                             // Use actual volume percentage for this zone
                             const volumePercent = zoneVolumePercentages[b] || 0;
 
-                            // Show label only on the last band of the last segment for this channel
-                            const isLastSegment = i + step >= multiData.length - 1;
-                            const showLabel = isInChannel && isLastSegment && volumePercent >= 1.0;
+                            // Show label on the last segment (rightmost) for each zone
+                            const showLabel = isLastSegmentOfChannel && volumePercent >= 1.0;
 
                             zones.push(
                               <ReferenceArea
@@ -3501,8 +3496,8 @@ export function PricePerformanceChart({
                               />
                             );
                           }
-                        }
-                        return zones;
+                          return zones;
+                        });
                       })}
 
                       {/* Render channel lines */}
