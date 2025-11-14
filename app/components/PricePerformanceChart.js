@@ -1873,6 +1873,48 @@ export function PricePerformanceChart({
     }
   }, [chartPeriod, getCurrentDataSlice]);
 
+  // Update manual channel stdev multiplier and recalculate data
+  const updateManualChannelStdev = useCallback((channelIdx, newStdMultiplier) => {
+    const currentData = getCurrentDataSlice();
+    if (!currentData) return;
+
+    setManualChannels(prev => prev.map((channel, idx) => {
+      if (idx !== channelIdx) return channel;
+
+      // Get the original data slice for this channel
+      const selectedSlice = currentData.slice(channel.startIdx, channel.endIdx + 1);
+
+      // Rebuild the channel data with the new stdev multiplier
+      const channelData = buildConfigurableTrendChannel(
+        selectedSlice,
+        channel.lookback,
+        newStdMultiplier,
+        { interceptShift: channel.interceptShift, endAt: 0 },
+        CHANNEL_BANDS
+      );
+
+      // Update the channel with new stdev and data
+      return {
+        ...channel,
+        stdMultiplier: newStdMultiplier,
+        data: channelData.map(pt => {
+          const channelPoint = {
+            date: pt.date,
+            trendLine: pt.trendLine,
+            trendUpper: pt.trendUpper,
+            trendLower: pt.trendLower
+          };
+          for (let b = 1; b < CHANNEL_BANDS; b++) {
+            if (pt[`trendBand_${b}`] != null) {
+              channelPoint[`trendBand_${b}`] = pt[`trendBand_${b}`];
+            }
+          }
+          return channelPoint;
+        })
+      };
+    }));
+  }, [getCurrentDataSlice]);
+
   const handleMouseDown = useCallback((e) => {
     // Only start drag on left mouse button
     if (e.button !== 0) return;
@@ -2204,17 +2246,41 @@ export function PricePerformanceChart({
                       style={{ accentColor: color }}
                       title={channel.visible ? 'Hide channel' : 'Show channel'}
                     />
-                    {/* Channel info label */}
-                    <div className="flex items-center gap-1 flex-1">
+                    {/* Channel label and stdev slider */}
+                    <div className="flex items-center gap-2 flex-1">
                       <span className="text-xs font-bold" style={{ color: color }}>
                         Ch{idx + 1}
                       </span>
-                      <span className="text-[10px] text-gray-400">
-                        {channel.startDate} - {channel.endDate}
-                      </span>
-                      <span className="text-[10px] font-semibold" style={{ color: color }}>
-                        ±{channel.stdMultiplier.toFixed(2)}σ
-                      </span>
+                      <div className="flex items-center gap-1">
+                        <label className="text-[10px] text-gray-300 font-medium">
+                          σ: {channel.stdMultiplier.toFixed(1)}
+                        </label>
+                        <button
+                          onClick={() => updateManualChannelStdev(idx, Math.max(0.5, parseFloat((channel.stdMultiplier - 0.1).toFixed(1))))}
+                          className="w-4 h-4 bg-gray-700 hover:bg-gray-600 rounded text-white text-xs font-bold flex items-center justify-center transition"
+                          title="Decrease stdev"
+                        >
+                          −
+                        </button>
+                        <input
+                          type="range"
+                          min="0.5"
+                          max="4"
+                          step="0.1"
+                          value={channel.stdMultiplier}
+                          onChange={(e) => updateManualChannelStdev(idx, parseFloat(e.target.value))}
+                          className="w-16 h-1.5 bg-gray-600 rounded-lg appearance-none cursor-pointer"
+                          style={{ accentColor: color }}
+                          title={`Standard Deviation Multiplier: ${channel.stdMultiplier.toFixed(1)}`}
+                        />
+                        <button
+                          onClick={() => updateManualChannelStdev(idx, Math.min(4, parseFloat((channel.stdMultiplier + 0.1).toFixed(1))))}
+                          className="w-4 h-4 bg-gray-700 hover:bg-gray-600 rounded text-white text-xs font-bold flex items-center justify-center transition"
+                          title="Increase stdev"
+                        >
+                          +
+                        </button>
+                      </div>
                     </div>
                     {/* Delete button */}
                     <button
