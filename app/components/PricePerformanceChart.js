@@ -1825,6 +1825,8 @@ export function PricePerformanceChart({
         { interceptShift: alignment.optimalInterceptShift, endAt: 0 }
       );
 
+      console.log('Channel data built, length:', channelData.length);
+
       // Create manual channel object
       const manualChannel = {
         id: Date.now(), // Unique ID for this channel
@@ -1837,7 +1839,8 @@ export function PricePerformanceChart({
         interceptShift: alignment.optimalInterceptShift,
         touchesUpper: alignment.touchesUpper,
         touchesLower: alignment.touchesLower,
-        data: channelData.slice(actualStartIdx, actualEndIdx + 1).map(pt => ({
+        // channelData is already the selected slice, don't slice it again
+        data: channelData.map(pt => ({
           date: pt.date,
           trendLine: pt.trendLine,
           trendUpper: pt.trendUpper,
@@ -1854,6 +1857,7 @@ export function PricePerformanceChart({
       // Add the channel to our manual channels array
       setManualChannels(prev => [...prev, manualChannel]);
       console.log('Manual channel added:', manualChannel);
+      console.log('Total manual channels:', manualChannels.length + 1);
 
     } catch (error) {
       console.error('Error computing manual channel:', error);
@@ -3082,6 +3086,8 @@ export function PricePerformanceChart({
               }
               // Apply manual channel data when manual channels exist
               if (isManualChannelMode && manualChannels.length > 0) {
+                console.log('Applying manual channel data. Channels:', manualChannels.length, 'Data points:', multiData.length);
+
                 // Add manual channel data to each point in multiData
                 multiData = multiData.map((pt, idx) => {
                   const channelData = {};
@@ -3089,19 +3095,18 @@ export function PricePerformanceChart({
 
                   // For each manual channel, add its upper/center/lower values and bands if this point is in range
                   manualChannels.forEach((channel, channelIdx) => {
-                    if (fullDataIdx >= channel.startIdx && fullDataIdx <= channel.endIdx) {
-                      const localIdx = fullDataIdx - channel.startIdx;
-                      const localData = channel.data[localIdx];
-                      if (localData && localData.date === pt.date) {
-                        channelData[`manual_${channelIdx}_upper`] = localData.trendUpper;
-                        channelData[`manual_${channelIdx}_center`] = localData.trendLine;
-                        channelData[`manual_${channelIdx}_lower`] = localData.trendLower;
+                    // Match by date instead of index for more reliability
+                    const channelDataPoint = channel.data.find(d => d.date === pt.date);
 
-                        // Add intermediate bands for color zones
-                        for (let b = 1; b <= 6; b++) {
-                          if (localData[`trendBand_${b}`] != null) {
-                            channelData[`manual_${channelIdx}_band_${b}`] = localData[`trendBand_${b}`];
-                          }
+                    if (channelDataPoint) {
+                      channelData[`manual_${channelIdx}_upper`] = channelDataPoint.trendUpper;
+                      channelData[`manual_${channelIdx}_center`] = channelDataPoint.trendLine;
+                      channelData[`manual_${channelIdx}_lower`] = channelDataPoint.trendLower;
+
+                      // Add intermediate bands for color zones
+                      for (let b = 1; b <= 6; b++) {
+                        if (channelDataPoint[`trendBand_${b}`] != null) {
+                          channelData[`manual_${channelIdx}_band_${b}`] = channelDataPoint[`trendBand_${b}`];
                         }
                       }
                     }
@@ -3109,6 +3114,8 @@ export function PricePerformanceChart({
 
                   return { ...pt, ...channelData };
                 });
+
+                console.log('Manual channel data applied. Sample point:', multiData[0]);
               }
               if (colorMode === 'sma' && chartCompareStocks.length === 0) {
                 const smaAnalysis = detectTurningPoints(multiData);
