@@ -1788,13 +1788,24 @@ export function PricePerformanceChart({
 
       // ...existing code...
 
-    setDataOffset(newOffset);
+    // Throttle updates using requestAnimationFrame to prevent excessive re-renders
+    if (!dragStartRef.current.rafId) {
+      dragStartRef.current.rafId = requestAnimationFrame(() => {
+        setDataOffset(newOffset);
+        dragStartRef.current.rafId = null;
+      });
+    }
   }, [chartPeriod, fullHistoricalData]);
 
   const handleMouseUp = useCallback(() => {
     // ...existing code...
     if (dragStartRef.current) {
       dragStartRef.current.isDragging = false;
+      // Cancel any pending RAF updates
+      if (dragStartRef.current.rafId) {
+        cancelAnimationFrame(dragStartRef.current.rafId);
+        dragStartRef.current.rafId = null;
+      }
     }
     setIsDragging(false);
     // Keep crosshair after drag end (do not clear)
@@ -3465,6 +3476,10 @@ export function PricePerformanceChart({
 
                             // Use actual volume percentage for this zone
                             const volumePercent = zoneVolumePercentages[b] || 0;
+
+                            // Skip rendering zones with very low volume to reduce DOM elements
+                            // This can cut down thousands of unnecessary ReferenceArea components
+                            if (volumePercent < 0.5) continue;
 
                             // Show label on the last segment (rightmost) for each zone
                             const showLabel = isLastSegmentOfChannel && volumePercent >= 1.0;

@@ -50,12 +50,12 @@ export function NewsSection({ newsApiNews = [], googleNews = [], yahooNews = [],
   const validYahooNews = hasYahoo ? yahooNews.filter(article => !article.error) : [];
   const validBloombergNews = hasBloomberg ? bloombergNews.filter(article => !article.error) : [];
 
-  console.log('[NewsSection] Valid news after filtering:', {
-    newsApi: validNewsApi.length,
-    google: validGoogleNews.length,
-    yahoo: validYahooNews.length,
-    bloomberg: validBloombergNews.length
-  });
+  // console.log('[NewsSection] Valid news after filtering:', {
+  //   newsApi: validNewsApi.length,
+  //   google: validGoogleNews.length,
+  //   yahoo: validYahooNews.length,
+  //   bloomberg: validBloombergNews.length
+  // });
   
   const newsLinks = symbol ? [
     { name: 'Google', url: `https://news.google.com/search?q=${encodeURIComponent(symbol + ' stock')}`, color: 'bg-blue-600 hover:bg-blue-700', logo: 'https://www.google.com/favicon.ico' },
