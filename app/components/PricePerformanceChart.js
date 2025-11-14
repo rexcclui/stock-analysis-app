@@ -130,6 +130,12 @@ export function PricePerformanceChart({
   const [isMultiChannelSimulating, setIsMultiChannelSimulating] = useState(false);
   const [multiChannelResults, setMultiChannelResults] = useState(null);
 
+  // Manual Channel configuration - user draws selection rectangles to create channels
+  const [isManualChannelMode, setIsManualChannelMode] = useState(false);
+  const [manualChannels, setManualChannels] = useState([]); // Array of manually created channels
+  const [manualChannelSelection, setManualChannelSelection] = useState(null); // Current selection rectangle
+  const [isComputingManualChannel, setIsComputingManualChannel] = useState(false);
+
   // AI Analysis using custom hook
   const {
     aiAnalysis,
@@ -1740,10 +1746,128 @@ export function PricePerformanceChart({
     setZoomDomain({ start: 0, end: 100 });
   };
 
+  // Compute optimal channel for the selected date range
+  const computeManualChannel = useCallback(async (startDate, endDate) => {
+    const currentData = getCurrentDataSlice();
+    if (!currentData || currentData.length < 20) {
+      alert('Not enough data for channel calculation');
+      return;
+    }
+
+    setIsComputingManualChannel(true);
+
+    try {
+      // Find the indices of the selected date range
+      const startIdx = currentData.findIndex(pt => pt.date === startDate);
+      const endIdx = currentData.findIndex(pt => pt.date === endDate);
+
+      if (startIdx === -1 || endIdx === -1) {
+        alert('Could not find selected date range in data');
+        setIsComputingManualChannel(false);
+        return;
+      }
+
+      // Ensure start is before end
+      const [actualStartIdx, actualEndIdx] = startIdx <= endIdx
+        ? [startIdx, endIdx]
+        : [endIdx, startIdx];
+
+      // Extract the selected slice of data
+      const selectedSlice = currentData.slice(actualStartIdx, actualEndIdx + 1);
+
+      if (selectedSlice.length < 20) {
+        alert('Selected range too small (minimum 20 data points)');
+        setIsComputingManualChannel(false);
+        return;
+      }
+
+      console.log(`Computing manual channel for ${selectedSlice.length} data points`);
+
+      // Use computeTrendChannelTouchAlignment to find optimal parameters
+      const alignment = computeTrendChannelTouchAlignment(selectedSlice, selectedSlice.length, 0, chartPeriod);
+
+      if (!alignment) {
+        alert('Could not compute channel for selected range');
+        setIsComputingManualChannel(false);
+        return;
+      }
+
+      console.log('Optimal channel parameters:', alignment);
+
+      // Build the channel data using the optimal parameters
+      const channelData = buildConfigurableTrendChannel(
+        selectedSlice,
+        selectedSlice.length,
+        alignment.optimalDelta,
+        { interceptShift: alignment.optimalInterceptShift, endAt: 0 }
+      );
+
+      // Create manual channel object
+      const manualChannel = {
+        id: Date.now(), // Unique ID for this channel
+        startIdx: actualStartIdx,
+        endIdx: actualEndIdx,
+        startDate: currentData[actualStartIdx].date,
+        endDate: currentData[actualEndIdx].date,
+        lookback: selectedSlice.length,
+        stdMultiplier: alignment.optimalDelta,
+        interceptShift: alignment.optimalInterceptShift,
+        touchesUpper: alignment.touchesUpper,
+        touchesLower: alignment.touchesLower,
+        data: channelData.slice(actualStartIdx, actualEndIdx + 1).map(pt => ({
+          date: pt.date,
+          trendLine: pt.trendLine,
+          trendUpper: pt.trendUpper,
+          trendLower: pt.trendLower,
+          trendBand_1: pt.trendBand_1,
+          trendBand_2: pt.trendBand_2,
+          trendBand_3: pt.trendBand_3,
+          trendBand_4: pt.trendBand_4,
+          trendBand_5: pt.trendBand_5,
+          trendBand_6: pt.trendBand_6
+        }))
+      };
+
+      // Add the channel to our manual channels array
+      setManualChannels(prev => [...prev, manualChannel]);
+      console.log('Manual channel added:', manualChannel);
+
+    } catch (error) {
+      console.error('Error computing manual channel:', error);
+      alert('Error computing channel: ' + error.message);
+    } finally {
+      setIsComputingManualChannel(false);
+      setManualChannelSelection(null); // Clear the selection
+    }
+  }, [chartPeriod, getCurrentDataSlice]);
+
   const handleMouseDown = useCallback((e) => {
     // Only start drag on left mouse button
     if (e.button !== 0) return;
     e.preventDefault();
+
+    // If in manual channel mode, start rectangle selection instead of panning
+    if (isManualChannelMode) {
+      const chartElement = chartContainerRef.current;
+      if (!chartElement) return;
+
+      const rect = chartElement.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      // Get the active data point from crosshair
+      if (crosshair.dataX) {
+        setManualChannelSelection({
+          startX: x,
+          startY: y,
+          endX: x,
+          endY: y,
+          startDate: crosshair.dataX,
+          endDate: crosshair.dataX
+        });
+      }
+      return;
+    }
 
     dragStartRef.current = {
       x: e.clientX,
@@ -1752,9 +1876,29 @@ export function PricePerformanceChart({
     };
     setIsDragging(true);
       // ...existing code...
-  }, [dataOffset]);
+  }, [dataOffset, isManualChannelMode, crosshair]);
 
   const handleMouseMove = useCallback((e) => {
+    // If in manual channel mode and we have an active selection, update the rectangle
+    if (isManualChannelMode && manualChannelSelection) {
+      const chartElement = chartContainerRef.current;
+      if (!chartElement) return;
+
+      const rect = chartElement.getBoundingClientRect();
+      const x = e.clientX - rect.left;
+      const y = e.clientY - rect.top;
+
+      if (crosshair.dataX) {
+        setManualChannelSelection(prev => ({
+          ...prev,
+          endX: x,
+          endY: y,
+          endDate: crosshair.dataX
+        }));
+      }
+      return;
+    }
+
     if (!dragStartRef.current?.isDragging) {
       return; // hover handled by handleChartHover
     }
@@ -1789,16 +1933,28 @@ export function PricePerformanceChart({
       // ...existing code...
 
     setDataOffset(newOffset);
-  }, [chartPeriod, fullHistoricalData]);
+  }, [chartPeriod, fullHistoricalData, isManualChannelMode, manualChannelSelection, crosshair]);
 
   const handleMouseUp = useCallback(() => {
+    // If in manual channel mode and we have a selection, compute the channel
+    if (isManualChannelMode && manualChannelSelection) {
+      const { startDate, endDate } = manualChannelSelection;
+      if (startDate && endDate && startDate !== endDate) {
+        computeManualChannel(startDate, endDate);
+      } else {
+        // If selection is too small, just clear it
+        setManualChannelSelection(null);
+      }
+      return;
+    }
+
     // ...existing code...
     if (dragStartRef.current) {
       dragStartRef.current.isDragging = false;
     }
     setIsDragging(false);
     // Keep crosshair after drag end (do not clear)
-  }, []);
+  }, [isManualChannelMode, manualChannelSelection, computeManualChannel]);
 
   const handleMouseLeave = useCallback(() => {
     setCrosshair({ x: null, y: null, dataX: null, dataY: null });
@@ -1980,6 +2136,46 @@ export function PricePerformanceChart({
             >
               Multi-Channel
             </button>
+          )}
+
+          {/* Manual Channel Mode Toggle */}
+          {chartCompareStocks.length === 0 && selectedStock && (
+            <button
+              onClick={() => {
+                setIsManualChannelMode(!isManualChannelMode);
+                if (!isManualChannelMode) {
+                  // When entering manual channel mode, clear selection
+                  setManualChannelSelection(null);
+                }
+              }}
+              className="px-3 py-2 rounded-lg text-xs font-medium transition"
+              style={{
+                backgroundColor: isManualChannelMode ? '#10B981' : '#374151',
+                color: isManualChannelMode ? '#000000' : '#D1D5DB',
+                fontWeight: 'bold'
+              }}
+              title={isManualChannelMode ? 'Disable Manual Channel mode' : 'Enable Manual Channel mode (Draw rectangles to create channels)'}
+            >
+              Manual Channel
+            </button>
+          )}
+
+          {/* Manual Channel Controls */}
+          {isManualChannelMode && chartCompareStocks.length === 0 && selectedStock && manualChannels.length > 0 && (
+            <button
+              onClick={() => setManualChannels([])}
+              className="px-3 py-2 rounded-lg text-xs font-medium transition bg-red-600 hover:bg-red-700 text-white"
+              title="Clear all manual channels"
+            >
+              Clear Channels ({manualChannels.length})
+            </button>
+          )}
+
+          {/* Manual Channel Status Message */}
+          {isManualChannelMode && chartCompareStocks.length === 0 && selectedStock && (
+            <div className="px-3 py-2 rounded-lg text-xs font-medium bg-green-900/30 text-green-300 border border-green-700">
+              {isComputingManualChannel ? '⏳ Computing optimal channel...' : '🖱️ Drag to select a range on the chart'}
+            </div>
           )}
 
           {/* Trend Channel Configuration (when in trend mode) */}
@@ -2863,6 +3059,36 @@ export function PricePerformanceChart({
                   return { ...pt, ...channelData };
                 });
               }
+              // Apply manual channel data when manual channels exist
+              if (isManualChannelMode && manualChannels.length > 0) {
+                // Add manual channel data to each point in multiData
+                multiData = multiData.map((pt, idx) => {
+                  const channelData = {};
+                  const fullDataIdx = startIndex + idx;
+
+                  // For each manual channel, add its upper/center/lower values and bands if this point is in range
+                  manualChannels.forEach((channel, channelIdx) => {
+                    if (fullDataIdx >= channel.startIdx && fullDataIdx <= channel.endIdx) {
+                      const localIdx = fullDataIdx - channel.startIdx;
+                      const localData = channel.data[localIdx];
+                      if (localData && localData.date === pt.date) {
+                        channelData[`manual_${channelIdx}_upper`] = localData.trendUpper;
+                        channelData[`manual_${channelIdx}_center`] = localData.trendLine;
+                        channelData[`manual_${channelIdx}_lower`] = localData.trendLower;
+
+                        // Add intermediate bands for color zones
+                        for (let b = 1; b <= 6; b++) {
+                          if (localData[`trendBand_${b}`] != null) {
+                            channelData[`manual_${channelIdx}_band_${b}`] = localData[`trendBand_${b}`];
+                          }
+                        }
+                      }
+                    }
+                  });
+
+                  return { ...pt, ...channelData };
+                });
+              }
               if (colorMode === 'sma' && chartCompareStocks.length === 0) {
                 const smaAnalysis = detectTurningPoints(multiData);
                 smaSegments = addSmaDataKeys(multiData, smaAnalysis.turningPoints);
@@ -3600,6 +3826,183 @@ export function PricePerformanceChart({
                       />
                     ))}
                   </>
+                )}
+
+                {/* Manual Channels - Render on top of everything when in manual channel mode */}
+                {isManualChannelMode && manualChannels.length > 0 && manualChannels.map((channel, channelIdx) => {
+                  // Calculate volume distribution for this manual channel
+                  const channelData = multiData.filter((pt, idx) => {
+                    const fullDataIdx = startIndex + idx;
+                    return fullDataIdx >= channel.startIdx && fullDataIdx <= channel.endIdx &&
+                           pt[`manual_${channelIdx}_lower`] != null;
+                  });
+
+                  // Calculate zone volume distribution
+                  const zoneVolumes = {};
+                  let totalVolume = 0;
+
+                  channelData.forEach(pt => {
+                    const price = pt.price || pt.close;
+                    const volume = pt.volume || 0;
+
+                    if (!price || !volume) return;
+
+                    const lowerBound = pt[`manual_${channelIdx}_lower`];
+                    const upperBound = pt[`manual_${channelIdx}_upper`];
+
+                    if (lowerBound == null || upperBound == null) return;
+
+                    // Build band boundary array (using 6 bands like trend mode)
+                    const boundaries = [lowerBound];
+                    for (let b = 1; b <= 6; b++) {
+                      const bandValue = pt[`manual_${channelIdx}_band_${b}`];
+                      if (bandValue != null) boundaries.push(bandValue);
+                    }
+                    boundaries.push(upperBound);
+
+                    // Determine zone by boundary search
+                    let zoneIndex = -1;
+                    for (let z = 0; z < boundaries.length - 1; z++) {
+                      const low = boundaries[z];
+                      const high = boundaries[z + 1];
+                      if (price >= low && price <= high) {
+                        zoneIndex = z;
+                        break;
+                      }
+                    }
+
+                    if (zoneIndex === -1 || zoneIndex >= CHANNEL_BANDS) return;
+                    if (!zoneVolumes[zoneIndex]) zoneVolumes[zoneIndex] = 0;
+                    zoneVolumes[zoneIndex] += volume;
+                    totalVolume += volume;
+                  });
+
+                  // Calculate volume percentages
+                  const zoneVolumePercentages = {};
+                  Object.keys(zoneVolumes).forEach(zoneIndex => {
+                    zoneVolumePercentages[zoneIndex] = totalVolume > 0
+                      ? (zoneVolumes[zoneIndex] / totalVolume) * 100
+                      : 0;
+                  });
+
+                  // Render color zones for this manual channel
+                  const colorZones = multiData.map((pt, i) => {
+                    const next = multiData[i + 1];
+                    if (!next) return null;
+
+                    const zones = [];
+                    // Render zones between bands (6 bands for trend mode, so CHANNEL_BANDS zones)
+                    for (let b = 0; b < CHANNEL_BANDS; b++) {
+                      const lowerKey = b === 0 ? `manual_${channelIdx}_lower` : `manual_${channelIdx}_band_${b}`;
+                      const upperKey = b === CHANNEL_BANDS - 1 ? `manual_${channelIdx}_upper` : `manual_${channelIdx}_band_${b + 1}`;
+                      const ptLower = pt[lowerKey];
+                      const ptUpper = pt[upperKey];
+                      const nextLower = next[lowerKey];
+                      const nextUpper = next[upperKey];
+
+                      if (ptLower == null || ptUpper == null || nextLower == null || nextUpper == null) continue;
+
+                      const zoneLower = Math.min(ptLower, nextLower);
+                      const zoneUpper = Math.max(ptUpper, nextUpper);
+                      const ratioMid = (b + 0.5) / CHANNEL_BANDS;
+                      const volumePercent = zoneVolumePercentages[b] || 0;
+
+                      // Show label on the last segment (rightmost) for each zone
+                      const fullDataIdx = startIndex + i;
+                      const isLastSegment = fullDataIdx === channel.endIdx - 1;
+                      const showLabel = isLastSegment && volumePercent >= 1.0;
+
+                      zones.push(
+                        <ReferenceArea
+                          key={`manual-${channelIdx}-band-${i}-${b}`}
+                          x1={pt.date}
+                          x2={next.date}
+                          y1={zoneLower}
+                          y2={zoneUpper}
+                          fill={getChannelBandColor(ratioMid, volumePercent)}
+                          strokeOpacity={0}
+                          ifOverflow="discard"
+                          label={showLabel ? {
+                            value: `${volumePercent.toFixed(1)}%`,
+                            position: 'right',
+                            fill: '#ffffff',
+                            fontSize: 10,
+                            fontWeight: 'bold',
+                            stroke: '#000000',
+                            strokeWidth: 0.5
+                          } : null}
+                        />
+                      );
+                    }
+                    return zones;
+                  });
+
+                  // Channel color (different colors for different manual channels)
+                  const channelColors = [
+                    { upper: '#A855F7', center: '#9333EA', lower: '#A855F7' }, // Purple
+                    { upper: '#10B981', center: '#059669', lower: '#10B981' }, // Green
+                    { upper: '#F59E0B', center: '#D97706', lower: '#F59E0B' }, // Orange
+                    { upper: '#EF4444', center: '#DC2626', lower: '#EF4444' }, // Red
+                    { upper: '#3B82F6', center: '#2563EB', lower: '#3B82F6' }, // Blue
+                  ];
+                  const channelColor = channelColors[channelIdx % channelColors.length];
+
+                  return (
+                    <React.Fragment key={`manual-channel-${channelIdx}`}>
+                      {/* Render color zones */}
+                      {colorZones}
+                      {/* Upper bound */}
+                      <Line
+                        type="monotone"
+                        dataKey={`manual_${channelIdx}_upper`}
+                        name={`Manual Ch${channelIdx + 1} Upper`}
+                        stroke={channelColor.upper}
+                        strokeWidth={2}
+                        strokeOpacity={0.9}
+                        strokeDasharray="5 5"
+                        dot={false}
+                        connectNulls={false}
+                      />
+                      {/* Center line */}
+                      <Line
+                        type="monotone"
+                        dataKey={`manual_${channelIdx}_center`}
+                        name={`Manual Ch${channelIdx + 1} Center`}
+                        stroke={channelColor.center}
+                        strokeWidth={2}
+                        strokeOpacity={0.95}
+                        strokeDasharray="5 5"
+                        dot={false}
+                        connectNulls={false}
+                      />
+                      {/* Lower bound */}
+                      <Line
+                        type="monotone"
+                        dataKey={`manual_${channelIdx}_lower`}
+                        name={`Manual Ch${channelIdx + 1} Lower`}
+                        stroke={channelColor.lower}
+                        strokeWidth={2}
+                        strokeOpacity={0.9}
+                        strokeDasharray="5 5"
+                        dot={false}
+                        connectNulls={false}
+                      />
+                    </React.Fragment>
+                  );
+                })}
+
+                {/* Selection rectangle for manual channel mode */}
+                {isManualChannelMode && manualChannelSelection && manualChannelSelection.startDate !== manualChannelSelection.endDate && (
+                  <ReferenceArea
+                    x1={manualChannelSelection.startDate}
+                    x2={manualChannelSelection.endDate}
+                    fill="#10B981"
+                    fillOpacity={0.2}
+                    stroke="#10B981"
+                    strokeWidth={2}
+                    strokeOpacity={0.8}
+                    strokeDasharray="5 5"
+                  />
                 )}
               </LineChart>
             );
