@@ -312,17 +312,18 @@ export function onRenderProfiler(id, phase, actualDuration, baseDuration, startT
   });
 
   // Log slow renders
-  if (actualDuration > config.slowThreshold) {
-    log(
-      actualDuration > config.verySlowThreshold ? LOG_LEVEL.WARN : LOG_LEVEL.INFO,
-      `${formatted.emoji} ${id} (${phase}): ${formatted.value}ms`,
-      {
-        actualDuration,
-        baseDuration,
-        overhead: (actualDuration - baseDuration).toFixed(2)
-      }
-    );
-  }
+  // Disabled to reduce console noise
+  // if (actualDuration > config.slowThreshold) {
+  //   log(
+  //     actualDuration > config.verySlowThreshold ? LOG_LEVEL.WARN : LOG_LEVEL.INFO,
+  //     `${formatted.emoji} ${id} (${phase}): ${formatted.value}ms`,
+  //     {
+  //       actualDuration,
+  //       baseDuration,
+  //       overhead: (actualDuration - baseDuration).toFixed(2)
+  //     }
+  //   );
+  // }
 }
 
 /**
