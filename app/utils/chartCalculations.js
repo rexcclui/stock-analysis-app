@@ -1158,6 +1158,29 @@ export const findMultipleChannels = (data, minRatio = 0.05, maxRatio = 0.5, stdM
         // Skip if no valid multiplier was found
         if (!bestMultiplierData) continue;
 
+        // Filter: Check for excessive stdDev deviation at start/end of channel
+        // This helps ensure the channel boundaries capture the true trend
+        const boundaryCheckSize = Math.max(3, Math.floor(n * 0.1)); // Check 10% of data at each end (min 3 points)
+
+        // Calculate average absolute residual at start
+        const startResiduals = residuals.slice(0, boundaryCheckSize);
+        const startAvgDeviation = startResiduals.reduce((sum, r) => sum + Math.abs(r), 0) / startResiduals.length;
+
+        // Calculate average absolute residual at end
+        const endResiduals = residuals.slice(-boundaryCheckSize);
+        const endAvgDeviation = endResiduals.reduce((sum, r) => sum + Math.abs(r), 0) / endResiduals.length;
+
+        // Calculate average absolute residual for entire channel
+        const totalAvgDeviation = residuals.reduce((sum, r) => sum + Math.abs(r), 0) / n;
+
+        // Reject if start or end deviation is more than 1.5x the average
+        // This indicates the channel doesn't fit well at the boundaries
+        const deviationThreshold = 1.5;
+        if (startAvgDeviation > totalAvgDeviation * deviationThreshold ||
+            endAvgDeviation > totalAvgDeviation * deviationThreshold) {
+          continue; // Skip this channel candidate
+        }
+
         // Use the best multiplier score as the channel score
         const score = bestMultiplierScore;
 
