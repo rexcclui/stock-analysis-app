@@ -136,6 +136,13 @@ export function PricePerformanceChart({
   const [manualChannelSelection, setManualChannelSelection] = useState(null); // Current selection rectangle
   const [isComputingManualChannel, setIsComputingManualChannel] = useState(false);
 
+  // Debug: Log manual channel selection changes
+  useEffect(() => {
+    if (manualChannelSelection) {
+      console.log('Manual channel selection updated:', manualChannelSelection);
+    }
+  }, [manualChannelSelection]);
+
   // AI Analysis using custom hook
   const {
     aiAnalysis,
@@ -179,7 +186,12 @@ export function PricePerformanceChart({
       value = activePayload[0]?.value ?? null; // percentage series value
     }
     setCrosshair({ x: chartX, y: chartY, dataX: activeLabel || null, dataY: value });
-  }, [chartCompareStocks.length]);
+
+    // Debug logging for manual channel mode
+    if (isManualChannelMode) {
+      console.log('handleChartHover - activeLabel:', activeLabel);
+    }
+  }, [chartCompareStocks.length, isManualChannelMode]);
   const [isDragging, setIsDragging] = useState(false);
   const dragStartRef = useRef({ x: 0, startOffset: 0 });
 
@@ -1847,16 +1859,18 @@ export function PricePerformanceChart({
 
     // If in manual channel mode, start rectangle selection instead of panning
     if (isManualChannelMode) {
-      e.preventDefault();
-      e.stopPropagation();
+      console.log('Manual channel mode - Mouse down at:', crosshair.dataX);
 
       // Get the active data point from crosshair
       if (crosshair.dataX) {
+        console.log('Starting selection at date:', crosshair.dataX);
         setManualChannelSelection({
           startDate: crosshair.dataX,
           endDate: crosshair.dataX,
           isDragging: true
         });
+      } else {
+        console.log('No crosshair.dataX available!');
       }
       return;
     }
@@ -1875,6 +1889,7 @@ export function PricePerformanceChart({
     // If in manual channel mode and we have an active selection, update the rectangle
     if (isManualChannelMode && manualChannelSelection?.isDragging) {
       if (crosshair.dataX && crosshair.dataX !== manualChannelSelection.endDate) {
+        console.log('Updating selection endDate to:', crosshair.dataX);
         setManualChannelSelection(prev => ({
           ...prev,
           endDate: crosshair.dataX
