@@ -4025,8 +4025,11 @@ export function PricePerformanceChart({
                   ];
                   const channelColor = channelColors[channelIdx % channelColors.length];
 
-                  // Find the last data point in this channel for the stdev label
-                  const channelEndData = multiData.find(pt => pt.date === channel.endDate);
+                  // Find the midpoint of the channel for the stdev label
+                  const channelStartIdx = multiData.findIndex(pt => pt.date === channel.startDate);
+                  const channelEndIdx = multiData.findIndex(pt => pt.date === channel.endDate);
+                  const channelMidIdx = Math.floor((channelStartIdx + channelEndIdx) / 2);
+                  const channelMidData = channelMidIdx >= 0 ? multiData[channelMidIdx] : null;
                   const sigmaLabel = `±${channel.stdMultiplier.toFixed(2)}σ`;
 
                   return (
@@ -4069,23 +4072,23 @@ export function PricePerformanceChart({
                         dot={false}
                         connectNulls={false}
                       />
-                      {/* StdDev label at channel end */}
-                      {channelEndData && channelEndData[`manual_${channelIdx}_upper`] && channelEndData[`manual_${channelIdx}_lower`] && (
-                        <ReferenceLine
-                          segment={[
-                            { x: channelEndData.date, y: channelEndData[`manual_${channelIdx}_upper`] },
-                            { x: channelEndData.date, y: channelEndData[`manual_${channelIdx}_lower`] }
-                          ]}
-                          stroke={channelColor.center}
-                          strokeWidth={2}
-                          strokeOpacity={0.7}
+                      {/* StdDev label at channel midpoint below lower bound */}
+                      {channelMidData && channelMidData[`manual_${channelIdx}_lower`] && (
+                        <ReferenceDot
+                          x={channelMidData.date}
+                          y={channelMidData[`manual_${channelIdx}_lower`]}
+                          r={0}
+                          fill="transparent"
+                          stroke="transparent"
                           label={{
                             value: sigmaLabel,
-                            position: 'right',
+                            position: 'bottom',
                             fill: channelColor.center,
-                            fontSize: 11,
+                            fontSize: 12,
                             fontWeight: 'bold',
-                            offset: 5
+                            offset: 10,
+                            stroke: '#000000',
+                            strokeWidth: 0.3
                           }}
                         />
                       )}
