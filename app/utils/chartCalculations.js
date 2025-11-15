@@ -1030,6 +1030,20 @@ export const findMultipleChannels = (data, minRatio = 0.05, maxRatio = 0.5, stdM
   const channels = [];
   const usedIndices = new Set();
 
+  // Pre-compute price based helpers so we can avoid expensive slice/map allocations
+  const prices = new Array(totalPoints);
+  const pricePrefix = new Array(totalPoints + 1);
+  const priceIndexPrefix = new Array(totalPoints + 1);
+
+  pricePrefix[0] = 0;
+  priceIndexPrefix[0] = 0;
+  for (let i = 0; i < totalPoints; i++) {
+    const price = data[i]?.price ?? 0;
+    prices[i] = price;
+    pricePrefix[i + 1] = pricePrefix[i] + price;
+    priceIndexPrefix[i + 1] = priceIndexPrefix[i] + i * price;
+  }
+
   // Helper function to find best channel in a given range
   const findBestChannelInRange = (startIdx, endIdx) => {
     const rangeLength = endIdx - startIdx + 1;
@@ -1050,25 +1064,24 @@ export const findMultipleChannels = (data, minRatio = 0.05, maxRatio = 0.5, stdM
 
       for (let pos = startIdx; pos <= maxStartPos; pos += posStep) {
         const channelEnd = Math.min(pos + lookback, endIdx + 1);
-        const slice = data.slice(pos, channelEnd);
+        const sliceLength = channelEnd - pos;
 
-        if (slice.length < minPoints) continue;
+        if (sliceLength < minPoints) continue;
 
         // Check if too many points are already used (allow up to 50% overlap)
-        const usedCount = slice.filter((_, idx) => usedIndices.has(pos + idx)).length;
-        if (usedCount > slice.length * 0.5) continue; // Skip if >50% already used
+        let usedCount = 0;
+        for (let idx = 0; idx < sliceLength; idx++) {
+          if (usedIndices.has(pos + idx)) usedCount++;
+        }
+        if (usedCount > sliceLength * 0.5) continue; // Skip if >50% already used
 
         // Calculate linear regression
-        const n = slice.length;
-        let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
-        slice.forEach((pt, i) => {
-          const x = i;
-          const y = pt.price || 0;
-          sumX += x;
-          sumY += y;
-          sumXY += x * y;
-          sumX2 += x * x;
-        });
+        const n = sliceLength;
+        const sumX = (n - 1) * n / 2;
+        const sumX2 = (n - 1) * n * (2 * n - 1) / 6;
+        const sumY = pricePrefix[pos + n] - pricePrefix[pos];
+        const sumIndexPrice = priceIndexPrefix[pos + n] - priceIndexPrefix[pos];
+        const sumXY = sumIndexPrice - pos * sumY;
 
         const denom = (n * sumX2 - sumX * sumX);
         if (denom === 0) continue;
@@ -1077,9 +1090,24 @@ export const findMultipleChannels = (data, minRatio = 0.05, maxRatio = 0.5, stdM
         const intercept = (sumY - slope * sumX) / n;
 
         // Calculate residuals and std dev
-        const residuals = slice.map((pt, i) => (pt.price || 0) - (slope * i + intercept));
-        const mean = residuals.reduce((sum, r) => sum + r, 0) / n;
-        const variance = residuals.reduce((sum, r) => sum + Math.pow(r - mean, 2), 0) / n;
+        const centers = new Array(n);
+        const residuals = new Array(n);
+        let residualSum = 0;
+        for (let i = 0; i < n; i++) {
+          const center = slope * i + intercept;
+          const residual = prices[pos + i] - center;
+          centers[i] = center;
+          residuals[i] = residual;
+          residualSum += residual;
+        }
+
+        const mean = residualSum / n;
+        let variance = 0;
+        for (let i = 0; i < n; i++) {
+          const diff = residuals[i] - mean;
+          variance += diff * diff;
+        }
+        variance /= n;
         const stdDev = Math.sqrt(variance);
 
         if (stdDev === 0) continue;
@@ -1092,10 +1120,6 @@ export const findMultipleChannels = (data, minRatio = 0.05, maxRatio = 0.5, stdM
 
         // Test multipliers from 1.0 to 4.0 in steps of 0.5
         for (let testMultiplier = 1.0; testMultiplier <= 4.0; testMultiplier += 0.5) {
-          // Calculate channel bounds with this multiplier
-          const upper = slice.map((_, i) => slope * i + intercept + testMultiplier * stdDev);
-          const lower = slice.map((_, i) => slope * i + intercept - testMultiplier * stdDev);
-
           // Count points within channel
           let pointsInChannel = 0;
           let touchesUpper = false;
@@ -1105,22 +1129,24 @@ export const findMultipleChannels = (data, minRatio = 0.05, maxRatio = 0.5, stdM
           // Count points within ±20% of center line
           let pointsNearCenter = 0;
 
-          slice.forEach((pt, i) => {
-            const price = pt.price || 0;
-            const center = slope * i + intercept;
+          for (let i = 0; i < n; i++) {
+            const price = prices[pos + i];
+            const center = centers[i];
+            const upper = center + testMultiplier * stdDev;
+            const lower = center - testMultiplier * stdDev;
 
-            if (price >= lower[i] - tolerance && price <= upper[i] + tolerance) {
+            if (price >= lower - tolerance && price <= upper + tolerance) {
               pointsInChannel++;
             }
-            if (Math.abs(price - upper[i]) <= tolerance) touchesUpper = true;
-            if (Math.abs(price - lower[i]) <= tolerance) touchesLower = true;
+            if (Math.abs(price - upper) <= tolerance) touchesUpper = true;
+            if (Math.abs(price - lower) <= tolerance) touchesLower = true;
 
             // Check if price is within ±20% of center line
             const centerTolerance = Math.abs(center) * 0.20;
             if (Math.abs(price - center) <= centerTolerance) {
               pointsNearCenter++;
             }
-          });
+          }
 
           const coverage = pointsInChannel / n;
           const centerProximity = pointsNearCenter / n;
@@ -1148,9 +1174,7 @@ export const findMultipleChannels = (data, minRatio = 0.05, maxRatio = 0.5, stdM
               coverage,
               centerProximity,
               touchesUpper,
-              touchesLower,
-              upper,
-              lower
+              touchesLower
             };
           }
         }
@@ -1163,15 +1187,25 @@ export const findMultipleChannels = (data, minRatio = 0.05, maxRatio = 0.5, stdM
         const boundaryCheckSize = Math.max(3, Math.floor(n * 0.1)); // Check 10% of data at each end (min 3 points)
 
         // Calculate average absolute residual at start
-        const startResiduals = residuals.slice(0, boundaryCheckSize);
-        const startAvgDeviation = startResiduals.reduce((sum, r) => sum + Math.abs(r), 0) / startResiduals.length;
+        let startSum = 0;
+        for (let i = 0; i < boundaryCheckSize; i++) {
+          startSum += Math.abs(residuals[i]);
+        }
+        const startAvgDeviation = startSum / boundaryCheckSize;
 
         // Calculate average absolute residual at end
-        const endResiduals = residuals.slice(-boundaryCheckSize);
-        const endAvgDeviation = endResiduals.reduce((sum, r) => sum + Math.abs(r), 0) / endResiduals.length;
+        let endSum = 0;
+        for (let i = n - boundaryCheckSize; i < n; i++) {
+          endSum += Math.abs(residuals[i]);
+        }
+        const endAvgDeviation = endSum / boundaryCheckSize;
 
         // Calculate average absolute residual for entire channel
-        const totalAvgDeviation = residuals.reduce((sum, r) => sum + Math.abs(r), 0) / n;
+        let totalAbsResidual = 0;
+        for (let i = 0; i < n; i++) {
+          totalAbsResidual += Math.abs(residuals[i]);
+        }
+        const totalAvgDeviation = totalAbsResidual / n;
 
         // Reject if start or end deviation is more than 1.5x the average
         // This indicates the channel doesn't fit well at the boundaries
@@ -1191,10 +1225,32 @@ export const findMultipleChannels = (data, minRatio = 0.05, maxRatio = 0.5, stdM
           const BANDS = 10;
           const channelRange = bestMultiplier * stdDev * 2; // Total range from lower to upper
 
+          const channelData = new Array(n);
+          for (let i = 0; i < n; i++) {
+            const originalPoint = data[pos + i];
+            const center = centers[i];
+            const upper = center + bestMultiplier * stdDev;
+            const lower = center - bestMultiplier * stdDev;
+
+            const bands = {};
+            for (let b = 1; b < BANDS; b++) {
+              const ratio = b / BANDS;
+              bands[`channelBand_${b}`] = lower + ratio * channelRange;
+            }
+
+            channelData[i] = {
+              ...originalPoint,
+              channelUpper: upper,
+              channelLower: lower,
+              channelCenter: center,
+              ...bands
+            };
+          }
+
           bestChannel = {
             startIdx: pos,
             endIdx: channelEnd - 1,
-            lookback: slice.length,
+            lookback: n,
             slope,
             intercept,
             stdDev,
@@ -1204,26 +1260,7 @@ export const findMultipleChannels = (data, minRatio = 0.05, maxRatio = 0.5, stdM
             touchesUpper: bestMultiplierData.touchesUpper,
             touchesLower: bestMultiplierData.touchesLower,
             score,
-            data: slice.map((pt, i) => {
-              const center = slope * i + intercept;
-              const upper = center + bestMultiplier * stdDev;
-              const lower = center - bestMultiplier * stdDev;
-
-              // Create intermediate bands
-              const bands = {};
-              for (let b = 1; b < BANDS; b++) {
-                const ratio = b / BANDS;
-                bands[`channelBand_${b}`] = lower + ratio * channelRange;
-              }
-
-              return {
-                ...pt,
-                channelUpper: upper,
-                channelLower: lower,
-                channelCenter: center,
-                ...bands
-              };
-            })
+            data: channelData
           };
         }
       }
