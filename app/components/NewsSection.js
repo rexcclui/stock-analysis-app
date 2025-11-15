@@ -142,6 +142,7 @@ export function NewsSection({ newsApiNews = [], googleNews = [], yahooNews = [],
                 rel="noopener noreferrer"
                 className={`px-3 py-1.5 ${link.color} text-white text-sm font-medium rounded-lg transition-colors flex items-center gap-1.5`}
               >
+                {/* eslint-disable-next-line @next/next/no-img-element */}
                 <img
                   src={link.logo}
                   alt={`${link.name} logo`}

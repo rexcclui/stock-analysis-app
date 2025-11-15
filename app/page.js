@@ -302,16 +302,7 @@ export default function StockAnalysisDashboard() {
     if (savedPeriod) {
       setChartPeriod(savedPeriod === '1D' ? '1M' : savedPeriod);
     }
-    // Load selected stock and related data from localStorage
-    const savedStock = localStorage.getItem('selectedStock');
-    if (savedStock) {
-      try {
-        const stockData = JSON.parse(savedStock);
-        if (stockData && stockData.code) {
-          handleSearch(stockData.code);
-        }
-      } catch {}
-    }
+    // Load cached news and comparison data (stock will be loaded in separate effect after handleSearch is defined)
     const savedNews = localStorage.getItem('selectedStockNews');
     if (savedNews) {
       try {
@@ -345,6 +336,7 @@ export default function StockAnalysisDashboard() {
         setComparisonStocks(filtered);
       } catch {}
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // Rebuild normalized comparison series when chartPeriod changes
@@ -537,7 +529,7 @@ export default function StockAnalysisDashboard() {
     }, forceReload).catch(err => console.error('[AI Analysis] Failed:', err));
   };
 
-  const handleSearch = async (overrideCode) => {
+  const handleSearch = React.useCallback(async (overrideCode) => {
     setLoading(true);
     const stockCode = (overrideCode || searchInput).toUpperCase();
     if (!stockCode) { setLoading(false); return; }
@@ -656,7 +648,21 @@ export default function StockAnalysisDashboard() {
     mark('search:fetchComplete');
     measureMarks('search.fetchDuration', 'search:start', 'search:fetchComplete');
     setLoading(false);
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [searchInput]);
+
+  // Load saved stock from localStorage after handleSearch is defined
+  React.useEffect(() => {
+    const savedStock = localStorage.getItem('selectedStock');
+    if (savedStock) {
+      try {
+        const stockData = JSON.parse(savedStock);
+        if (stockData && stockData.code) {
+          handleSearch(stockData.code);
+        }
+      } catch {}
+    }
+  }, [handleSearch]);
 
   // Force reload: Clear all caches (client + server) and reload current stock
   const handleForceReload = async () => {

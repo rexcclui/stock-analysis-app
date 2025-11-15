@@ -245,7 +245,7 @@ export default function LeadLagView({
         <div className="font-semibold mb-2">Understanding the Metrics:</div>
         <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
           <div>
-            <span className="font-medium">Beta:</span> Sensitivity to the selected stock's movements (slope of regression)
+            <span className="font-medium">Beta:</span> Sensitivity to the selected stock&apos;s movements (slope of regression)
           </div>
           <div>
             <span className="font-medium">Correlation:</span> Strength and direction of relationship (-1 to +1)

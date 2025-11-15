@@ -135,6 +135,7 @@ export function PricePerformanceChart({
   const [manualChannels, setManualChannels] = useState([]); // Array of manually created channels
   const [manualChannelSelection, setManualChannelSelection] = useState(null); // Current selection rectangle
   const [isComputingManualChannel, setIsComputingManualChannel] = useState(false);
+  const [isFindingLastChannel, setIsFindingLastChannel] = useState(false); // Track find last channel operation
 
   // Debug: Log manual channel selection changes
   useEffect(() => {
@@ -1529,7 +1530,7 @@ export function PricePerformanceChart({
   };
 
   // Get current data slice based on offset and period
-  const getCurrentDataSlice = () => {
+  const getCurrentDataSlice = useCallback(() => {
     if (fullHistoricalData.length === 0) {
       return chartData; // Fallback to pre-sliced data
     }
@@ -1633,7 +1634,8 @@ export function PricePerformanceChart({
     }
 
     return slicedData;
-  };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [fullHistoricalData, chartData, chartPeriod, dataOffset, colorMode, spyData]);
 
   // Run simulation to find optimal SMA period
   const runSimulation = async () => {
@@ -1889,7 +1891,7 @@ export function PricePerformanceChart({
         selectedSlice,
         selectedSlice.length,
         alignment.optimalDelta,
-        { interceptShift: alignment.optimalInterceptShift, endAt: 0 },
+        { interceptShift: alignment.interceptShift, endAt: 0 },
         CHANNEL_BANDS // Use 10 bands to match rendering expectation
       );
 
@@ -1904,7 +1906,7 @@ export function PricePerformanceChart({
         endDate: currentData[actualEndIdx].date,
         lookback: selectedSlice.length,
         stdMultiplier: alignment.optimalDelta,
-        interceptShift: alignment.optimalInterceptShift,
+        interceptShift: alignment.interceptShift,
         touchesUpper: alignment.touchesUpper,
         touchesLower: alignment.touchesLower,
         visible: true, // Channel visibility toggle
@@ -1972,7 +1974,231 @@ export function PricePerformanceChart({
       setIsComputingManualChannel(false);
       setManualChannelSelection(null); // Clear the selection
     }
-  }, [chartPeriod, getCurrentDataSlice]);
+  }, [chartPeriod, getCurrentDataSlice, computeTrendChannelTouchAlignment, checkChannelOverlap]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Find the last 3 channels by starting from a short lookback and increasing until trend break is detected
+  const findLastChannel = useCallback(async () => {
+    const currentData = getCurrentDataSlice();
+    if (!currentData || currentData.length < 20) {
+      alert('Not enough data for channel calculation');
+      return;
+    }
+
+    setIsFindingLastChannel(true);
+
+    try {
+      // Configuration
+      const minLookback = 20; // Minimum data points required
+      const trendBreakPercentage = 0.10; // First 10% of data
+      const channelsToFind = 3; // Find last 3 channels
+      const foundChannels = [];
+      let searchEndIdx = currentData.length - 1; // Start from the end of data
+
+      console.log('Starting find last 3 channels operation...');
+      console.log(`Data length: ${currentData.length}, Min lookback: ${minLookback}`);
+
+      // Find 3 channels sequentially
+      for (let channelNum = 1; channelNum <= channelsToFind; channelNum++) {
+        console.log(`\n=== Searching for Channel ${channelNum} ===`);
+        console.log(`Search range: 0 to ${searchEndIdx}`);
+
+        const maxLookback = searchEndIdx + 1; // Can't look back further than available data
+
+        if (maxLookback < minLookback) {
+          console.log(`Not enough data remaining for channel ${channelNum}`);
+          break;
+        }
+
+        let currentLookback = minLookback;
+        let optimalChannel = null;
+
+        // Start from shortest lookback and increase until we find a channel where the trend is not broken
+        while (currentLookback <= maxLookback) {
+          // Get the data slice from (searchEndIdx - currentLookback + 1) to searchEndIdx
+          const startIdx = Math.max(0, searchEndIdx - currentLookback + 1);
+          const endIdx = searchEndIdx;
+          const selectedSlice = currentData.slice(startIdx, endIdx + 1);
+
+          console.log(`  Trying lookback ${currentLookback}: indices ${startIdx} to ${endIdx} (${selectedSlice.length} points)`);
+
+          // Compute channel alignment for this slice
+          const alignment = computeTrendChannelTouchAlignment(selectedSlice, selectedSlice.length, 0, chartPeriod);
+
+          if (!alignment) {
+            console.log('    Could not compute channel alignment, trying next lookback');
+            currentLookback += Math.max(1, Math.floor(maxLookback / 50)); // Increment by ~2%
+            continue;
+          }
+
+          // Build the channel data
+          const channelData = buildConfigurableTrendChannel(
+            selectedSlice,
+            selectedSlice.length,
+            alignment.optimalDelta,
+            { interceptShift: alignment.interceptShift, endAt: 0 },
+            CHANNEL_BANDS
+          );
+
+          // Check trend break: if first 10% of data is outside the channel stdev
+          const trendBreakCheckSize = Math.max(1, Math.floor(selectedSlice.length * trendBreakPercentage));
+          const firstPoints = channelData.slice(0, trendBreakCheckSize);
+
+          let trendBroken = false;
+          for (let i = 0; i < firstPoints.length; i++) {
+            const point = firstPoints[i];
+            const actualPrice = selectedSlice[i].close;
+
+            // Check if price is outside the channel bounds
+            if (actualPrice > point.trendUpper || actualPrice < point.trendLower) {
+              trendBroken = true;
+              console.log(`    Trend broken at point ${i + 1}/${trendBreakCheckSize}: price ${actualPrice.toFixed(2)} outside [${point.trendLower.toFixed(2)}, ${point.trendUpper.toFixed(2)}]`);
+              break;
+            }
+          }
+
+          if (!trendBroken) {
+            // Found a channel where the trend is not broken
+            console.log(`    ✓ Trend NOT broken! First ${trendBreakCheckSize} points are within channel bounds.`);
+            console.log(`    Optimal channel ${channelNum} found with lookback ${currentLookback}`);
+
+            optimalChannel = {
+              startIdx,
+              endIdx,
+              startDate: currentData[startIdx].date,
+              endDate: currentData[endIdx].date,
+              lookback: selectedSlice.length,
+              stdMultiplier: alignment.optimalDelta,
+              interceptShift: alignment.interceptShift,
+              touchesUpper: alignment.touchesUpper,
+              touchesLower: alignment.touchesLower,
+              channelData
+            };
+            break;
+          } else {
+            console.log(`    ✗ Trend broken, increasing lookback...`);
+          }
+
+          // Increase lookback for next iteration
+          currentLookback += Math.max(1, Math.floor(maxLookback / 50)); // Increment by ~2%
+        }
+
+        if (!optimalChannel) {
+          console.log(`Could not find optimal channel ${channelNum}. Stopping search.`);
+          break;
+        }
+
+        foundChannels.push(optimalChannel);
+        console.log(`Channel ${channelNum} found: ${optimalChannel.startDate} to ${optimalChannel.endDate}`);
+
+        // Move search end point to just before this channel's start
+        searchEndIdx = optimalChannel.startIdx - 1;
+      }
+
+      if (foundChannels.length === 0) {
+        alert('Could not find any optimal channels. The dataset may be in a broken trend.');
+        console.log('No optimal channels found.');
+        return;
+      }
+
+      console.log(`\nFound ${foundChannels.length} channel(s). Adding to manual channels...`);
+
+      // Create manual channel objects for all found channels and add them
+      setManualChannels(prev => {
+        const newChannels = [];
+
+        foundChannels.forEach((optimalChannel, idx) => {
+          // Create the manual channel object
+          const manualChannel = {
+            id: Date.now() + idx, // Unique ID
+            startIdx: optimalChannel.startIdx,
+            endIdx: optimalChannel.endIdx,
+            startDate: optimalChannel.startDate,
+            endDate: optimalChannel.endDate,
+            lookback: optimalChannel.lookback,
+            stdMultiplier: optimalChannel.stdMultiplier,
+            interceptShift: optimalChannel.interceptShift,
+            touchesUpper: optimalChannel.touchesUpper,
+            touchesLower: optimalChannel.touchesLower,
+            visible: true,
+            data: optimalChannel.channelData.map(pt => {
+              const channelPoint = {
+                date: pt.date,
+                trendLine: pt.trendLine,
+                trendUpper: pt.trendUpper,
+                trendLower: pt.trendLower
+              };
+              // Include all intermediate bands
+              for (let b = 1; b < CHANNEL_BANDS; b++) {
+                if (pt[`trendBand_${b}`] != null) {
+                  channelPoint[`trendBand_${b}`] = pt[`trendBand_${b}`];
+                }
+              }
+              return channelPoint;
+            })
+          };
+
+          newChannels.push(manualChannel);
+        });
+
+        // Now assign colorsets for all new channels, checking overlaps with existing and new channels
+        const channelsWithColors = newChannels.map((manualChannel, newIdx) => {
+          let hasOverlap = false;
+          let colorsetType = 'primary';
+
+          // Check overlap with existing channels
+          for (const existingChannel of prev) {
+            if (checkChannelOverlap(manualChannel, existingChannel)) {
+              hasOverlap = true;
+              colorsetType = 'secondary';
+              console.log(`New channel ${newIdx + 1} overlaps with existing channel ${existingChannel.id}, using secondary colorset`);
+              break;
+            }
+          }
+
+          // Check overlap with other new channels (already processed)
+          if (!hasOverlap) {
+            for (let i = 0; i < newIdx; i++) {
+              if (checkChannelOverlap(manualChannel, newChannels[i])) {
+                hasOverlap = true;
+                colorsetType = 'secondary';
+                console.log(`New channel ${newIdx + 1} overlaps with new channel ${i + 1}, using secondary colorset`);
+                break;
+              }
+            }
+          }
+
+          // Calculate color index
+          let colorIndex;
+          if (colorsetType === 'secondary') {
+            const secondaryChannelCount = prev.filter(ch => ch.colorsetType === 'secondary').length +
+                                          newChannels.slice(0, newIdx).filter(ch => ch.colorsetType === 'secondary').length;
+            colorIndex = secondaryChannelCount % SECONDARY_COLORSET.length;
+          } else {
+            const primaryChannelCount = prev.filter(ch => ch.colorsetType === 'primary').length +
+                                        newChannels.slice(0, newIdx).filter(ch => ch.colorsetType === 'primary').length;
+            colorIndex = primaryChannelCount % PRIMARY_COLORSET.length;
+          }
+
+          return {
+            ...manualChannel,
+            colorsetType,
+            colorIndex
+          };
+        });
+
+        console.log(`Added ${channelsWithColors.length} new channels`);
+        console.log('Total manual channels:', prev.length + channelsWithColors.length);
+
+        return [...prev, ...channelsWithColors];
+      });
+
+    } catch (error) {
+      console.error('Error finding last channels:', error);
+      alert('Error finding last channels: ' + error.message);
+    } finally {
+      setIsFindingLastChannel(false);
+    }
+  }, [chartPeriod, getCurrentDataSlice, computeTrendChannelTouchAlignment, checkChannelOverlap]); // eslint-disable-line react-hooks/exhaustive-deps
 
   // Update manual channel stdev multiplier and recalculate data
   const updateManualChannelStdev = useCallback((channelIdx, newStdMultiplier) => {
@@ -2325,9 +2551,28 @@ export function PricePerformanceChart({
             </button>
           )}
 
+          {/* Find Last 3 Channels Button - only show when Manual Channel mode is active */}
+          {isManualChannelMode && chartCompareStocks.length === 0 && selectedStock && (
+            <button
+              onClick={findLastChannel}
+              disabled={isFindingLastChannel}
+              className="px-3 py-2 rounded-lg text-xs font-medium transition"
+              style={{
+                backgroundColor: isFindingLastChannel ? '#6B7280' : '#8B5CF6',
+                color: '#FFFFFF',
+                fontWeight: 'bold',
+                opacity: isFindingLastChannel ? 0.6 : 1,
+                cursor: isFindingLastChannel ? 'not-allowed' : 'pointer'
+              }}
+              title="Automatically find the last 3 valid channels by detecting trend breaks"
+            >
+              {isFindingLastChannel ? '⏳ Finding...' : 'Find Last 3 Channels'}
+            </button>
+          )}
+
           {/* Individual Manual Channel Controls */}
           {isManualChannelMode && chartCompareStocks.length === 0 && selectedStock && manualChannels.length > 0 && (
-            <div className="flex flex-col gap-1 ml-1">
+            <div className="flex flex-row flex-wrap gap-1 ml-1">
               {manualChannels.map((channel, idx) => {
                 // Use the assigned colorset from the channel
                 const colorset = channel.colorsetType === 'secondary' ? SECONDARY_COLORSET : PRIMARY_COLORSET;
@@ -2404,7 +2649,7 @@ export function PricePerformanceChart({
           {/* Manual Channel Status Message */}
           {isManualChannelMode && chartCompareStocks.length === 0 && selectedStock && (
             <div className="px-3 py-2 rounded-lg text-xs font-medium bg-green-900/30 text-green-300 border border-green-700">
-              {isComputingManualChannel ? '⏳ Computing optimal channel...' : '🖱️ Drag to select a range on the chart'}
+              {isFindingLastChannel ? '⏳ Finding last 3 channels (analyzing trend breaks)...' : isComputingManualChannel ? '⏳ Computing optimal channel...' : 'Select Range'}
             </div>
           )}
 
@@ -3669,7 +3914,7 @@ export function PricePerformanceChart({
                                 strokeOpacity={0}
                                 ifOverflow="discard"
                                 label={showLabel ? {
-                                  value: `${volumePercent.toFixed(1)}%`,
+                                  value: `${volumePercent.toFixed(0)}%`,
                                   position: 'right',
                                   fill: '#ffffff',
                                   fontSize: 10,
@@ -3767,7 +4012,7 @@ export function PricePerformanceChart({
                                 strokeOpacity={0}
                                 ifOverflow="discard"
                                 label={showLabel ? {
-                                  value: `${volumePercent.toFixed(1)}%`,
+                                  value: `${volumePercent.toFixed(0)}%`,
                                   position: 'right',
                                   fill: '#ffffff',
                                   fontSize: 10,
@@ -3940,7 +4185,7 @@ export function PricePerformanceChart({
                                 strokeOpacity={0}
                                 ifOverflow="discard"
                                 label={showLabel ? {
-                                  value: `${volumePercent.toFixed(1)}%`,
+                                  value: `${volumePercent.toFixed(0)}%`,
                                   position: 'right',
                                   fill: '#ffffff',
                                   fontSize: 9,
@@ -4132,8 +4377,6 @@ export function PricePerformanceChart({
                       : 0;
                   }
 
-                  console.log(`Channel ${channelIdx + 1} volume distribution:`, zoneVolumePercentages);
-
                   // Render color zones for this manual channel
                   const colorZones = multiData.map((pt, i) => {
                     const next = multiData[i + 1];
@@ -4172,7 +4415,7 @@ export function PricePerformanceChart({
                           strokeOpacity={0}
                           ifOverflow="discard"
                           label={showLabel ? {
-                            value: `${volumePercent.toFixed(1)}%`,
+                            value: `${volumePercent.toFixed(0)}%`,
                             position: 'right',
                             fill: '#ffffff',
                             fontSize: 10,
@@ -4195,8 +4438,20 @@ export function PricePerformanceChart({
                   const channelStartIdx = multiData.findIndex(pt => pt.date === channel.startDate);
                   const channelEndIdx = multiData.findIndex(pt => pt.date === channel.endDate);
                   const channelMidIdx = Math.floor((channelStartIdx + channelEndIdx) / 2);
-                  const channelMidData = channelMidIdx >= 0 ? multiData[channelMidIdx] : null;
+                  const channelMidData = channelMidIdx >= 0 && channelStartIdx >= 0 && channelEndIdx >= 0 ? multiData[channelMidIdx] : null;
                   const sigmaLabel = `±${channel.stdMultiplier.toFixed(2)}σ`;
+
+                  // Debug logging for sigma label
+                  if (!channelMidData && channelIdx === manualChannels.length - 1) {
+                    console.log(`Channel ${channelIdx} sigma label not showing:`, {
+                      startDate: channel.startDate,
+                      endDate: channel.endDate,
+                      channelStartIdx,
+                      channelEndIdx,
+                      channelMidIdx,
+                      multiDataLength: multiData.length
+                    });
+                  }
 
                   return (
                     <React.Fragment key={`manual-channel-${channelIdx}`}>
