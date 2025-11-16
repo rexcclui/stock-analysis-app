@@ -2242,6 +2242,157 @@ export function PricePerformanceChart({
     }));
   }, [getCurrentDataSlice]);
 
+  // Extend manual channel to the left and right while respecting the original channel bounds
+  const extendManualChannel = useCallback((channelIdx) => {
+    const currentData = getCurrentDataSlice();
+    if (!currentData) return;
+
+    const channel = manualChannels[channelIdx];
+    if (!channel) return;
+
+    console.log(`Extending channel ${channelIdx + 1}...`);
+
+    // Build the ORIGINAL channel to use as baseline for comparison
+    const originalSlice = currentData.slice(channel.startIdx, channel.endIdx + 1);
+    const originalChannelData = buildConfigurableTrendChannel(
+      originalSlice,
+      originalSlice.length,
+      channel.stdMultiplier,
+      { interceptShift: channel.interceptShift, endAt: 0 },
+      CHANNEL_BANDS
+    );
+
+    // Get the original channel bounds (we'll extrapolate these for new points)
+    // Calculate regression parameters from original data to extrapolate bounds
+
+    // Simple linear regression to get slope and intercept for extrapolation
+    const n = originalChannelData.length;
+    let sumX = 0, sumY = 0, sumXY = 0, sumX2 = 0;
+    let sumUpper = 0, sumLower = 0;
+
+    for (let i = 0; i < n; i++) {
+      const x = i;
+      const trendLine = originalChannelData[i].trendLine;
+      const upper = originalChannelData[i].trendUpper;
+      const lower = originalChannelData[i].trendLower;
+
+      sumX += x;
+      sumY += trendLine;
+      sumXY += x * trendLine;
+      sumX2 += x * x;
+      sumUpper += upper;
+      sumLower += lower;
+    }
+
+    const slope = (n * sumXY - sumX * sumY) / (n * sumX2 - sumX * sumX);
+    const intercept = (sumY - slope * sumX) / n;
+    const avgUpper = sumUpper / n;
+    const avgLower = sumLower / n;
+    const avgCenter = sumY / n;
+    const upperOffset = avgUpper - avgCenter;
+    const lowerOffset = avgLower - avgCenter;
+
+    let extendedStartIdx = channel.startIdx;
+    let extendedEndIdx = channel.endIdx;
+
+    // Try to extend to the left (going backwards in time)
+    let canExtendLeft = true;
+    while (canExtendLeft && extendedStartIdx > 0) {
+      const testStartIdx = extendedStartIdx - 1;
+      const newPoint = currentData[testStartIdx];
+      const actualPrice = newPoint.price || newPoint.close;
+
+      // Calculate the expected position relative to original channel start
+      const relativeIndex = testStartIdx - channel.startIdx; // This will be negative (e.g., -1, -2, etc.)
+
+      // Extrapolate the channel bounds to this new point
+      const expectedCenter = slope * relativeIndex + intercept;
+      const expectedUpper = expectedCenter + upperOffset;
+      const expectedLower = expectedCenter + lowerOffset;
+
+      // Check if the new point falls within the extrapolated original channel bounds
+      if (actualPrice > expectedUpper || actualPrice < expectedLower) {
+        console.log(`  Cannot extend left: bar ${testStartIdx} price ${actualPrice.toFixed(2)} outside [${expectedLower.toFixed(2)}, ${expectedUpper.toFixed(2)}]`);
+        canExtendLeft = false;
+      } else {
+        console.log(`  Extended left: bar ${testStartIdx} price ${actualPrice.toFixed(2)} within [${expectedLower.toFixed(2)}, ${expectedUpper.toFixed(2)}]`);
+        extendedStartIdx = testStartIdx;
+      }
+    }
+
+    // Try to extend to the right (going forward in time)
+    let canExtendRight = true;
+    while (canExtendRight && extendedEndIdx < currentData.length - 1) {
+      const testEndIdx = extendedEndIdx + 1;
+      const newPoint = currentData[testEndIdx];
+      const actualPrice = newPoint.price || newPoint.close;
+
+      // Calculate the expected position relative to original channel start
+      const relativeIndex = testEndIdx - channel.startIdx;
+
+      // Extrapolate the channel bounds to this new point
+      const expectedCenter = slope * relativeIndex + intercept;
+      const expectedUpper = expectedCenter + upperOffset;
+      const expectedLower = expectedCenter + lowerOffset;
+
+      // Check if the new point falls within the extrapolated original channel bounds
+      if (actualPrice > expectedUpper || actualPrice < expectedLower) {
+        console.log(`  Cannot extend right: bar ${testEndIdx} price ${actualPrice.toFixed(2)} outside [${expectedLower.toFixed(2)}, ${expectedUpper.toFixed(2)}]`);
+        canExtendRight = false;
+      } else {
+        console.log(`  Extended right: bar ${testEndIdx} price ${actualPrice.toFixed(2)} within [${expectedLower.toFixed(2)}, ${expectedUpper.toFixed(2)}]`);
+        extendedEndIdx = testEndIdx;
+      }
+    }
+
+    // If channel was extended, update it
+    if (extendedStartIdx !== channel.startIdx || extendedEndIdx !== channel.endIdx) {
+      const extendedSlice = currentData.slice(extendedStartIdx, extendedEndIdx + 1);
+
+      // Rebuild the channel data with extended range
+      const channelData = buildConfigurableTrendChannel(
+        extendedSlice,
+        extendedSlice.length,
+        channel.stdMultiplier,
+        { interceptShift: channel.interceptShift, endAt: 0 },
+        CHANNEL_BANDS
+      );
+
+      setManualChannels(prev => prev.map((ch, idx) => {
+        if (idx !== channelIdx) return ch;
+
+        return {
+          ...ch,
+          startIdx: extendedStartIdx,
+          endIdx: extendedEndIdx,
+          startDate: currentData[extendedStartIdx].date,
+          endDate: currentData[extendedEndIdx].date,
+          lookback: extendedSlice.length,
+          data: channelData.map(pt => {
+            const channelPoint = {
+              date: pt.date,
+              trendLine: pt.trendLine,
+              trendUpper: pt.trendUpper,
+              trendLower: pt.trendLower
+            };
+            for (let b = 1; b < CHANNEL_BANDS; b++) {
+              if (pt[`trendBand_${b}`] != null) {
+                channelPoint[`trendBand_${b}`] = pt[`trendBand_${b}`];
+              }
+            }
+            return channelPoint;
+          })
+        };
+      }));
+
+      const leftExtension = channel.startIdx - extendedStartIdx;
+      const rightExtension = extendedEndIdx - channel.endIdx;
+      console.log(`Channel ${channelIdx + 1} extended: ${leftExtension} bars left, ${rightExtension} bars right`);
+    } else {
+      console.log(`Channel ${channelIdx + 1} cannot be extended without breaking trend`);
+    }
+  }, [getCurrentDataSlice, manualChannels]);
+
   const handleMouseDown = useCallback((e) => {
     // Only start drag on left mouse button
     if (e.button !== 0) return;
@@ -2630,6 +2781,14 @@ export function PricePerformanceChart({
                         </button>
                       </div>
                     </div>
+                    {/* Extend button */}
+                    <button
+                      onClick={() => extendManualChannel(idx)}
+                      className="px-1.5 py-0.5 bg-blue-600 hover:bg-blue-700 text-white rounded text-xs font-bold transition"
+                      title={`Extend channel ${idx + 1} to left and right (respects 10% trend break rule)`}
+                    >
+                      ↔
+                    </button>
                     {/* Delete button */}
                     <button
                       onClick={() => {
@@ -3544,8 +3703,6 @@ export function PricePerformanceChart({
               }
               // Apply manual channel data when manual channels exist
               if (isManualChannelMode && manualChannels.length > 0) {
-                console.log('Applying manual channel data. Channels:', manualChannels.length, 'Data points:', multiData.length);
-
                 // Add manual channel data to each point in multiData
                 multiData = multiData.map((pt, idx) => {
                   const channelData = {};
@@ -3575,8 +3732,6 @@ export function PricePerformanceChart({
 
                   return { ...pt, ...channelData };
                 });
-
-                console.log('Manual channel data applied. Sample point:', multiData[0]);
               }
               if (colorMode === 'sma' && chartCompareStocks.length === 0) {
                 const smaAnalysis = detectTurningPoints(multiData);
@@ -3880,6 +4035,26 @@ export function PricePerformanceChart({
                         // Calculate volume distribution across all zones
                         const zoneVolumeDistribution = calculateZoneVolumeDistribution(multiData, 'channel');
 
+                        // Rank zones by volume percentage for color coding
+                        const zoneRankings = Object.entries(zoneVolumeDistribution)
+                          .map(([zone, percent]) => ({ zone: parseInt(zone), percent }))
+                          .sort((a, b) => b.percent - a.percent);
+
+                        const zoneRankMap = {};
+                        zoneRankings.forEach((item, rank) => {
+                          zoneRankMap[item.zone] = rank;
+                        });
+
+                        const getLabelColor = (zoneIndex) => {
+                          const rank = zoneRankMap[zoneIndex];
+                          const totalZones = zoneRankings.length;
+                          if (rank === 0) return '#3B82F6'; // Blue - highest
+                          if (rank === 1) return '#10B981'; // Green - second
+                          if (rank === 2) return '#EAB308'; // Yellow - third
+                          if (rank === totalZones - 1) return '#EF4444'; // Red - lowest
+                          return '#ffffff'; // White - middle ranks
+                        };
+
                         return multiData.map((pt, i) => {
                           const next = multiData[i + 1];
                           if (!next) return null;
@@ -3916,7 +4091,7 @@ export function PricePerformanceChart({
                                 label={showLabel ? {
                                   value: `${volumePercent.toFixed(0)}%`,
                                   position: 'right',
-                                  fill: '#ffffff',
+                                  fill: getLabelColor(b),
                                   fontSize: 10,
                                   fontWeight: 'bold',
                                   stroke: '#000000',
@@ -3979,6 +4154,28 @@ export function PricePerformanceChart({
                         // Calculate volume distribution across all zones
                         const zoneVolumeDistribution = calculateZoneVolumeDistribution(multiData, 'trend');
 
+                        // Rank zones by volume percentage for color coding
+                        const zoneRankings = Object.entries(zoneVolumeDistribution)
+                          .map(([zone, percent]) => ({ zone: parseInt(zone), percent }))
+                          .sort((a, b) => b.percent - a.percent); // Sort descending by percentage
+
+                        // Create a map of zone -> rank (0 = highest, 1 = second, etc.)
+                        const zoneRankMap = {};
+                        zoneRankings.forEach((item, rank) => {
+                          zoneRankMap[item.zone] = rank;
+                        });
+
+                        // Helper function to get label color based on rank
+                        const getLabelColor = (zoneIndex) => {
+                          const rank = zoneRankMap[zoneIndex];
+                          const totalZones = zoneRankings.length;
+                          if (rank === 0) return '#3B82F6'; // Blue - highest
+                          if (rank === 1) return '#10B981'; // Green - second
+                          if (rank === 2) return '#EAB308'; // Yellow - third
+                          if (rank === totalZones - 1) return '#EF4444'; // Red - lowest
+                          return '#ffffff'; // White - middle ranks
+                        };
+
                         return multiData.map((pt, i) => {
                           const next = multiData[i + 1];
                           if (!next) return null;
@@ -4014,7 +4211,7 @@ export function PricePerformanceChart({
                                 label={showLabel ? {
                                   value: `${volumePercent.toFixed(0)}%`,
                                   position: 'right',
-                                  fill: '#ffffff',
+                                  fill: getLabelColor(b),
                                   fontSize: 10,
                                   fontWeight: 'bold',
                                   stroke: '#000000',
@@ -4141,6 +4338,26 @@ export function PricePerformanceChart({
                             : 0;
                         });
 
+                        // Rank zones by volume percentage for color coding
+                        const zoneRankings = Object.entries(zoneVolumePercentages)
+                          .map(([zone, percent]) => ({ zone: parseInt(zone), percent }))
+                          .sort((a, b) => b.percent - a.percent);
+
+                        const zoneRankMap = {};
+                        zoneRankings.forEach((item, rank) => {
+                          zoneRankMap[item.zone] = rank;
+                        });
+
+                        const getLabelColor = (zoneIndex) => {
+                          const rank = zoneRankMap[zoneIndex];
+                          const totalZones = zoneRankings.length;
+                          if (rank === 0) return '#3B82F6'; // Blue - highest
+                          if (rank === 1) return '#10B981'; // Green - second
+                          if (rank === 2) return '#EAB308'; // Yellow - third
+                          if (rank === totalZones - 1) return '#EF4444'; // Red - lowest
+                          return '#ffffff'; // White - middle ranks
+                        };
+
                         return multiData.map((pt, i) => {
                           const next = multiData[i + 1];
                           if (!next) return null;
@@ -4187,7 +4404,7 @@ export function PricePerformanceChart({
                                 label={showLabel ? {
                                   value: `${volumePercent.toFixed(0)}%`,
                                   position: 'right',
-                                  fill: '#ffffff',
+                                  fill: getLabelColor(b),
                                   fontSize: 9,
                                   fontWeight: 'bold',
                                   stroke: '#000000',
@@ -4377,6 +4594,26 @@ export function PricePerformanceChart({
                       : 0;
                   }
 
+                  // Rank zones by volume percentage
+                  const zoneRankings = Object.entries(zoneVolumePercentages)
+                    .map(([zone, percent]) => ({ zone: parseInt(zone), percent }))
+                    .sort((a, b) => b.percent - a.percent);
+
+                  const zoneRankMap = {};
+                  zoneRankings.forEach((item, index) => {
+                    zoneRankMap[item.zone] = index;
+                  });
+
+                  const getLabelColor = (zoneIndex) => {
+                    const rank = zoneRankMap[zoneIndex];
+                    const totalZones = zoneRankings.length;
+                    if (rank === 0) return '#3B82F6'; // Blue - highest
+                    if (rank === 1) return '#10B981'; // Green - second
+                    if (rank === 2) return '#EAB308'; // Yellow - third
+                    if (rank === totalZones - 1) return '#EF4444'; // Red - lowest
+                    return '#ffffff'; // White - middle ranks
+                  };
+
                   // Render color zones for this manual channel
                   const colorZones = multiData.map((pt, i) => {
                     const next = multiData[i + 1];
@@ -4417,7 +4654,7 @@ export function PricePerformanceChart({
                           label={showLabel ? {
                             value: `${volumePercent.toFixed(0)}%`,
                             position: 'right',
-                            fill: '#ffffff',
+                            fill: getLabelColor(b),
                             fontSize: 10,
                             fontWeight: 'bold',
                             stroke: '#000000',

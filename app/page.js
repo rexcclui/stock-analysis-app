@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, Profiler } from 'react';
+import React, { useState, useRef, Profiler } from 'react';
 // Chart now extracted to PricePerformanceChart component
 import { Search, BarChart3, RotateCcw } from 'lucide-react';
 import { ComparisonSection } from './components/Comparison/ComparisonSection';
@@ -166,6 +166,8 @@ export default function StockAnalysisDashboard() {
   // Unique identifier for current search cycle (timestamp + stock code)
   const [searchCycleId, setSearchCycleId] = useState(null);
   const [selectedStock, setSelectedStock] = useState(null);
+  // Track whether we've loaded the initial stock from localStorage (should only happen once)
+  const hasLoadedInitialStock = useRef(false);
   const [chartPeriod, setChartPeriod] = useState('1M');
   const [comparisonStocks, setComparisonStocks] = useState([]);
   const [searchHistoryFullStocks, setSearchHistoryFullStocks] = useState([]); // Full stock data for search history
@@ -651,18 +653,22 @@ export default function StockAnalysisDashboard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [searchInput]);
 
-  // Load saved stock from localStorage after handleSearch is defined
+  // Load saved stock from localStorage only once on mount
   React.useEffect(() => {
+    if (hasLoadedInitialStock.current) return;
+
     const savedStock = localStorage.getItem('selectedStock');
     if (savedStock) {
       try {
         const stockData = JSON.parse(savedStock);
         if (stockData && stockData.code) {
+          hasLoadedInitialStock.current = true;
           handleSearch(stockData.code);
         }
       } catch {}
     }
-  }, [handleSearch]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   // Force reload: Clear all caches (client + server) and reload current stock
   const handleForceReload = async () => {
